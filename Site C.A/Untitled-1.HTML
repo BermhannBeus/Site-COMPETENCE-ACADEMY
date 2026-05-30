@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Competence Academy</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <script>
+  (function(){
+    emailjs.init("osyslXsvP736liCI-");
+  })();
+
+  function ouvrirPDF(file){
+    window.open(file, "_blank");
+  }
+
+  /* REGLAGE MENUBAR MOBIL */
+  function toggleMenu(){
+    const navLinks = document.getElementById("nav-links");
+    const menuIcon = document.getElementById("menu-btn");
+    
+    navLinks.classList.toggle("active");
+    
+    if(navLinks.classList.contains("active")){
+      menuIcon.innerHTML = "✖";
+    } else {
+      menuIcon.innerHTML = "☰";
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <div class="logo">
+    <img src="Logo.png" alt="Logo">
+  </div>
+
+  <ul class="nav-links" id="nav-links">
+    <li><a href="#" onclick="toggleMenu()">Accueil</a></li>
+    <li><a href="#historique" onclick="toggleMenu()">À propos</a></li>
+    <li><a href="#formations" onclick="toggleMenu()">Formations</a></li>
+    <li><a href="#event" onclick="toggleMenu()">Événements</a></li>
+    <li><a href="#contact" onclick="toggleMenu()">Contact</a></li>
+  </ul>
+
+  <div class="menu-icon" id="menu-btn" onclick="toggleMenu()">
+    ☰
+  </div>
+</nav>
+
+<header class="hero-section">
+  <video autoplay loop muted playsinline class="bg-video">
+    <source src="Animate site.mp4" type="video/mp4">
+  </video>
+
+  <div class="video-overlay"></div>
+  
+  <div class="hero-content">
+        <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">Inscrire</a>
+  </div>
+</header>
+<section class="historique" id="historique">
+  <div class="container about-content">
+    <h2>À propos de Competence Academy</h2>
+    
+    <p>Depuis maintenant 2 ans, <strong>Competence Academy</strong> évolue avec une vision claire : former, inspirer et développer une nouvelle génération de jeunes compétents dans les domaines du numérique, de la création et des métiers techniques.</p>
+    
+    <p>Fondée le 15 Juin 2024, l’institution a été créée dans le but d’offrir une formation professionnelle moderne, pratique et accessible, adaptée aux réalités du marché actuel. Dès le début, l’objectif a été de permettre aux étudiants d’acquérir de véritables compétences professionnelles capables de créer des opportunités concrètes d’emploi, de freelance ou d’entrepreneuriat.</p>
+
+   <div class="about-grid">
+  <!-- Seksyon Formations -->
+  <div class="highlight-box">
+    <h3>Nos Formations</h3>
+    <ul class="custom-list">
+      <li><img src="Logo.png" alt="icon"> Informatique bureautique</li>
+      <li><img src="Logo.png" alt="icon"> Infographie & Photographie</li>
+      <li><img src="Logo.png" alt="icon"> Vidéographie & Montage vidéo</li>
+      <li><img src="Logo.png" alt="icon"> Dépannage d’ordinateur</li>
+      
+    </ul>
+  </div>
+  
+  <!-- Seksyon Services -->
+  <div class="highlight-box">
+    <h3>Nos Services</h3>
+    <ul class="custom-list">
+      <li><img src="Logo.png" alt="icon"> Branding & Graphisme</li>
+      <li><img src="Logo.png" alt="icon"> Couverture photo & vidéo</li>
+      <li><img src="Logo.png" alt="icon"> Assistance informatique</li>
+      <li><img src="Logo.png" alt="icon"> Impression & Sérigraphie</li>
+    </ul>
+  </div>
+</div>
+
+    <h3 style="text-align: center; margin-top: 50px;">Notre Vision</h3>
+    <p style="text-align: center;">Notre ambition est de devenir une référence dans la formation professionnelle moderne en Haïti, en accompagnant les jeunes talents vers l’excellence, la créativité et l’autonomie professionnelle. Aujourd’hui, après 2 années d’évolution, Competence Academy continue de grandir avec la même passion : transmettre des compétences utiles, développer des professionnels qualifiés et construire l’avenir à travers l’éducation et la pratique.</p>
+  </div>
+</section>
+    <div class="cards" id="formations">
+      <div class="card">
+        <h3>Informatique</h3>
+        <button onclick="ouvrirPDF('Syllabus INFORMATIQUE BUREAUTIQUE.pdf')">Voir Syllabus</button>
+      </div>
+
+      <div class="card">
+        <h3>Infographie</h3>
+        <button onclick="ouvrirPDF('Syllabus INFOGRAPHIE.pdf')">Voir Syllabus</button>
+      </div>
+
+      <div class="card">
+        <h3>Photographie</h3>
+        <button onclick="ouvrirPDF('Syllabus photographie.pdf')">Voir Syllabus</button>
+      </div>
+
+      <div class="card">
+        <h3>Vidéographie</h3>
+        <button onclick="ouvrirPDF('Syllabus Videographie.pdf')">Voir Syllabus</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="stats-section">
+  <div class="stats-container">
+    <div class="stat-item"><h3>2+</h3><p>Ans d'expérience</p></div>
+    <div class="stat-item"><h3>100+</h3><p>Étudiants formés</p></div>
+    <div class="stat-item"><h3>4+</h3><p>Filières disponibles</p></div>
+  </div>
+</section>
+
+<section class="services-section">
+  <h2>Nos Services</h2>
+  <div class="services-grid">
+    <div class="service-card"><h3>Branding</h3><p>Identité visuelle complète.</p></div>
+    <div class="service-card"><h3>Graphisme</h3><p>Création pour réseaux sociaux, bannières, affiches, supports de communication.</p></div>
+    <div class="service-card"><h3>Vidéographie</h3><p>Montage vidéo professionnel.</p></div>
+    <div class="service-card"><h3>Photographie</h3><p>Evennementiels, portraits, reportages.</p></div>
+    <div class="service-card"><h3>Reseaux Informatique</h3><p>Cablage, configuration, maintenance.</p></div>
+    <div class="service-card"><h3>Assistance</h3><p>Dépannage informatique, support technique.</p></div>
+  </div>
+</section>
+
+
+<section class="event" id="event">
+  <div class="container">
+    <h2>Informations de la Cérémonie</h2>
+
+    <div class="info-box">
+      <p><strong>Date :</strong> 15 Juin 2026</p>
+      <p><strong>Événement :</strong> 2 Ans de Competence Academy</p>
+      <p><strong>Type :</strong> Cérémonie Officielle</p>
+    </div>
+  </div>
+</section>
+
+
+<section class="contact" id="contact">
+  <div class="container">
+    <h2>Envoyer un Message</h2>
+
+    <form onsubmit="envoyerEmail(event)">
+      <input type="text" id="nom" placeholder="Votre nom" required>
+      <input type="email" id="email" placeholder="Votre email" required>
+      <textarea id="message" placeholder="Votre message" required></textarea>
+      <button type="submit">Envoyer</button>
+    </form>
+  </div>
+</section>
+
+<script>
+let lastSubmit = 0;
+
+function envoyerEmail(event){
+  event.preventDefault();
+
+  const now = Date.now();
+  if(now - lastSubmit < 5000){
+    alert("Veuillez attendre avant de renvoyer un message.");
+    return;
+  }
+  lastSubmit = now;
+
+  let nom = document.getElementById("nom").value;
+  let email = document.getElementById("email").value;
+  let message = document.getElementById("message").value;
+
+  emailjs.send("service_vqkhkdp","x-92Db6nZSon7Y4oovpaH",{
+    nom: nom,
+    email: email,
+    message: message
+  });
+
+  emailjs.send("service_vqkhkdp","x-92Db6nZSon7Y4oovpaH",{
+    nom: nom,
+    email: email,
+    message: "Merci pour votre message, nous vous répondrons bientôt."
+  });
+
+  alert("Message envoyé avec succès !");
+  document.querySelector("form").reset();
+}
+
+function envoyerWhatsApp(){
+  let nom = document.getElementById("nom").value;
+  let message = document.getElementById("message").value;
+
+  let url = "https://wa.me/48836113?text="
+    + encodeURIComponent("Votre nom svp " + nom + "\nDites-nous comment nous pouvons vous assister " + message);
+
+  window.open(url, "_blank");
+}
+</script>
+
+<div style="text-align:center; margin:20px;">
+  <button onclick="envoyerWhatsApp()" style="
+    background:#0e8b3c;
+    color:white;
+    padding:12px 20px;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+    cursor:pointer;
+  ">
+    Envoyer via WhatsApp
+  </button>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+<section class="faq-section">
+  <h2 style="text-align: center;">Questions Fréquentes</h2>
+  
+<div class="faq-item">
+      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Recevons-nous un certificat ?</button>
+      <div class="faq-answer">Oui, un certificat professionnel est remis à la fin.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">La formation est-elle pratique ou théorique ?</button>
+      <div class="faq-answer">La formation est 80% pratique. Nous privilégions la manipulation d'outils réels pour une immersion totale.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Comment s'effectue le paiement ?</button>
+      <div class="faq-answer">Vous pouvez payer mensuellement, via MonCash, Natcash, Cash ou par virement bancaire.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Y a-t-il une cérémonie de graduation ?</button>
+      <div class="faq-answer">Oui, nous organisons une cérémonie officielle à la fin de chaque cycle de formation.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Puis-je suivre les cours en ligne ?</button>
+      <div class="faq-answer">Actuellement, nos formations sont en présentiel pour garantir un meilleur encadrement, Bientôt se sera disponibles en ligne.</div>
+    </div>
+  </div>
+</section>
+
+<section class="remerciement-section">
+  <div class="remerciement-wrapper">
+    <button class="btn-deroule" onclick="this.nextElementSibling.classList.toggle('show')">
+      Voir nos Remerciements ▼
+    </button>
+    
+    <div class="content-deroule">
+      <h3>Merci à vous !</h3>
+      <p>Competence Academy tient à exprimer sa profonde gratitude à tous les utilisateurs, étudiants, partenaires et visiteurs qui font confiance à notre plateforme.</p>
+      <p>Votre engagement, votre intérêt et votre fidélité nous motivent chaque jour à améliorer nos services et à offrir des formations toujours plus professionnelles, pratiques et adaptées aux réalités du marché actuel.</p>
+      <p>Merci de faire partie de cette vision. Chaque interaction, chaque inscription et chaque participation contribuent à la croissance d’une communauté dynamique dédiée à l’apprentissage, à la créativité et à l’excellence.</p>
+      <p>Nous restons engagés à vous accompagner dans votre parcours de développement personnel et professionnel.</p>
+      <p><strong>Merci pour votre confiance. Ensemble, construisons l’avenir.</strong></p>
+    </div>
+  </div>
+</section>
+
+
+
+<footer>
+  <div class="footer-social">
+    <a href="https://www.facebook.com/share/1JDUim79ZT/" target="_blank"><i class="fab fa-facebook"></i></a>
+    <a href="https://www.instagram.com/_competence_academy?igsh=MTJ6dDVycnlmMDV4eg==" target="_blank"><i class="fab fa-instagram"></i></a>
+    <a href="https://www.tiktok.com/@competenceacademy1?_r=1&_t=ZS-96mODNOfhS9" target="_blank"><i class="fab fa-tiktok"></i></a>
+  </div>
+  <p>© 2026 Competence Academy - Tous droits réservés</p>
+</footer>
+</html>
