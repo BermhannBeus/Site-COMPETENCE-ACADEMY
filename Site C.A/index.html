@@ -215,7 +215,7 @@ function envoyerWhatsApp(){
   let message = document.getElementById("message").value;
 
   let url = "https://wa.me/48836113?text="
-    + encodeURIComponent("Bonjour " + nom + "\Je viens de visiter votre site Officiel, j' suis interessé par vos formations " + message);
+    + encodeURIComponent("Bonjour, " + nom + "\nJe viens de visiter votre site Officiel, j' suis interessé par vos formations " + message);
 
   window.open(url, "_blank");
 }
