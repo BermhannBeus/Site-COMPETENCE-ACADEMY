@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Competence Academy | Fòmasyon Pwofesyonèl an Ayiti</title>
-    <meta name="description" content="Competence Academy ofri fòmasyon an enfòmatik, videografi, fotografi ak enfografi an Ayiti. Enskri kounye a pou w devlope konpetans ou.">
-    <meta name="keywords" content="Competence Academy, fòmasyon Ayiti, enfòmatik, videografi, fotografi, aprantisaj">
+    <meta name="description" content="Competence Academy à Arcahaie - École de formation professionnelle en Haïti. Ofri fòmasyon pratik an informatique, infographie, photographie, vidéographie ak montage vidéo nan Akayè. Inscription ouverte / Enskri kounye a!">
+<meta name="keywords" content="Competence Academy Arcahaie, Competence Academy Akayè, formation professionnelle Arcahaie, fòmasyon pwofesyonèl Akayè, ecole informatique Arcahaie, lekòl enfòmatik Akayè, cours infographie Arcahaie, kou enfografi Akayè, apprendre la photographie Arcahaie, aprann fotografi Akayè, videographie Arcahaie, videografi Akayè">
   <title>Competence Academy</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -236,6 +236,112 @@ function envoyerWhatsApp(){
 </div>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<section class="section-anniversaire">
+  <div class="anniversaire-container">
+    <div class="anniversaire-text">
+      <h2> CÉLÉBRONS ENSEMBLE ! </h2>
+      <p>À l'occasion de l'anniversaire de <strong>COMPETENCE ACADEMY</strong>, nous avons une surprise exclusive pour vous. Cliquez sur la boîte magique pour découvrir votre cadeau !</p>
+    </div>
+    
+    <div class="gift-box-wrapper" onclick="ouvrirCadeau()">
+      <div class="gift-box">
+        <div class="gift-lid"></div>
+        <div class="gift-ribbon-v"></div>
+        <div class="gift-ribbon-h"></div>
+        <div class="gift-bow"></div>
+      </div>
+      <span class="click-hint">Cliquez-moi !</span>
+    </div>
+  </div>
+</section>
+
+<div id="modal-anniversaire" class="modal-anniv">
+  <div class="petals-container" id="petals-zone"></div>
+  
+  <div class="modal-anniv-content">
+    <span class="close-anniv" onclick="fermerCadeau()">&times;</span>
+    <div class="anniv-badge">🎁CADEAU D'ANNIVERSAIRE </div>
+    <h3>FÉLICITATIONS !</h3>
+    <h2>Inscrivez-vous maintenant et recevez une <span>DEMI-BOURSE</span> comme cadeau dans n'importe quelle option !</h2>
+    <p>Saisissez cette opportunité en or pour propulser votre carrière.</p>
+    
+    <a href="https://form.jotform.com/261485567334869" class="btn-profiter" onclick="fermerCadeau()">Profiter de ma Demi-Bourse</a>
+  </div>
+</div>
+
+<script>
+function ouvrirCadeau() {
+  document.getElementById("modal-anniversaire").style.display = "flex";
+  creerPetales();
+}
+
+function fermerCadeau() {
+  document.getElementById("modal-anniversaire").style.display = "none";
+  document.getElementById("petals-zone").innerHTML = ""; // Netwaye petal yo lè l fèmen
+}
+
+// Fonksyon ki kreye petal ak ti confetti k ap tonbe yo tankou nan fèt
+function creerPetales() {
+  const zone = document.getElementById("petals-zone");
+  const couleurs = ['#F76B00', '#111E62', '#FFD700', '#FFC0CB', '#FF4500']; // Koulè lekòl la ak lòt koulè fèt
+  
+  for (let i = 0; i < 50; i++) {
+    const petal = document.createElement('div');
+    petal.classList.add('petal');
+    
+    // Pozisyon ak gwosè ozafa
+    petal.style.left = Math.random() * 100 + '%';
+    petal.style.width = Math.random() * 12 + 8 + 'px';
+    petal.style.height = Math.random() * 20 + 10 + 'px';
+    petal.style.backgroundColor = couleurs[Math.floor(Math.random() * couleurs.length)];
+    
+    // Vitès animasyon ozafa
+    petal.style.animationDelay = Math.random() * 5 + 's';
+    petal.style.animationDuration = Math.random() * 3 + 4 + 's';
+    petal.style.opacity = Math.random();
+    
+    zone.appendChild(petal);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
 
 
 
