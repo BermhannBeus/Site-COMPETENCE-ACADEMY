@@ -496,3 +496,305 @@ footer {
   color: #F76B00; /* Koulè zoranj lan lè ou pase sourit sou li */
   transform: scale(1.2);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===== SECTION ANNIVERSAIRE ===== */
+.section-anniversaire {
+  background: linear-gradient(135deg, #fbfaf7 0%, #eef0ff 100%); /* Ble Nuit lekòl la */
+  padding: 60px 20px;
+  text-align: center;
+  color: rgb(18, 1, 99);
+  border-top: 4px solid #f4f4f4; /* Yon liy ble fonse pou separe seksyon an */
+  border-bottom: 4px solid #d3d3d3; /* Yon liy ble fonse pou separe seksyon an */
+  overflow: hidden;
+  position: relative;
+}
+
+.anniversaire-container {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.anniversaire-text h2 {
+  color: #170170 !important; /* Zoranj lekòl la */
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.anniversaire-text p {
+  font-size: 18px;
+  max-width: 600px;
+  margin: auto;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+/* --- ANIMASYON BWAT KADO AN CSS --- */
+.gift-box-wrapper {
+  margin-top: 20px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+/* Ti balanse kado a ap fè pou atire moun */
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 60% { transform: rotate(-8deg); }
+  40%, 80% { transform: rotate(8deg); }
+}
+
+.gift-box {
+  width: 120px;
+  height: 100px;
+  background: #F76B00; /* Kò kado a an Zoranj */
+  position: relative;
+  border-radius: 4px;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+  animation: shake 3s infinite ease-in-out;
+}
+
+.gift-lid {
+  width: 130px;
+  height: 25px;
+  background: #ff7e1a;
+  position: absolute;
+  top: -22px;
+  left: -5px;
+  border-radius: 3px;
+  box-shadow: 0 4px 5px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+
+.gift-ribbon-v {
+  width: 20px;
+  height: 100%;
+  background: #111E62; /* Riban an Ble */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+}
+
+.gift-ribbon-h {
+  width: 100%;
+  height: 20px;
+  background: #111E62;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 0;
+}
+
+.gift-bow {
+  width: 30px;
+  height: 30px;
+  background: #111E62;
+  border-radius: 50%;
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+.gift-bow::before, .gift-bow::after {
+  content: '';
+  width: 35px;
+  height: 20px;
+  border: 4px solid #111E62;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+}
+.gift-bow::before { left: -25px; transform: rotate(-30deg); }
+.gift-bow::after { right: -25px; transform: rotate(30deg); }
+
+.click-hint {
+  font-size: 14px;
+  font-weight: bold;
+  color: #000000; /* Koulè Lò */
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* --- MODAL POP-UP AK PETAL K AP TONBE --- */
+.modal-anniv {
+  display: none;
+  position: fixed;
+  z-index: 99999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(210, 215, 247, 0.85); /* Ble fwonse transparan */
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.modal-anniv-content {
+  background: #f3f2fb;
+  padding: 40px;
+  border-radius: 15px;
+  max-width: 550px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  border: 4px solid #111E62;
+  animation: zoomIn 0.4s ease-out;
+  z-index: 10;
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.close-anniv {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 30px;
+  font-weight: bold;
+  color: #999;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.close-anniv:hover { color: #111E62; }
+
+.anniv-badge {
+  background: #111E62;
+  color: #FFD700;
+  padding: 8px 15px;
+  font-weight: bold;
+  font-size: 13px;
+  border-radius: 50px;
+  display: inline-block;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+.modal-anniv-content h3 {
+  color: #F76B00;
+  font-size: 20px;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.modal-anniv-content h2 {
+  color: #111E62 !important;
+  font-size: 24px;
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.modal-anniv-content h2 span {
+  color: #F76B00;
+  font-weight: 900;
+  border-bottom: 3px dashed #F76B00;
+}
+
+.modal-anniv-content p {
+  color: #555;
+  font-size: 15px;
+  margin-bottom: 30px;
+}
+
+.btn-profiter {
+  display: block;
+  background: #111E62;
+  color: rgb(255, 255, 255) !important;
+  text-decoration: none;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(247, 107, 0, 0.4);
+  transition: 0.3s;
+}
+.btn-profiter:hover {
+  background: #ff7e1a;
+  transform: translateY(-2px);
+}
+
+/* --- ANIMASYON PETAL AK CONFETTI --- */
+.petals-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.petal {
+  position: absolute;
+  top: -20px;
+  border-radius: 50% 0 50% 50%;
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  0% {
+    top: -50px;
+    transform: translateX(0) rotate(0deg);
+  }
+  100% {
+    top: 105%;
+    transform: translateX(150px) rotate(720deg);
+  }
+}
+
+/* RESPONSIVE POU TELEFÒN */
+@media (max-width: 480px) {
+  .anniversaire-text h2 { font-size: 24px; }
+  .modal-anniv-content { padding: 25px 15px; }
+  .modal-anniv-content h2 { font-size: 20px; }
+}
