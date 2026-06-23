@@ -601,8 +601,8 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 20px;
-    gap: 20px;
+    padding-bottom: 15px;
+    gap: 15px;
     border-bottom: 3px double #111E62; /* Liy double nòb pou dokiman ofisyèl */
 }
 
