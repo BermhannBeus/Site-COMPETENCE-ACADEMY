@@ -608,8 +608,8 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 
 /* 1. Pati Logo a */
 .letterhead-logo {
-    width: 185px;
-    height: 185px;
+    width: 75px;
+    height: 75px;
     object-fit: contain;
 }
 
