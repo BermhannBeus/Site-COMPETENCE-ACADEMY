@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Competence Academy | Fòmasyon Pwofesyonèl an Ayiti</title>
-    <meta name="description" content="Competence Academy à Arcahaie - École de formation professionnelle en Haïti. Ofri fòmasyon pratik an informatique, infographie, photographie, vidéographie ak montage vidéo nan Akayè. Inscription ouverte / Enskri kounye a!">
-<meta name="keywords" content="Competence Academy Arcahaie, Competence Academy Akayè, formation professionnelle Arcahaie, fòmasyon pwofesyonèl Akayè, ecole informatique Arcahaie, lekòl enfòmatik Akayè, cours infographie Arcahaie, kou enfografi Akayè, apprendre la photographie Arcahaie, aprann fotografi Akayè, videographie Arcahaie, videografi Akayè">
   <title>Competence Academy</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -34,6 +31,111 @@
       menuIcon.innerHTML = "☰";
     }
   }
+
+  function envoyerFormulaire(event) {
+    event.preventDefault(); // Anpeche paj la rafrechi
+    
+    // Montre mesaj siksè a
+    const successMsg = document.getElementById('form-success-msg');
+    successMsg.style.display = 'flex';
+    
+    // Netwaye fòm nan
+    document.getElementById('contact-form').reset();
+    
+    // Kache mesaj la apre 4 segond
+    setTimeout(() => {
+        successMsg.style.display = 'none';
+    }, 400);
+}
+
+// Tann paj la fin chaje nèt anvan li kouri
+document.addEventListener("DOMContentLoaded", function () {
+    
+    // Seleksyone tout bouton kesyon yo
+    const questions = document.querySelectorAll(".faq-question");
+
+    questions.forEach(question => {
+        question.addEventListener("click", function () {
+            // Jwenn bwat paran an (faq-item)
+            const item = this.parentElement;
+
+            // SIW VLE LOUVRI YON SÈL KESYON ALAFWA (Akòdeyon nòmal):
+            // Retire klas 'active' sou lòt b bwat yo epi kache repons yo
+            document.querySelectorAll(".faq-item").forEach(otherItem => {
+                if (otherItem !== item) {
+                    otherItem.classList.remove("active");
+                    const otherAnswer = otherItem.querySelector(".faq-answer");
+                    if (otherAnswer) otherAnswer.style.display = "none";
+                }
+            });
+
+            // Active oubyen désactive bwat kote moun nan klike la a
+            item.classList.toggle("active");
+            
+            // Jwenn repons ki anndan bwat sa a parèy la
+            const answer = item.querySelector(".faq-answer");
+
+            if (item.classList.contains("active")) {
+                answer.style.display = "block"; // Montre repons lan
+            } else {
+                answer.style.display = "none";  // Kache repons lan
+            }
+        });
+    });
+    
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const statsSection = document.querySelector('.stats-section');
+    const counters = document.querySelectorAll('.stat-number');
+
+    // Fonksyon k ap fè chif yo konte a
+    const startCounting = (counter) => {
+        const target = +counter.getAttribute('data-target');
+        let count = 0;
+        const duration = 1500; // Tan animasyon an ap dire (1.5 segond)
+        const startTime = performance.now();
+
+        const updateCount = (currentTime) => {
+            const elapsedTime = currentTime - startTime;
+            const progress = Math.min(elapsedTime / duration, 1); // fòse l bloke nan 1 max
+
+            // Efè akselerasyon dous (Ease-Out)
+            const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+            
+            count = easeOutProgress * target;
+            counter.innerText = Math.ceil(count) + "+";
+
+            if (progress < 1) {
+                requestAnimationFrame(updateCount);
+            } else {
+                counter.innerText = target + "+"; // Garanti chif final la egzak
+            }
+        };
+
+        requestAnimationFrame(updateCount);
+    };
+
+    // Obsèvatè k ap siveye lè moun nan rive sou seksyon an (pa klike oswa pa skwòl)
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            // Depi moun nan rive sou seksyon an
+            if (entry.isIntersecting) {
+                counters.forEach(counter => {
+                    counter.innerText = "0+"; // Reset chif la nan zewo anvan l kòmanse
+                    startCounting(counter);   // Deklanche kontè a
+                });
+            }
+        });
+    }, {
+        threshold: 0.2 // Deklanche depi 20% nan bann nan vizib sou ekran an
+    });
+
+    // Lanse obsèvatè a sou gwo seksyon statistik la
+    if (statsSection) {
+        observer.observe(statsSection);
+    }
+});
   </script>
 </head>
 
@@ -46,10 +148,12 @@
 
   <ul class="nav-links" id="nav-links">
     <li><a href="#" onclick="toggleMenu()">Accueil</a></li>
-    <li><a href="#historique" onclick="toggleMenu()">À propos</a></li>
-    <li><a href="#formations" onclick="toggleMenu()">Formations</a></li>
-    <li><a href="#event" onclick="toggleMenu()">Événements</a></li>
-    <li><a href="#contact" onclick="toggleMenu()">Contact</a></li>
+    <li><a href="#historique" onclick="toggleMenu()">Histoire</a></li>
+    <li><a href="#formations" onclick="toggleMenu()">Nos Cours</a></li>
+    <li><a href="#why-choose-us" onclick="toggleMenu()">Choisir</a></li>
+    <li><a href="#founders" onclick="toggleMenu()">Nos Fondateurs</a></li>
+    <li><a href="Cours en ligne.html" onclick="toggleMenu()">Cours pré-enregistré</a></li>
+   <li><a href="#Contact" onclick="toggleMenu()">Contact</a></li>
   </ul>
 
   <div class="menu-icon" id="menu-btn" onclick="toggleMenu()">
@@ -65,27 +169,27 @@
   <div class="video-overlay"></div>
   
   <div class="hero-content">
-        <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">INSCRIRE</a>
+        <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">Inscrire</a>
   </div>
 </header>
 <section class="historique" id="historique">
   <div class="container about-content">
-    <h2>À PROPOS DE NOUS</h2>
+    <h2>À propos de Competence Academy</h2>
     
     <p>Depuis maintenant 2 ans, <strong>Competence Academy</strong> évolue avec une vision claire : former, inspirer et développer une nouvelle génération de jeunes compétents dans les domaines du numérique, de la création et des métiers techniques.</p>
     
-    <p>Fondée le 15 Juin 2024, l’institution a été créée dans le but d’offrir une formation professionnelle moderne, pratique et accessible, adaptée aux réalités du marché actuel. Dès le début, l’objectif a été de permettre aux étudiants d’acquérir de véritables compétences professionnelles capables de créer des opportunités concrètes d’emploi, de freelance ou d’entrepreneuriat.</p>
+    <p>Fondée le 15 Juin 2024, l’institution a été créée dans le but d’offrir une formation professionnelle moderne, pratique et accessible, adaptée aux réalités du marché actuel.
+       Dès le début, l’objectif a été de permettre aux étudiants d’acquérir de véritables compétences professionnelles capables de créer des opportunités concrètes d’emploi, de freelance ou d’entrepreneuriat.</p>
 
    <div class="about-grid">
   <!-- Seksyon Formations -->
   <div class="highlight-box">
-    <h3>Nos Formations</h3>
+    <h3>Nos Formations Disponibles</h3>
     <ul class="custom-list">
       <li><img src="Logo.png" alt="icon"> Informatique bureautique</li>
       <li><img src="Logo.png" alt="icon"> Infographie & Photographie</li>
       <li><img src="Logo.png" alt="icon"> Vidéographie & Montage vidéo</li>
       <li><img src="Logo.png" alt="icon"> Dépannage d’ordinateur</li>
-      
     </ul>
   </div>
   
@@ -102,44 +206,69 @@
 </div>
 
     <h3 style="text-align: center; margin-top: 50px;">Notre Vision</h3>
-    <p style="text-align: center;">Notre ambition est de devenir une référence dans la formation professionnelle moderne en Haïti, en accompagnant les jeunes talents vers l’excellence, la créativité et l’autonomie professionnelle. Aujourd’hui, après 2 années d’évolution, Competence Academy continue de grandir avec la même passion : transmettre des compétences utiles, développer des professionnels qualifiés et construire l’avenir à travers l’éducation et la pratique.</p>
+    <p style="text-align: center;">Notre ambition est de devenir une référence dans la formation professionnelle moderne en Haïti, en accompagnant les jeunes talents vers l’excellence, la créativité et l’autonomie professionnelle.
+       Aujourd’hui, après 2 années d’évolution, Competence Academy continue de grandir avec la même passion : transmettre des compétences utiles, développer des professionnels qualifiés et construire l’avenir à travers l’éducation et la pratique.</p>
   </div>
-</section>
-    <div class="cards" id="formations">
-      <div class="card">
-        <h3>Informatique</h3>
-        <button onclick="ouvrirPDF('Syllabus INFORMATIQUE BUREAUTIQUE.pdf')">Voir Syllabus</button>
-      </div>
 
-      <div class="card">
-        <h3>Infographie</h3>
-        <button onclick="ouvrirPDF('Syllabus INFOGRAPHIE.pdf')">Voir Syllabus</button>
-      </div>
-
-      <div class="card">
-        <h3>Photographie</h3>
-        <button onclick="ouvrirPDF('Syllabus photographie.pdf')">Voir Syllabus</button>
-      </div>
-
-      <div class="card">
-        <h3>Vidéographie</h3>
-        <button onclick="ouvrirPDF('Syllabus Videographie.pdf')">Voir Syllabus</button>
-      </div>
+  <!-- Section Cours -->
+<section class="courses-section" id="formations">
+    
+    <div class="courses-header">
+        <h2>Nos Cours</h2>
+        <p>Découvrez nos programmes de formation technique disponible pour propulser vos compétences.</p>
     </div>
-  </div>
-</section>
 
+    <div class="cards" id="formations">
+        <div class="card">
+            <h3>Informatique</h3>
+            <button onclick="ouvrirPDF('Syllabus INFORMATIQUE BUREAUTIQUE.pdf')">Voir Syllabus</button>
+        </div>
+        
+        <div class="card">
+            <h3>Infographie</h3>
+            <button onclick="ouvrirPDF('Syllabus INFOGRAPHIE.pdf')">Voir Syllabus</button>
+        </div>
+        
+        <div class="card">
+            <h3>Photographie</h3>
+            <button onclick="ouvrirPDF('Syllabus photographie.pdf')">Voir Syllabus</button>
+        </div>
+        
+        <div class="card">
+            <h3>Vidéographie</h3>
+            <button onclick="ouvrirPDF('Syllabus Videographie.pdf')">Voir Syllabus</button>
+        </div>
+    </div>
+
+</section>
 
 <section class="stats-section">
-  <div class="stats-container">
-    <div class="stat-item"><h3>2+</h3><p>Ans d'expérience</p></div>
-    <div class="stat-item"><h3>100+</h3><p>Étudiants formés</p></div>
-    <div class="stat-item"><h3>4+</h3><p>Filières disponibles</p></div>
-  </div>
+    <div class="stats-banner">
+        
+        <!-- Atik 1 -->
+        <div class="stat-item">
+            <h3 class="stat-number" data-target="2">0+</h3>
+            <p class="stat-text">Ans d'expérience</p>
+        </div>
+
+        <!-- Atik 2 -->
+        <div class="stat-item">
+            <h3 class="stat-number" data-target="100">0+</h3>
+            <p class="stat-text">Étudiants formés</p>
+        </div>
+
+        <!-- Atik 3 -->
+        <div class="stat-item">
+            <h3 class="stat-number" data-target="5">0+</h3>
+            <p class="stat-text">Filières disponibles</p>
+        </div>
+
+    </div>
 </section>
 
 <section class="services-section">
-  <h2>Nos Services</h2>
+
+<h2 id="services" style="scroll-margin-top: 120px; text-align: center;">NOS SERVICES</h2>
   <div class="services-grid">
     <div class="service-card"><h3>Branding</h3><p>Identité visuelle complète.</p></div>
     <div class="service-card"><h3>Graphisme</h3><p>Création pour réseaux sociaux, bannières, affiches, supports de communication.</p></div>
@@ -151,229 +280,238 @@
 </section>
 
 
-<section class="event" id="event">
-  <div class="container">
-    <h2>Informations de la Cérémonie</h2>
 
-    <div class="info-box">
-      <p><strong>Date :</strong> 15 Juin 2024 - 2026</p>
-      <p><strong>Événement :</strong> Anniversaire de COMPETENCE ACADEMY</p>
-      <p><strong>Type :</strong> Cérémonie Officiel</p>
+
+
+
+
+<!-- ==========================================================================
+     SECTION : POURQUOI NOUS CHOISIR ?
+     ========================================================================== -->
+<section class="why-choose-us" id="why-choose-us">
+    <div class="section-title-container">
+        <h2>Pourquoi Choisir Competence Academy ?</h2>
+        <p>Découvrez les avantages exclusifs qui font de notre académie le meilleur choix pour votre avenir professionnel.</p>
     </div>
-  </div>
+
+    <div class="advantages-grid">
+        <!-- Avantage 1 -->
+        <div class="advantage-card">
+            <div class="advantage-icon-wrapper">
+                <i class="fa-solid fa-laptop"></i>
+            </div>
+            <h3>Apprentissage 100% Pratique</h3>
+            <p>Pas de théorie inutile. Nos cours sont basés sur des projets réels, des simulations de serveurs et des ateliers techniques pour vous préparer directement au marché du travail.</p>
+            <span class="advantage-badge"><i class="fa-solid fa-star"></i> Excellence</span>
+        </div>
+
+        <!-- Avantage 2 -->
+        <div class="advantage-card">
+            <div class="advantage-icon-wrapper">
+                <i class="fa-solid fa-certificate"></i>
+            </div>
+            <h3>Certifications Reconnues</h3>
+            <p>Validez vos compétences technologiques. À la fin de chaque formation, vous recevez un certificat officiel qui booste instantanément la valeur de votre CV auprès des recruteurs.</p>
+            <span class="advantage-badge"><i class="fa-solid fa-star"></i> Professionnel</span>
+        </div>
+
+        <!-- Avantage 3 -->
+        <div class="advantage-card">
+            <div class="advantage-icon-wrapper">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h3>Accès À Vie & Support</h3>
+            <p>Progressez à votre rythme. Une fois inscrit, vous bénéficiez d'un accès illimité aux contenus de cours en ligne et d'un encadrement personnalisé par nos experts techniques.</p>
+            <span class="advantage-badge"><i class="fa-solid fa-star"></i> Garantie</span>
+        </div>
+    </div>
 </section>
 
 
-<section class="contact" id="contact">
-  <div class="container">
-    <h2>Envoyer un Message</h2>
 
-    <form onsubmit="envoyerEmail(event)">
-      <input type="text" id="nom" placeholder="Votre nom" required>
-      <input type="email" id="email" placeholder="Votre email" required>
-      <textarea id="message" placeholder="Votre message" required></textarea>
-      <button type="submit">Envoyer</button>
-    </form>
-  </div>
+
+<section class="founders-section" id="founders">
+    <div class="founders-header">
+        <h2>Nos Fondateurs</h2>
+        <p>L'équipe visionnaire derrière COMPETENCE ACADEMY</p>
+    </div>
+
+    <div class="founders-container">
+        
+        <div class="founder-card">
+            <div class="founder-img-wrapper">
+                <img src="Founders/OIP.webp" alt="Werdy Wendesky Louis">
+                <span class="badge-star"><i class="fa-solid fa-star"></i> CEO</span>
+            </div>
+            <div class="founder-info">
+                <h3>WERDY WENDESKY LOUIS</h3>
+                <p class="founder-description">
+                    Spécialiste en informatique de gestion et infrastructures.
+                    Il est expert dans la conception de bases de données sécurisées, 
+                    l'administration système et la gestion du réseautage pour garantir une connectivité stable et performante.
+                </p>
+            </div>
+        </div>
+
+        <div class="founder-card">
+            <div class="founder-img-wrapper">
+                <img src="Founders/OIP.webp" alt="Bermhann Beus">
+                <span class="badge-star"><i class="fa-solid fa-code"></i> PDG</span>
+            </div>
+            <div class="founder-info">
+                <h3>BERMHANN BEUS</h3>
+                <p class="founder-description">
+                    Ingénieur en informatique, concepteur visuel et développeur web. Expert dans la conception de bases de données sécurisées
+                     Il combine expertise technique et créativité pour concevoir l'architecture numérique, l'identité de marque et les solutions web innovantes de l'academy.
+                </p>
+            </div>
+        </div>
+
+        <div class="founder-card">
+            <div class="founder-img-wrapper">
+                <img src="Founders/OIP.webp" alt="Pouchy Charles">
+                <span class="badge-star"><i class="far fa-chart-bar"></i> DIR. GÉNÉRAL</span>
+            </div>
+            <div class="founder-info">
+                <h3>POUCHY CHARLES</h3>
+                <p class="founder-description">
+                    Responsable de la gestion financière et administrative. Rigoureux et analytique, il assure le suivi comptable, 
+                    la planification budgétaire et la stabilité financière nécessaires au développement et à la croissance de l'academy.
+                </p>
+            </div>
+        </div>
+        
+        <div class="founder-card">
+            <div class="founder-img-wrapper">
+                <img src="Founders/OIP.webp" alt="Nom du quatrième">
+                <span class="badge-star"><i class="fa-solid fa-camera"></i> ASSITANT</span>
+            </div>
+            <div class="founder-info">
+                <h3>LOVA PRODUCTION</h3>
+                <p class="founder-description">
+                    Professionnel de la photographie et de la production visuelle. Passionné par l'image, 
+                    il capture l'essence de nos projets et encadre les étudiants dans la maîtrise des techniques de prise de vue, de lumière et de composition.
+                </p>
+            </div>
+        </div>
+
+    </div>
+   </section>
+
+
+
+<!-- ==================== SEKSYON CONTACT ==================== -->
+
+<section class="Contact-section" id="Contact">
+    
+    <!-- TI TIT SA A KI TE MANKE ANLÈ A -->
+    <div class="contact-header">
+        <h2>CONTACTEZ-NOUS</h2>
+        <p>Prenez contact avec notre équipe pour toute assistance ou information complémentaire.</p>
+    </div>
+
+    <div class="Contact-container">
+        <!-- Rès kòd bwat enfòmasyon ak fòm ou an ap rete la nòmal... -->
+        <div class="contact-info-box">
+            <h2>Discutez avec un Conseiller</h2>
+            <p>Une question sur nos formations, les horaires ou les modalités de paiement ? Notre équipe est disponible pour vous guider en temps réel.</p>
+            
+            <div class="contact-details">
+                <div class="detail-item">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>competenceacademy34@gmail.com</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Arcahaie, Bas-Cortade, Ouest / Haïti</span>
+                </div>
+            </div>
+
+            <a href="https://wa.me/+50948836113?text=Bonjour%20Competence%20Academy,%20je%20souhaite%20avoir%20plus%20d'informations%20sur%20vos%20cours." 
+               target="_blank" class="whatsapp-btn">
+                <i class="fa-brands fa-whatsapp"></i> Contactez-nous sur WhatsApp
+            </a>
+        </div>
+
+        <div class="contact-form-box">
+            <h3>Envoyer un message</h3>
+            <form id="contact-form" onsubmit="envoyerFormulaire(event)">
+                <div class="form-group">
+                    <label for="form-name">Nom complet</label>
+                    <input type="text" id="form-name" placeholder="Ex: Jean Bernard" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-email">Adresse Email</label>
+                    <input type="email" id="form-email" placeholder="Ex: jean@gmail.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="form-message">Votre Message</label>
+                    <textarea id="form-message" rows="4" placeholder="Comment pouvons-nous vous aider ?" required></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    Envoyer le message <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+            <p id="form-success-msg" class="success-message" style="display: none;">
+                <i class="fa-solid fa-circle-check"></i> Message envoyé avec succès !
+            </p>
+        </div>
+
+    </div>
 </section>
 
-<script>
-let lastSubmit = 0;
 
-function envoyerEmail(event){
-  event.preventDefault();
-
-  const now = Date.now();
-  if(now - lastSubmit < 5000){
-    alert("Veuillez attendre avant de renvoyer un message.");
-    return;
-  }
-  lastSubmit = now;
-
-  let nom = document.getElementById("nom").value;
-  let email = document.getElementById("email").value;
-  let message = document.getElementById("message").value;
-
-  emailjs.send("service_vqkhkdp","x-92Db6nZSon7Y4oovpaH",{
-    nom: nom,
-    email: email,
-    message: message
-  });
-
-  emailjs.send("service_vqkhkdp","x-92Db6nZSon7Y4oovpaH",{
-    nom: nom,
-    email: email,
-    message: "Merci pour votre message, nous vous répondrons bientôt."
-  });
-
-  alert("Message envoyé avec succès !");
-  document.querySelector("form").reset();
-}
-
-function envoyerWhatsApp(){
-  let nom = document.getElementById("nom").value;
-  let message = document.getElementById("message").value;
-
-  let url = "https://wa.me/48836113?text="
-    + encodeURIComponent("Bonjour, " + nom + "\nJe viens de visiter votre site Officiel, j' suis interessé par vos formations " + message);
-
-  window.open(url, "_blank");
-}
-</script>
-
-<div style="text-align:center; margin:20px;">
-  <button onclick="envoyerWhatsApp()" style="
-    background:#0e8b3c;
-    color:white;
-    padding:12px 20px;
-    border:none;
-    border-radius:8px;
-    font-size:16px;
-    cursor:pointer;
-  ">
-    Envoyer via WhatsApp
-  </button>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<section class="section-anniversaire">
-  <div class="anniversaire-container">
-    <div class="anniversaire-text">
-      <h2> CÉLÉBRONS ENSEMBLE ! </h2>
-      <p>À l'occasion de l'anniversaire de <strong>COMPETENCE ACADEMY</strong>, nous avons une surprise exclusive pour vous. Cliquez sur la boîte magique pour découvrir votre cadeau !</p>
-    </div>
-    
-    <div class="gift-box-wrapper" onclick="ouvrirCadeau()">
-      <div class="gift-box">
-        <div class="gift-lid"></div>
-        <div class="gift-ribbon-v"></div>
-        <div class="gift-ribbon-h"></div>
-        <div class="gift-bow"></div>
-      </div>
-      <span class="click-hint">Cliquez-moi !</span>
-    </div>
-  </div>
-</section>
-
-<div id="modal-anniversaire" class="modal-anniv">
-  <div class="petals-container" id="petals-zone"></div>
-  
-  <div class="modal-anniv-content">
-    <span class="close-anniv" onclick="fermerCadeau()">&times;</span>
-    <div class="anniv-badge">🎁CADEAU D'ANNIVERSAIRE </div>
-    <h3>FÉLICITATIONS !</h3>
-    <h2>Inscrivez-vous maintenant et recevez une <span>DEMI-BOURSE</span> comme cadeau dans n'importe quelle option !</h2>
-    <p>Saisissez cette opportunité en or pour propulser votre carrière.</p>
-    
-    <a href="https://form.jotform.com/261485567334869" class="btn-profiter" onclick="fermerCadeau()">Profiter de ma Demi-Bourse</a>
-  </div>
-</div>
-
-<script>
-function ouvrirCadeau() {
-  document.getElementById("modal-anniversaire").style.display = "flex";
-  creerPetales();
-}
-
-function fermerCadeau() {
-  document.getElementById("modal-anniversaire").style.display = "none";
-  document.getElementById("petals-zone").innerHTML = ""; // Netwaye petal yo lè l fèmen
-}
-
-// Fonksyon ki kreye petal ak ti confetti k ap tonbe yo tankou nan fèt
-function creerPetales() {
-  const zone = document.getElementById("petals-zone");
-  const couleurs = ['#F76B00', '#111E62', '#FFD700', '#FFC0CB', '#FF4500']; // Koulè lekòl la ak lòt koulè fèt
-  
-  for (let i = 0; i < 50; i++) {
-    const petal = document.createElement('div');
-    petal.classList.add('petal');
-    
-    // Pozisyon ak gwosè ozafa
-    petal.style.left = Math.random() * 100 + '%';
-    petal.style.width = Math.random() * 12 + 8 + 'px';
-    petal.style.height = Math.random() * 20 + 10 + 'px';
-    petal.style.backgroundColor = couleurs[Math.floor(Math.random() * couleurs.length)];
-    
-    // Vitès animasyon ozafa
-    petal.style.animationDelay = Math.random() * 5 + 's';
-    petal.style.animationDuration = Math.random() * 3 + 4 + 's';
-    petal.style.opacity = Math.random();
-    
-    zone.appendChild(petal);
-  }
-}
-</script>
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
 
 
 
 <section class="faq-section">
-  <h2 style="text-align: center;">Questions Fréquentes</h2>
-  
-<div class="faq-item">
-      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Recevons-nous un certificat ?</button>
-      <div class="faq-answer">Oui, un certificat professionnel est remis à la fin.</div>
-    </div>
+    <h2>Questions Fréquentes</h2>
 
-    <div class="faq-item">
-      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">La formation est-elle pratique ou théorique ?</button>
-      <div class="faq-answer">La formation est 80% pratique. Nous privilégions la manipulation d'outils réels pour une immersion totale.</div>
-    </div>
+    <div class="faq-container">
+        
+        <div class="faq-item">
+            <button class="faq-question">Recevons-nous un certificat ?</button>
+            <div class="faq-answer">
+                Oui, un certificat officiel vous sera délivré par Competence Academy après avoir suivi et validé avec succès l'ensemble des modules de votre formation.
+            </div>
+        </div>
 
-    <div class="faq-item">
-      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Comment s'effectue le paiement ?</button>
-      <div class="faq-answer">Vous pouvez payer mensuellement, via MonCash, Natcash, Cash ou par virement bancaire.</div>
-    </div>
+        <div class="faq-item">
+            <button class="faq-question">La formation est-elle pratique ou théorique ?</button>
+            <div class="faq-answer">
+                Nos formations sont axées à 80% sur la pratique. Vous travaillerez sur des laboratoires réels, des serveurs physiques et des configurations concrètes adaptées aux exigences du marché de l'emploi.
+            </div>
+        </div>
 
-    <div class="faq-item">
-      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Y a-t-il une cérémonie de graduation ?</button>
-      <div class="faq-answer">Oui, nous organisons une cérémonie officielle à la fin de chaque cycle de formation.</div>
-    </div>
+        <div class="faq-item">
+            <button class="faq-question">Comment s'effectue le paiement ?</button>
+            <div class="faq-answer">
+                Le paiement peut s'effectuer en plusieurs versements selon les modalités définies lors de votre inscription. Vous pouvez payer directement à notre secrétariat ou via nos canaux de paiement autorisés.
+            </div>
+        </div>
 
-    <div class="faq-item">
-      <button class="faq-question" onclick="this.parentElement.classList.toggle('active')">Puis-je suivre les cours en ligne ?</button>
-      <div class="faq-answer">Actuellement, nos formations sont en présentiel pour garantir un meilleur encadrement, Bientôt se sera disponibles en ligne.</div>
+        <div class="faq-item">
+            <button class="faq-question">Y a-t-il une cérémonie de graduation ?</button>
+            <div class="faq-answer">
+                Oui, chaque fin de cycle est couronnée par une cérémonie officielle de remise des diplômes pour célébrer la réussite de nos étudiants certifiés.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question">Puis-je suivre les cours en ligne ?</button>
+            <div class="faq-answer">
+                Certaines de nos options et ressources pédagogiques sont disponibles à distance, mais nos laboratoires d'ingénierie réseaux et d'administration système se font principalement en présentiel pour garantir une pratique optimale.
+            </div>
+        </div>
+
     </div>
-  </div>
 </section>
+
+
+
 
 <section class="remerciement-section">
   <div class="remerciement-wrapper">
