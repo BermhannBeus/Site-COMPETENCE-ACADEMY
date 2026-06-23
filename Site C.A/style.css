@@ -1,4 +1,4 @@
-/* ===== 1. RESET & GENERAL ===== */
+/* ===== CSS GENERAL ===== */
 * {
   margin: 0;
   padding: 0;
@@ -6,6 +6,10 @@
   font-family: Arial, sans-serif;
 }
 
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 100px; 
+}
 body {
   background: #f5f5f5;
   color: #363636;
@@ -33,7 +37,7 @@ section h2 {
   top: 0;
   left: 0;
   width: 100%;
-  height: 70px;
+  height: 80px;
   background: #111E62;
   display: flex;
   justify-content: space-between;
@@ -42,19 +46,10 @@ section h2 {
   z-index: 9999;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  font-size: 20px;
-  font-weight: bold;
-}
-
 .logo img {
-  width: 120px;
-  height: auto;
-  object-fit: contain;
+    height: 150px !important;       /* Ogmante wotè a pou l parèt byen gwo */
+    width: 150px !important;        /* Mete menm lajè a pou l fòme yon kare pafè */
+    
 }
 
 .nav-links {
@@ -83,6 +78,7 @@ section h2 {
 }
 
 /* ===== 3. HERO SECTION (RESPEKTE TAILLE PHOTOSHOP LA SOU MOBIL) ===== */
+
 .hero-section {
   position: relative;
   width: 100%;
@@ -130,9 +126,10 @@ section h2 {
 
 
 /* Seksyon an jeneral */
+
 .historique {
     padding: 60px 20px;
-    background-color: #f9f9f9; /* Yon ti koulè gri trè lejè pou fè l soti sou rès paj la */
+    background-color: #f5f5ff; /* Yon ti koulè gri trè lejè pou fè l soti sou rès paj la */
     color: #333;
 }
 
@@ -173,6 +170,7 @@ section h2 {
 
 
 /* Kache tèks HTML la sou mobil paske videyo a gen tèks la deja */
+
 .hero-content h1 {
   display: none; 
 }
@@ -240,73 +238,252 @@ section h2 {
   background: #F76B00;
 }
 
-/* ===== 6. EVENT ===== */
-.event {
-  background: #111E62;
-  color: white;
+/* ==========================================================================
+   STIL POU SECTION CONTACT & WHATSAPP (MODÈN & RESPONSIVE)
+   ========================================================================== */
+
+/* 1. Seksyon Jeneral la (Pase an kolòn pou Tit la ka rete anlè bwat la) */
+.Contact-section {
+    padding: 90px 20px;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column; /* Fòse kontni yo desann anba lòt */
+    align-items: center;    /* Santre tout bagay nan mitan */
 }
 
-.event h2 {
-  color: white;
+/* --- TIT PRENSIPAL ANLÈ A (SA KI TE MANKE A) --- */
+.contact-header {
+    text-align: center;
+    margin-bottom: 50px; /* Espas ant tit la ak gwo bwat kontak la */
+    max-width: 600px;
 }
 
-.info-box {
-  background: white;
-  color: #222;
-  padding: 30px;
-  border-radius: 15px;
-  max-width: 600px;
-  margin: auto;
-  text-align: center;
+.contact-header h2 {
+    color: #111E62; /* Ble ofisyèl */
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
 }
 
-.info-box p {
-  margin: 15px 0;
-  font-size: 18px;
+/* Ti liy zoranj dekoratif anba gwo tit la */
+.contact-header h2::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: #F76B00; /* Zoranj ofisyèl */
+    margin: 15px auto 0 auto;
+    border-radius: 2px;
 }
 
-/* ===== 7. CONTACT FORM ===== */
-.contact form {
-  max-width: 600px;
-  margin: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.contact-header p {
+    color: #64748b; /* Gri pwofesyonèl */
+    font-size: 0.95rem;
+    line-height: 1.6;
 }
 
-.contact input,
-.contact textarea {
-  padding: 15px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 16px;
+/* 2. Veso Kontenè a (Gwo Bwat la) */
+.Contact-container {
+    max-width: 1100px;
+    width: 100%;
+    display: flex;
+    background: #ffffff;
+    border-radius: 24px; /* Kwen yo pi dous kounye a */
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(17, 30, 98, 0.04); /* Lonbraj ki baze sou ble ofisyèl la */
+    border: 1px solid #e2e8f0;
 }
 
-.contact textarea {
-  height: 150px;
+/* --- Pati Gòch (Bwat Enfòmasyon an) --- */
+.contact-info-box {
+    flex: 1;
+    background: linear-gradient(135deg, #111E62 0%, #0a123a 100%); /* Koulè ble a rann pi rich */
+    color: #ffffff;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-.contact button {
-  background: #F76B00;
-  color: white;
-  border: none;
-  padding: 15px;
-  font-size: 18px;
-  border-radius: 8px;
-  cursor: pointer;
+.contact-info-box h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #ffffff;
+    letter-spacing: -0.5px;
 }
 
-.contact button:hover {
-  background: #ff8a2d;
+.contact-info-box p {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 35px;
 }
 
-/* ===== 8. FOOTER ===== */
-footer {
-  background: #000;
-  color: white;
-  text-align: center;
-  padding: 20px;
+.contact-details {
+    margin-bottom: 40px;
 }
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 22px;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+}
+
+.detail-item i {
+    color: #F76B00; /* Ti icon yo an zoranj */
+    font-size: 1.3rem;
+    background: rgba(247, 107, 0, 0.1);
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+/* --- BOUTON WHATSAPP STYLE --- */
+.whatsapp-btn {
+    background-color: #25D366;
+    color: white;
+    text-decoration: none;
+    padding: 15px 30px;
+    border-radius: 14px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.25);
+    align-self: flex-start;
+}
+
+.whatsapp-btn:hover {
+    background-color: #20ba5a;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(37, 211, 102, 0.4);
+    color: white;
+}
+
+/* --- Pati Dwat (Fòm nan) --- */
+.contact-form-box {
+    flex: 1.2;
+    padding: 60px 50px;
+}
+
+.contact-form-box h3 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #111E62;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 22px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input, 
+.form-group textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    color: #334155;
+    background-color: #f8fafc;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.form-group input:focus, 
+.form-group textarea:focus {
+    border-color: #111E62;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(17, 30, 98, 0.1);
+}
+
+/* --- Bouton Envoyer --- */
+.submit-btn {
+    width: 100%;
+    background-color: #111E62;
+    color: #ffffff;
+    border: none;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.submit-btn:hover {
+    background-color: #F76B00; /* Pase an zoranj lè w pase sou li pou plis dinamism */
+}
+
+.submit-btn:active {
+    transform: scale(0.99);
+}
+
+/* --- Mesaj siksè --- */
+.success-message {
+    margin-top: 20px;
+    color: #16a34a;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   RESPONSIVE POU TELEFÒN AK TABLÈT (KORÈK)
+   ========================================================================== */
+@media (max-width: 991px) {
+    .Contact-section {
+        padding: 60px 20px;
+    }
+    .contact-header h2 {
+        font-size: 2rem;
+    }
+    .Contact-container {
+        flex-direction: column; /* Bwat yo ap pase anba lòt sou tablèt/mobil */
+        border-radius: 20px;
+    }
+    .contact-info-box, .contact-form-box {
+        padding: 40px 30px;
+    }
+    .whatsapp-btn {
+        width: 100%; /* Bouton an pran tout lajè a sou mobil pou klike pi fasil */
+    }
+}
+
+
+
 
 /* ==========================================
    ===== 9. MEDIA QUERIES (RESPONSIVE) =====
@@ -338,6 +515,7 @@ footer {
 }
 
 /* --- REGLAJE STRIK MOBIL (Maks 768px) --- */
+
 @media (max-width: 768px) {
   section h2 {
     font-size: 26px;
@@ -371,19 +549,11 @@ footer {
   }
 }
 
+.stat-item p, .cards + div p { 
+    color: #cbd5e1 !important; 
+    font-weight: 500;
+}
 
-
-
-
-
-/* Estil pou Seksyon À propos/Historique */
-.about-section { padding: 80px 20px; background: #f9f9f9; }
-.about-content { max-width: 900px; margin: auto; line-height: 1.8; color: #333; }
-.about-content h2 { color: #111E62; font-size: 2.5rem; text-align: center; margin-bottom: 30px; }
-.about-content h3 { color: #F76B00; margin-top: 30px; border-left: 5px solid #111E62; padding-left: 15px; }
-.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 30px; }
-@media (max-width: 768px) { .about-grid { grid-template-columns: 1fr; } }
-.highlight-box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
 
 .custom-list {
@@ -392,7 +562,6 @@ footer {
 }
 
 .custom-list li {
-  display: flex;
   align-items: center;
   margin-bottom: 12px;
 }
@@ -405,14 +574,249 @@ footer {
 }
 
 
+/* ==========================================================================
+   ESTIL POU SEKSYON À PROPOS / HISTORIQUE (MODÈN & RESPONSIVE)
+   ========================================================================== */
+
+.about-section { 
+    padding: 100px 20px; 
+    background: #f8fafc; /* Gri fre, pwòp epi repozan pou je */
+}
+
+.about-content { 
+    max-width: 1100px; /* Laji ti kras pou grid la ka respire nèt */
+    margin: 0 auto; 
+    line-height: 1.8; 
+    color: #334155; 
+}
+
+/* --- TIT PRENSIPAL LA --- */
+.about-content h2 { 
+    color: #111E62; 
+    font-size: 2.8rem; 
+    text-align: center; 
+    margin-bottom: 50px; 
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    position: relative;
+}
+
+/* Ti liy dekoratif anba tit la pou l fè sit la parèt pi pwofesyonèl */
+.about-content h2::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: #F76B00; /* Zoranj ofisyèl */
+    margin: 15px auto 0 auto;
+    border-radius: 2px;
+}
+
+/* --- TI SOU-TIT YO --- */
+.about-content h3 { 
+    color: #111E62; /* Pase l an ble pou l pi fèm */
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 35px; 
+    margin-bottom: 20px;
+    border-left: 4px solid #F76B00; /* Liy zoranj sou kote a pou l flash */
+    padding-left: 15px; 
+}
+
+/* --- GRID LAYOUT LA --- */
+.about-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 40px; 
+    margin-top: 40px; 
+}
+
+/* --- HIGHLIGHT BOXES --- */
+.highlight-box { 
+    background: #ffffff; 
+    padding: 35px; 
+    border-radius: 16px; 
+    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.03); /* Lonbraj dous ki baze sou ble a */
+    border: 1px solid #e2e8f0;
+    /* Tranzisyon pafè ki bay yon efè dous (Smooth cubic-bezier) */
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.highlight-box:hover {
+    transform: translateY(-6px); /* Bwat la monte dous lè w pase sou li */
+    box-shadow: 0 20px 40px rgba(17, 30, 98, 0.08);
+    border-color: rgba(247, 107, 0, 0.2); /* Yon ti kras zoranj sou rebò a lè w pase sou li */
+}
+
+/* --- LIS AK IMAJ YO (ALIGNEMENT) --- */
+.custom-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+.custom-list li {
+    display: flex;          
+    align-items: center;    /* Santre imaj la ak tèks la nèt sou menm liy */
+    margin-bottom: 18px;
+    font-size: 0.98rem;
+    color: #475569;
+}
+
+.custom-list li img {
+    width: 32px;            
+    height: 32px;
+    margin-right: 15px;
+    object-fit: contain;
+    flex-shrink: 0;         /* Anpeche imaj la kraze oswa deformation si tèks la long */
+}
+
+/* ==========================================================================
+   RESPONSIVE (POU MOBIL & TABLÈT)
+   ========================================================================== */
+@media (max-width: 991px) {
+    .about-section {
+        padding: 60px 20px;
+    }
+    
+    .about-content h2 {
+        font-size: 2.2rem;
+    }
+    
+    /* Grid la tounen yon sèl kolòn sou tablèt ak mobil pou anyen pa janm kwense */
+    .about-grid { 
+        grid-template-columns: 1fr; 
+        gap: 25px; 
+    }
+    
+    .highlight-box {
+        padding: 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-content h2 {
+        font-size: 1.8rem;
+    }
+    
+    .about-content h3 {
+        font-size: 1.2rem;
+    }
+}
 
 
-/* Estil pou FAQ Accordion */
-.faq-container { max-width: 800px; margin: auto; }
-.faq-item { background: #fff; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-.faq-question { width: 100%; padding: 15px; background: #111E62; color: white; border: none; text-align: left; cursor: pointer; font-weight: bold; }
-.faq-answer { padding: 15px; display: none; background: #f9f9f9; color: #333; }
-.faq-item.active .faq-answer { display: block; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ==========================================================================
+   DESIGN AK ANIMASYON SEKSYON STATISTIK (COMPETENCE ACADEMY)
+   ========================================================================== */
+
+/* Fond jeneral dèyè bann nan (ti gri/ble trè klè ki sou foto a) */
+.stats-section {
+    width: 100%;
+    padding: 60px 20px;
+    background-color: #f4f6ff; 
+    display: flex;
+    justify-content: center;
+}
+
+/* Gwo bann ble fonse a ak kwen awondi yo */
+.stats-banner {
+    width: 100%;
+    max-width: 1200px;
+    background-color: #111E62; /* Ble fonse ofisyèl la */
+    padding: 50px 30px;
+    border-radius: 20px; /* Kwen yo byen awondi jan sa ye sou foto a */
+    display: flex;
+    justify-content: space-around; /* Separe 3 blòk yo pafè sou liy lan */
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.15);
+}
+
+/* Chak blòk kontè yo */
+.stat-item {
+    flex: 1;
+}
+
+/* Gwo chif zoranj yo egzakteman */
+.stat-number {
+    color: #F76B00; /* Zoranj flash la */
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 0 0 10px 0;
+    font-family: 'Poppins', sans-serif;
+    display: inline-block;
+    
+    /* Animasyon kwasans lè paj la louvri */
+    animation: pulseCounter 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Ti tèks anba chif yo */
+.stat-text {
+    color: #ffffff; /* Tèks an blan */
+    font-size: 1rem;
+    font-weight: 400;
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* ==========================================================================
+   ANIMASYON KEYFRAMES
+   ========================================================================== */
+@keyframes pulseCounter {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ==========================================================================
+   RESPONSIVE (POU MOBIL LA)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .stats-banner {
+        flex-direction: column; /* Pase an kolòn sou mobil pou yo pa kwense */
+        gap: 40px;
+        padding: 40px 20px;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Nouvo Estil pou Seksyon Ajoute */
 .stats-section, .services-section, .faq-section { padding: 60px 20px; text-align: center; }
@@ -426,10 +830,161 @@ footer {
 .service-card { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 15px; border: 1px solid #ddd; transition: 0.3s; }
 .service-card:hover { transform: translateY(-10px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
 
-/* FAQ Style */
-.faq-item { background: #f4f4f4; margin: 10px 0; padding: 15px; border-left: 5px solid #F76B00; text-align: left; border-radius: 5px; }
 
 
+/* Stil pou chak liy bwat kesyon yo (Liy ble yo) */
+.faq-box, 
+.accordion-item,
+.faq-container > div { 
+    border-radius: 8px;    /* Bay ti kwen yo yon bèl fòm yon ti jan won */
+    margin-bottom: 15px;   /* Mete yon ti espas ant chak bwat kesyon */
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02); /* Yon ti lonbraj trè lejè pou rann li pi dous */
+}
+
+/* Si ou gen bouton oswa tèt kesyon yo ki gen kòlè ble a */
+
+.faq-trigger,
+.accordion-title {
+    padding: 18px 25px;    /* Ogmante espas andedan an pou tèks la respire */
+    font-size: 1.05rem;    /* Rann ekriti a yon ti jan pi vizib */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ==========================================================================
+   SECTION FAQ MODERN & PREMIUM (COMPETENCE ACADEMY)
+   ========================================================================== */
+
+/* Arrière-plan global de la section */
+.faq-section {
+    padding: 80px 20px;
+    background-color: #f8fafc; /* Couleur de fond douce */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Titre de la section */
+.faq-section h2 {
+    font-size: 2.2rem;
+    color: #111E62;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 800;
+}
+
+/* Grand bloc blanc arrondi qui centre et cadre la FAQ sur laptop */
+.faq-container {
+    max-width: 850px;           /* Largeur idéale pour éviter l'effet étiré */
+    width: 100%;
+    background: #ffffff;        /* Fond blanc pur */
+    padding: 35px;              /* Espace interne */
+    border-radius: 24px;        /* Magnifiques grands coins arrondis */
+    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.05); /* Légère ombre bleutée pro */
+    border: 1px solid #e2e8f0;  /* Fine bordure de finition */
+    margin: 0 auto;
+}
+
+/* Style de chaque conteneur de question (les lignes internes) */
+.faq-item {
+    background: #f8fafc;        /* Fond légèrement grisé pour contraster */
+    margin-bottom: 16px;        /* Espace entre les blocs */
+    border-radius: 14px;        /* Coins arrondis pour chaque ligne */
+    overflow: hidden;
+    border-left: 5px solid #F76B00; /* Ligne de marque orange distinctive */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Supprime la marge sur la toute dernière question */
+.faq-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Effet interactif au survol de la souris */
+.faq-item:hover {
+    transform: translateX(4px); /* Léger glissement vers la droite très fluide */
+    background: #f1f5f9;
+}
+
+/* Le bouton de la question (la barre bleue) */
+.faq-question {
+    width: 100%;
+    padding: 20px 25px;
+    background: #111E62;        /* Bleu marine officiel */
+    color: #ffffff;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1.05rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    outline: none;
+    transition: background 0.3s ease;
+}
+
+.faq-question:hover {
+    background: #F76B00;        /* Devient un tout petit peu plus clair au survol */
+}
+
+/* Création automatique de l'indicateur dynamique (+) en orange */
+
+.faq-question::after {
+    content: '\2b';            /* Code du symbole Plus (+) */
+    font-size: 1.3rem;
+    color: #ffffff;             /* Orange de la charte */
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+/* Animation de l'indicateur lorsque la question est active (ouverte) */
+
+.faq-item.active .faq-question::after {
+    transform: rotate(45deg);   /* Fait pivoter le (+) pour créer un (x) */
+    color: #ffff;             /* Change en rouge doux pour indiquer la fermeture */
+}
+
+/* Zone de la réponse (cachée par défaut, ouverte via votre JS) */
+.faq-answer {
+    padding: 22px 25px;
+    display: none;
+    background: #ffffff;        /* Fond blanc pour une lecture claire */
+    color: #334155;             /* Couleur de texte gris anthracite pro */
+    font-size: 0.98rem;
+    line-height: 1.6;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Affiche la réponse lorsque la classe .active est appliquée */
+.faq-item.active .faq-answer {
+    display: block;
+    animation: fadeIn 0.4s ease;
+}
+
+/* Petite animation d'apparition douce */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ajustements pour les écrans de téléphones */
+@media (max-width: 768px) {
+    .faq-container {
+        padding: 20px;
+        border-radius: 16px;
+    }
+    .faq-question {
+        padding: 15px 20px;
+        font-size: 0.95rem;
+    }
+    .faq-answer {
+        padding: 15px 20px;
+        font-size: 0.92rem;
+    }
+}
 
 
 
@@ -466,17 +1021,12 @@ footer {
 /* Klas pou montre kontni an lè nou klike */
 .content-deroule.show { display: block; }
 
-
-
-
-
-
-
 footer {
   text-align: center;
   padding: 30px 20px;
-  background: #2e2e2e; /* Koulè background footer la */
+  background: #e3e3e3; /* Koulè background footer la */
   color: white;
+
 }
 
 .footer-social {
@@ -487,314 +1037,323 @@ footer {
 }
 
 .footer-social a {
-  color: #fff;
+  color:#111E62;
   font-size: 28px; /* Gwosè logo yo */
   transition: 0.3s;
 }
 
 .footer-social a:hover {
-  color: #F76B00; /* Koulè zoranj lan lè ou pase sourit sou li */
+  color: #F76B00; 
   transform: scale(1.2);
 }
 
 
+/* Fòse chak eleman nan lis la parèt sou yon sèl liy dwat */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===== SECTION ANNIVERSAIRE ===== */
-.section-anniversaire {
-  background: linear-gradient(135deg, #fbfaf7 0%, #eef0ff 100%); /* Ble Nuit lekòl la */
-  padding: 60px 20px;
-  text-align: center;
-  color: rgb(18, 1, 99);
-  border-top: 4px solid #f4f4f4; /* Yon liy ble fonse pou separe seksyon an */
-  border-bottom: 4px solid #d3d3d3; /* Yon liy ble fonse pou separe seksyon an */
-  overflow: hidden;
-  position: relative;
+.contact-container ul li, 
+.courses-section ul li, 
+ul li { 
+    display: flex;         
+    align-items: center;   
+    gap: 12px;             
+    margin-bottom: 15px;    
+    list-style: none;       
 }
 
-.anniversaire-container {
-  max-width: 900px;
-  margin: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 30px;
+/* Kontwole gwosè ti logo a pou l pa twò gwo ni twò piti */
+
+.contact-container ul li img, 
+.courses-section ul li img, 
+ul li img {
+    width: 20px;           
+    height: 20px;
+    object-fit: contain;    
+    flex-shrink: 0;         
 }
 
-.anniversaire-text h2 {
-  color: #170170 !important; /* Zoranj lekòl la */
-  font-size: 32px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-  text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+
+
+
+/* ==========================================================================
+   CORRECTION ULTRA-PRO: SECTION FONDATEURS
+   ========================================================================== */
+.founders-section {
+    max-width: 1200px;
+    margin: 80px auto;
+    padding: 40px 20px;
 }
 
-.anniversaire-text p {
-  font-size: 18px;
-  max-width: 600px;
-  margin: auto;
-  line-height: 1.6;
-  opacity: 0.95;
+.founders-header {
+    text-align: center;
+    margin-bottom: 50px;
 }
 
-/* --- ANIMASYON BWAT KADO AN CSS --- */
-.gift-box-wrapper {
-  margin-top: 20px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  position: relative;
+.founders-header h2 {
+    font-size: 2.2rem;
+    color: #111E62 !important;
+    font-weight: 800;
+    margin-bottom: 12px;
 }
 
-/* Ti balanse kado a ap fè pou atire moun */
-@keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  20%, 60% { transform: rotate(-8deg); }
-  40%, 80% { transform: rotate(8deg); }
+.founders-container {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
 }
 
-.gift-box {
-  width: 120px;
-  height: 100px;
-  background: #F76B00; /* Kò kado a an Zoranj */
-  position: relative;
-  border-radius: 4px;
-  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
-  animation: shake 3s infinite ease-in-out;
+.founder-card {
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(17, 30, 98, 0.08) !important;
+    box-shadow: 0 10px 30px rgba(0, 76, 255, 0.05) !important;
+    width: 100%;
+    max-width: 320px;
+    padding: 35px 25px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.gift-lid {
-  width: 130px;
-  height: 25px;
-  background: #ff7e1a;
-  position: absolute;
-  top: -22px;
-  left: -5px;
-  border-radius: 3px;
-  box-shadow: 0 4px 5px rgba(0,0,0,0.2);
-  z-index: 2;
+.founder-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(247, 107, 0, 0.1) !important;
 }
 
-.gift-ribbon-v {
-  width: 20px;
-  height: 100%;
-  background: #111E62; /* Riban an Ble */
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 0;
+/* KONTÈNÈ FOTO A */
+.founder-img-wrapper {
+    position: relative !important; /* Fixe repè a pou bouton an */
+    width: 140px;
+    height: 140px;
+    margin-bottom: 35px; /* Bay plis espas pou bouton an ka chita pafè */
+    display: inline-block;
 }
 
-.gift-ribbon-h {
-  width: 100%;
-  height: 20px;
-  background: #111E62;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: 0;
+.founder-img-wrapper img {
+    width: 140px !important;
+    height: 140px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    border: 2px solid #F76B00 !important; /* Liy ble solid alantou foto a */
+    display: block;
 }
 
-.gift-bow {
-  width: 30px;
-  height: 30px;
-  background: #111E62;
-  border-radius: 50%;
-  position: absolute;
-  top: -42px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-}
-.gift-bow::before, .gift-bow::after {
-  content: '';
-  width: 35px;
-  height: 20px;
-  border: 4px solid #111E62;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px;
-}
-.gift-bow::before { left: -25px; transform: rotate(-30deg); }
-.gift-bow::after { right: -25px; transform: rotate(30deg); }
-
-.click-hint {
-  font-size: 14px;
-  font-weight: bold;
-  color: #000000; /* Koulè Lò */
-  letter-spacing: 1px;
-  text-transform: uppercase;
+/* REKREYASYON BOUTON BADGE LA (KORÈK NET) */
+.founder-card .badge-star {
+    position: absolute !important;
+    bottom: -15px !important; /* Desann li pou l poze mwatye sou foto a mwatye deyò */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background-color: #F76B00 !important; /* Fòse bèl koulè orange lan */
+    color: #ffffff !important; /* Fòse tèks la ekri an blan */
+    padding: 6px 18px !important;
+    border-radius: 50px !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    box-shadow: 0 4px 12px rgba(247, 107, 0, 0.4) !important;
+    white-space: nowrap !important;
+    z-index: 99 !important; /* Mete l anlè nèt pou anyen pa kache l */
 }
 
-/* --- MODAL POP-UP AK PETAL K AP TONBE --- */
-.modal-anniv {
-  display: none;
-  position: fixed;
-  z-index: 99999;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(210, 215, 247, 0.85); /* Ble fwonse transparan */
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  overflow: hidden;
+/* Zetwal blan anndan bouton an */
+.founder-card .badge-star i {
+    color: #ffffff !important;
+    font-size: 0.85rem !important;
 }
 
-.modal-anniv-content {
-  background: #f3f2fb;
-  padding: 40px;
-  border-radius: 15px;
-  max-width: 550px;
-  width: 100%;
-  text-align: center;
-  position: relative;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-  border: 4px solid #111E62;
-  animation: zoomIn 0.4s ease-out;
-  z-index: 10;
+.founder-info h3 {
+    font-size: 1.3rem;
+    color: #111E62 !important;
+    margin-bottom: 12px;
+    font-weight: 700;
 }
 
-@keyframes zoomIn {
-  from { transform: scale(0.7); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+.founder-description {
+    color: #000000 !important;
+    font-size: 0.9rem !important;
+    line-height: 1.6 !important;
 }
 
-.close-anniv {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  font-size: 30px;
-  font-weight: bold;
-  color: #999;
-  cursor: pointer;
-  transition: 0.2s;
-}
-.close-anniv:hover { color: #111E62; }
 
-.anniv-badge {
-  background: #111E62;
-  color: #FFD700;
-  padding: 8px 15px;
-  font-weight: bold;
-  font-size: 13px;
-  border-radius: 50px;
-  display: inline-block;
-  margin-bottom: 20px;
-  letter-spacing: 1px;
+
+
+/* ==========================================================================
+   SECTION: POURQUOI NOUS CHOISIR (PREMIUM LOOK)
+   ========================================================================== */
+.why-choose-us {
+    max-width: 1200px;
+    margin: 80px auto;
+    padding: 20px;
 }
 
-.modal-anniv-content h3 {
-  color: #F76B00;
-  font-size: 20px;
-  margin-bottom: 10px;
-  letter-spacing: 2px;
+.section-title-container {
+    text-align: center;
+    margin-bottom: 50px;
 }
 
-.modal-anniv-content h2 {
-  color: #111E62 !important;
-  font-size: 24px;
-  line-height: 1.4;
-  margin-bottom: 20px;
+.section-title-container h2 {
+    font-size: 2.2rem;
+    color: #111E62;
+    font-weight: 800;
+    margin-bottom: 15px;
+    position: relative;
+    display: inline-block;
+    letter-spacing: -0.5px;
 }
 
-.modal-anniv-content h2 span {
-  color: #F76B00;
-  font-weight: 900;
-  border-bottom: 3px dashed #F76B00;
+/* Ligne décorative moderne sous le titre */
+
+.section-title-container h2::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: var(--academy-orange);
+    border-radius: 50px;
 }
 
-.modal-anniv-content p {
-  color: #555;
-  font-size: 15px;
-  margin-bottom: 30px;
+.section-title-container p {
+    color: #000000;
+    font-size: 1.05rem;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
 }
 
-.btn-profiter {
-  display: block;
-  background: #111E62;
-  color: rgb(255, 255, 255) !important;
-  text-decoration: none;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: bold;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(247, 107, 0, 0.4);
-  transition: 0.3s;
-}
-.btn-profiter:hover {
-  background: #ff7e1a;
-  transform: translateY(-2px);
+.advantages-grid {
+    display: flex;
+    justify-content: center;
+    gap: 35px;
+    flex-wrap: wrap;
 }
 
-/* --- ANIMASYON PETAL AK CONFETTI --- */
-.petals-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 5;
+.advantage-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 40px 30px;
+    width: 100%;
+    max-width: 360px;
+    border: 1px solid rgba(17, 30, 98, 0.05);
+    box-shadow: 0 15px 35px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.petal {
-  position: absolute;
-  top: -20px;
-  border-radius: 50% 0 50% 50%;
-  animation: fall linear infinite;
+/* Effet Hover (Survol) ultra-pro */
+.advantage-card:hover {
+    transform: translateY(-10px);
+    border-color: rgba(255, 111, 0, 0.25);
+    box-shadow: 0 25px 50px rgba(247, 107, 0, 0.08);
 }
 
-@keyframes fall {
-  0% {
-    top: -50px;
-    transform: translateX(0) rotate(0deg);
-  }
-  100% {
-    top: 105%;
-    transform: translateX(150px) rotate(720deg);
-  }
+/* Conteneur de l'icône */
+.advantage-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: #111E62;
+    color:#F76B00;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    margin-bottom: 25px;
+    transition: all 0.4s ease;
 }
 
-/* RESPONSIVE POU TELEFÒN */
-@media (max-width: 480px) {
-  .anniversaire-text h2 { font-size: 24px; }
-  .modal-anniv-content { padding: 25px 15px; }
-  .modal-anniv-content h2 { font-size: 20px; }
+.advantage-card:hover .advantage-icon-wrapper {
+    background: var(--academy-blue);
+    color: #ffffff;
+    transform: rotate(10deg);
+}
+
+.advantage-card h3 {
+    font-size: 1.35rem;
+    color: var(--academy-dark);
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.advantage-card p {
+    color: #000000;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+
+/* Badge Star en bas de la carte */
+.advantage-badge {
+    background: rgba(247, 107, 0, 0.1);
+    color: var(--academy-orange);
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto; /* Pousse le badge toujours au fond */
+    transition: all 0.3s ease;
+}
+
+.advantage-card:hover .advantage-badge {
+    background: var(--academy-orange);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(247, 107, 0, 0.3);
+}
+
+/* Responsive pour Mobile */
+@media (max-width: 991px) {
+    .why-choose-us {
+        margin: 50px auto;
+    }
+    .section-title-container h2 {
+        font-size: 1.8rem;
+    }
+    .advantages-grid {
+        gap: 25px;
+    }
+    .advantage-card {
+        max-width: 100%;
+        padding: 35px 20px;
+    }
+}
+
+/* ==========================================================================
+   KOREKSYON: SANTRAJ LYEN YO SÈLMAN SOU MOBIL (PA SOU LAPTOP)
+   ========================================================================== */
+
+/* Kòd sa a ap egzekite SÈLMAN si ekran an pi piti pase 991px (Telefòn ak Tablèt) */
+@media (max-width: 991px) {
+    
+    .navbar-menu-overlay, 
+    [class*="menu-mobile"], 
+    [class*="nav-links"].active { 
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;    /* Santre orizontal sou mobil */
+        justify-content: center !important;  /* Santre vikal sou mobil */
+    }
+
+    .navbar-menu-overlay a, 
+    [class*="menu-mobile"] a, 
+    [class*="nav-links"] a {
+        text-align: center !important;
+        width: 100% !important;
+    }
 }
