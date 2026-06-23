@@ -575,21 +575,9 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 
 
 
-
-
-
-
-
 /* ==========================================================================
    STYLE : ESPACE RÉSULTATS & DASHBOARD
    ========================================================================== */
-
-
-
-
-
-
-
 
 
 
@@ -601,9 +589,9 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 15px;
-    gap: 15px;
-    border-bottom: 3px double #111E62; /* Liy double nòb pou dokiman ofisyèl */
+    padding-bottom: 10px;
+    gap: 10px;
+    border-bottom: 6px double #111E62; /* Liy double nòb pou dokiman ofisyèl */
 }
 
 /* 1. Pati Logo a */
@@ -627,13 +615,6 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     letter-spacing: 1px;
 }
 
-.institution-slogan {
-    font-style: italic;
-    color: #F76B00; /* Koulè zoranj ofisyèl */
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin: 3px 0 10px 0;
-}
 
 .institution-meta-info {
     display: flex;
@@ -656,19 +637,6 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     font-weight: 300;
 }
 
-/* 3. Badge "Bulletin Officiel" sou bò dwat la */
-.doc-type-badge {
-    background: rgba(17, 30, 98, 0.06);
-    color: #111E62;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    border: 1px dashed #111E62;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
 
 /* Liy dekoratif anba a */
 .letterhead-divider {
