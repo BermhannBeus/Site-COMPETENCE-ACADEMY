@@ -673,14 +673,6 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 
 
 
-
-
-
-
-
-
-
-
    
 .results-section {
     max-width: 1000px;
@@ -1111,7 +1103,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 }
 
 .results-auth-container p {
-    color: #64748b;
+    color: #dfe4eb;
     font-size: 0.9rem;
     margin-bottom: 25px;
     line-height: 1.5;
