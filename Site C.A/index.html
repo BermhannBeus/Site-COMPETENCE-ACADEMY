@@ -136,6 +136,69 @@ document.addEventListener("DOMContentLoaded", () => {
         observer.observe(statsSection);
     }
 });
+
+
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const slides = document.querySelectorAll('.hero-slider .slide');
+    const progressLine = document.getElementById('progressLine');
+    let currentSlideIndex = 0;
+    const slideInterval = 6000; // 6 segond pou chak foto
+
+    if (slides.length === 0) return;
+
+    // Fonksyon pou reset epi anime ti liy lan
+    const resetProgressBar = () => {
+        progressLine.style.transition = 'none';
+        progressLine.style.width = '0%';
+        
+        // Fòse navigatè a rekonèt reset la
+        void progressLine.offsetWidth; 
+        
+        // Lanse animasyon liy lan pou 6 segond lan
+        progressLine.style.transition = `width ${slideInterval}ms linear`;
+        progressLine.style.width = '100%';
+    };
+
+    const nextSlide = () => {
+        // 1. Bay ansyen foto a klas 'prev' pou l fè efè disparèt la
+        const previousSlide = slides[currentSlideIndex];
+        previousSlide.classList.remove('active');
+        previousSlide.classList.add('prev');
+
+        // Netwaye ansyen klas prev yo sou lòt foto yo
+        slides.forEach((slide, index) => {
+            if (index !== currentSlideIndex) {
+                slide.classList.remove('prev');
+            }
+        });
+
+        // 2. Pase nan pwochen foto a
+        currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+        
+        // 3. Aktive nouvo foto a
+        slides[currentSlideIndex].classList.add('active');
+        
+        // 4. Rekòmanse kontè liy lan
+        resetProgressBar();
+    };
+
+    // Lanse premye chajman liy lan
+    resetProgressBar();
+
+    // Lanse bouk otomatik la
+    setInterval(nextSlide, slideInterval);
+});
+
+
+
+
+
+    
   </script>
 </head>
 
@@ -161,17 +224,88 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 </nav>
 
-<header class="hero-section">
-  <video autoplay loop muted playsinline class="bg-video">
-    <source src="Animate site.mp4" type="video/mp4">
-  </video>
 
-  <div class="video-overlay"></div>
-  
-  <div class="hero-content">
-        <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">Inscrire</a>
-  </div>
+<header class="hero-section">
+    <div class="hero-slider" id="heroSlider">
+        
+        <div class="slide active">
+            <img src="Slider/IMG_9721.jpg" alt="Slide 1" class="slide-img">
+            <div class="slide-info">
+                <h2>Formations Pratiques & Professionnelles</h2>
+                <p>Développez des compétences réelles pour propulser votre avenir.</p>
+                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
+                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
+                </a>
+            </div>
+        </div>
+
+        <div class="slide">
+            <img src="Slider/IMG_9828.jpg" alt="Slide 2" class="slide-img">
+            <div class="slide-info">
+                <h2>Informatique Bureautique</h2>
+                <p>Maîtrisez Word, Excel, PowerPoint et les outils numériques essentiels.</p>
+                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
+                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
+                </a>
+            </div>
+        </div>
+
+         <div class="slide">
+            <img src="Slider/IMG_9827.jpg" alt="Slide 3" class="slide-img">
+            <div class="slide-info">
+                <h2>Photographie Professionnelle</h2>
+                <p>Capturez chaque instant avec technique et créativité.</p>
+                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
+                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
+                </a>
+            </div>
+        </div>
+
+         <div class="slide">
+            <img src="Slider/IMG_9729.jpg" alt="Slide 4" class="slide-img">
+            <div class="slide-info">
+                <h2>Vidéographie & Montage Vidéo</h2>
+                <p>Créez des contenus captivants pour le monde moderne.</p>
+                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
+                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
+                </a>
+            </div>
+        </div>
+
+
+         <div class="slide">
+            <img src="Slider/IMG_9824.jpg" alt="Slide 5" class="slide-img">
+            <div class="slide-info">
+                <h2>Infographie Créative</h2>
+                <p>Créez des graphismes percutants et engageants pour votre communication.</p>
+                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
+                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
+                </a>
+            </div>
+        </div>
+
+         <div class="slide">
+            <img src="Slider/IMG_9784.jpg" alt="Slide 5" class="slide-img">
+            <div class="slide-info">
+                <h2>Rejoignez la Famille COMPETENCE ACADEMY</h2>
+                <p>Inscrivez-vous dès aujourd'hui et développez votre potentiel.</p>
+                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
+                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
+                </a>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <div class="progress-bar-container">
+        <div class="progress-line" id="progressLine"></div>
+    </div>
+    <div class="video-overlay"></div>
 </header>
+
+  
 <section class="historique" id="historique">
   <div class="container about-content">
     <h2>À propos de Competence Academy</h2>
