@@ -726,24 +726,53 @@ section h2 {
     }
 }
 
-/* --- RESPONSIVE TELEFÒN --- */
+/* ==========================================================================
+   KÒD RESPONSIVE VIP POU TELEFÒN (CORRECTION RAPIDE)
+   ========================================================================== */
 @media (max-width: 768px) {
+    /* 1. Fòse seksyon Hero a jere wotè a pi byen sou mobil */
+    .hero-section {
+        height: 100vh; /* Oubyen min-height: 100vh; si kontni an anpil */
+    }
+
+    /* 2. Repozisyone veso tèks ak bouton an pou l pa janm soti deyò */
     .slide-info {
-        gap: 15px;
+        top: 50%;
+        width: 92%;
+        gap: 15px; /* Redwi espas ant tit, paragraf ak bouton */
+        padding: 0 10px;
     }
+
+    /* 3. Redwi gwosè gwo tit yo pou yo pa pran tout ekran an */
     .slide-info h2 {
-        font-size: 1.8rem;
+        font-size: 1.6rem !important; /* Fòse l pran gwosè sa a sou mobil */
+        line-height: 1.3;
+        margin-bottom: 5px;
     }
+
+    /* 4. Redwi paragraf la tou */
     .slide-info p {
-        font-size: 0.95rem;
+        font-size: 0.95rem !important;
+        line-height: 1.4;
+        max-width: 100%;
     }
+
+    /* 5. Fè bouton an vin nan yon fòma ki pi dous pou mobil */
     .btn-decouvrir {
-        padding: 12px 28px;
-        font-size: 0.95rem;
+        padding: 12px 28px !important;
+        font-size: 0.95rem !important;
+        white-space: nowrap; /* Anpeche tèks bouton an fann an de liy */
+    }
+
+    .btn-decouvrir i {
+        font-size: 1.1rem !important;
+    }
+    
+    /* 6. Si w gen ti bar chajman anba a, asire w li pa kache bouton an */
+    .progress-bar-container {
+        height: 4px;
     }
 }
-
-
 
 
 
