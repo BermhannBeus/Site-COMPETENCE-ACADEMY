@@ -726,58 +726,65 @@ section h2 {
     }
 }
 
+
+
+
+
 /* ==========================================================================
-   KÒD RESPONSIVE VIP POU TELEFÒN (CORRECTION RAPIDE)
+   KÒD RESPONSIVE VIP POU HEADER 16:9 SOU TELEFÒN (KORIJE)
    ========================================================================== */
 @media (max-width: 768px) {
-    /* 1. Fòse seksyon Hero a jere wotè a pi byen sou mobil */
+    /* 1. Nou retire 100vh a epi nou fòse yon rapò 16:9 solid */
     .hero-section {
-        height: 100vh; /* Oubyen min-height: 100vh; si kontni an anpil */
+        height: auto !important; /* Retire wotè fiks la */
+        width: 100%;
+        /* Sa a se sekrè 16:9 la: wotè a ap kalkile dapre lajè a (56.25% de lajè a) */
+        aspect-ratio: 16 / 9; 
+        
+        display: block; /* Retire flexbox la pou evite deformation kontni */
     }
 
-    /* 2. Repozisyone veso tèks ak bouton an pou l pa janm soti deyò */
+    /* 2. Asire w videyo a oswa slider a pran tout espas 16:9 la */
+    .hero-slider,
+    .bg-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Anpeche videyo a tire oswa squish */
+        aspect-ratio: 16 / 9;
+    }
+
+    /* 3. Ajuste kontni an (Tèks ak Bouton) anndan kare 16:9 la */
     .slide-info {
-        top: 50%;
-        width: 92%;
-        gap: 15px; /* Redwi espas ant tit, paragraf ak bouton */
-        padding: 0 10px;
+        top: 50% !important; /* Re-santre vètikalman nan 16:9 la */
+        transform: translate(-50%, -50%) scale(0.9); /* Gwosè yon ti kras pi piti */
+        width: 90%;
+        gap: 12px; /* Redwi espas sou mobil */
     }
 
-    /* 3. Redwi gwosè gwo tit yo pou yo pa pran tout ekran an */
+    /* 4. Gwosè tèks pou mobil anndan 16:9 */
     .slide-info h2 {
-        font-size: 1.6rem !important; /* Fòse l pran gwosè sa a sou mobil */
-        line-height: 1.3;
-        margin-bottom: 5px;
+        font-size: 1.4rem !important; /* Pi piti pou l pa pran twòp plas */
+        line-height: 1.2;
     }
 
-    /* 4. Redwi paragraf la tou */
     .slide-info p {
-        font-size: 0.95rem !important;
-        line-height: 1.4;
-        max-width: 100%;
+        font-size: 0.85rem !important;
+        line-height: 1.3;
     }
 
-    /* 5. Fè bouton an vin nan yon fòma ki pi dous pou mobil */
+    /* 5. Bouton an vin pi piti pou mobil */
     .btn-decouvrir {
-        padding: 12px 28px !important;
-        font-size: 0.95rem !important;
-        white-space: nowrap; /* Anpeche tèks bouton an fann an de liy */
+        padding: 10px 24px !important;
+        font-size: 0.9rem !important;
     }
 
     .btn-decouvrir i {
-        font-size: 1.1rem !important;
-    }
-    
-    /* 6. Si w gen ti bar chajman anba a, asire w li pa kache bouton an */
-    .progress-bar-container {
-        height: 4px;
+        font-size: 1rem !important;
     }
 }
-
-
-
-
-
 
 
 
