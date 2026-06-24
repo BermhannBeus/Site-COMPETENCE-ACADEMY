@@ -584,19 +584,17 @@ section h2 {
 
 
 
-
-
 /* ==========================================================================
-   CSS HERO SLIDER COMPLET - NETTOYÉ SANS AUCUN OVERLAY (COULEUR PALE)
+   CSS HERO SLIDER FINAL - 16:9 RESPONSIVE (SANS ZOOM & ULTRA CENTRÉ)
    ========================================================================== */
 
-/* 1. GWO SEKSYON HERO A (16:9 sou nenpòt ekran) */
+/* 1. GWO SEKSYON HERO A (Fòse fòma 16:9 san koulè ble sekirite a) */
 .hero-section {
     position: relative;
     width: 100%;
     margin: 0 auto;
     overflow: hidden;
-    background-color: #0b133a; /* Fond sekirite */
+    background-color: #000000; /* Nou mete fond sekirite a tou nwa olye de ble */
     aspect-ratio: 16 / 9; 
 }
 
@@ -610,18 +608,15 @@ section h2 {
     z-index: 1;
 }
 
-/* 3. CHAK FOTO (SANS ZOOM, SANS FILTRE) */
+/* 3. CHAK SLIDE */
 .slide {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    
     opacity: 0;
+    pointer-events: none; /* Anpeche l bloke klike yo */
     transition: opacity 0.8s ease-in-out;
     z-index: 1;
 }
@@ -632,7 +627,102 @@ section h2 {
     z-index: 2;
 }
 
-/* 4. TI BAR DEKORATIF KI ANBA A */
+/* 4. FÒSE IMAJ TAG <img> YO REYALIZE FÒMA 16:9 SANS DEFÒMASYON */
+.slide-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 1;
+}
+
+/* 5. VESO TÈKS AK BOUTON AN (SANTRE NET SOU DESKTOP/TABLET) */
+.slide-info {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 90%;
+    max-width: 850px;
+    color: #ffffff;
+    z-index: 5;
+    pointer-events: auto !important; 
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Santraj orizontal pou tout kontni an */
+    justify-content: center; /* Santraj vètikal */
+    gap: 20px;
+    
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.slide.active .slide-info {
+    opacity: 1;
+}
+
+/* STIL TÈKS YO AK LONBRAJ SOLID */
+.slide-info h2 {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-transform: uppercase;
+    margin: 0;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    text-align: center; /* Fòse tit la rete nan mitan */
+}
+
+.slide-info p {
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: #f1f5f9;
+    max-width: 650px;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    text-align: center; /* Fòse paragraf la rete nan mitan */
+}
+
+/* 6. DESIGN BOUTON INSCRIPTION AN */
+.btn-decouvrir {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 15px 40px;
+    background-color: #F76B00; /* Zoranj ofisyèl */
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-decoration: none;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 6px 20px rgba(247, 107, 0, 0.4);
+    
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    
+    transition: all 0.3s ease;
+    animation: buttonPulse 2s infinite ease-in-out;
+}
+
+.btn-decouvrir:hover {
+    background-color: #ffffff;
+    color: #111E62;
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
+}
+
+.btn-decouvrir i {
+    font-size: 1.3rem;
+}
+
+/* 7. TI BAR CHAJMAN ANBA A */
 .progress-bar-container {
     position: absolute;
     bottom: 0;
@@ -646,106 +736,113 @@ section h2 {
 .progress-line {
     height: 100%;
     width: 0%;
-    background-color: #F76B00; /* Zoranj Competence Academy */
+    background-color: #F76B00;
     box-shadow: 0 0 10px rgba(247, 107, 0, 0.8);
 }
 
-/* 5. VESO TÈKS AK BOUTON AN */
-.slide-info {
+/* Overlay transparan nèt */
+.video-overlay {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    width: 90%;
-    max-width: 850px;
-    color: #ffffff;
-    z-index: 5;
-    
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    
-    opacity: 0;
-    transition: opacity 0.6s ease;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    pointer-events: none;
+    z-index: 3;
 }
 
-.slide.active .slide-info {
-    opacity: 1;
+/* ANIMASYON VAG LONBRAJ */
+@keyframes buttonPulse {
+    0% { box-shadow: 0 0 0 0 rgba(247, 107, 0, 0.7), 0 8px 25px rgba(247, 107, 0, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(247, 107, 0, 0), 0 8px 25px rgba(247, 107, 0, 0.4); }
+    100% { box-shadow: 0 0 0 0 rgba(247, 107, 0, 0), 0 8px 25px rgba(247, 107, 0, 0.4); }
 }
 
-/* STIL TÈKS YO AC LONBRAJ POU LÈ FOTO YO KLÈ */
-.slide-info h2 {
-    font-size: 3rem;
-    font-weight: 800;
-    color: #ffffff;
-    text-transform: uppercase;
-    margin: 0;
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); /* Fòs lonbraj pou lèt yo soti byen kounye a */
-}
 
-.slide-info p {
-    font-size: 1.25rem;
-    font-weight: 400;
-    color: #f1f5f9;
-    max-width: 650px;
-    margin: 0;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-}
-
-/* 6. DESIGN BOUTON AN */
-.btn-decouvrir {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 15px 40px;
-    background-color: #F76B00;
-    color: #ffffff;
-    font-size: 1.2rem;
-    font-weight: 800;
-    text-decoration: none;
-    border-radius: 50px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 6px 20px rgba(247, 107, 0, 0.4);
-    transition: all 0.3s ease;
-}
-
-.btn-decouvrir:hover {
-    background-color: #ffffff;
-    color: #111E62;
-    transform: scale(1.03);
-    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
-}
 
 /* ==========================================================================
-   BLÒK RESPONSIVE POU MOBIL (16:9)
+   BLÒK RESPONSIVE FORCE - SANTRAJ ABSOLI (BRUTAL FORCE) SOU MOBIL
    ========================================================================== */
 @media (max-width: 768px) {
-    .slide-info {
-        gap: 12px;
+    
+    /* 1. Fòse seksyon an gen yon bèl wotè vètikal pwofesyonèl */
+    .hero-section {
+        aspect-ratio: auto !important;
+        height: 70vh !important; /* Prereglaj wotè pafè pou mobil */
+        min-height: 500px !important; /* Anpeche l twò kout sou ti telefòn */
+        background-color: #000000 !important;
     }
 
+    /* 2. Asire w imaj yo pran tout kò a */
+    .hero-slider, .slide, .slide-img {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* 3. KRAZE ANCIEN SANTRAJ LA: Nou fòse veso a pran tout espas la */
+    .slide-info {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        
+        /* Nou anile fòmil transform an nèt paske se li JS la ka ap bloke */
+        transform: none !important; 
+        margin: 0 !important;
+        padding: 0 20px !important;
+        box-sizing: border-box !important;
+        
+        /* Nou fòse Flexbox pran kontwòl sou tout wotè 100% an pou l mete l nan mitan sant */
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important; /* Sa ap fòse tèks la desann nan mitan nèt vètikalman */
+        align-items: center !important;     /* Santre orizontalman */
+        gap: 15px !important;
+        background: transparent !important;
+    }
+
+    /* 4. Tit ak Paragraf yo ap rete nan mitan kòrèkteman */
     .slide-info h2 {
-        font-size: 1.5rem !important;
-        line-height: 1.2;
+        font-size: 1.6rem !important;
+        line-height: 1.3 !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        text-shadow: 0 4px 10px rgba(0, 0, 0, 0.9) !important;
+        margin: 0 !important;
+        text-align: center !important;
+        width: 100% !important;
     }
 
     .slide-info p {
-        font-size: 0.85rem !important;
-        line-height: 1.3;
+        font-size: 0.95rem !important;
+        line-height: 1.4 !important;
+        color: #f1f5f9 !important;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important;
+        margin: 0 !important;
+        text-align: center !important;
+        max-width: 320px !important;
     }
 
+    /* 5. Bouton an k ap detache pafè anba */
     .btn-decouvrir {
-        padding: 10px 24px !important;
-        font-size: 0.85rem !important;
+        padding: 14px 36px !important;
+        font-size: 0.95rem !important;
+        font-weight: 800 !important;
+        width: auto !important;
+        display: inline-flex !important;
+        margin-top: 10px !important;
+    }
+
+    .progress-bar-container {
+        height: 4px !important;
     }
 }
-
-
-
-
 
 
 
