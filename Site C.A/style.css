@@ -583,19 +583,20 @@ section h2 {
 
 
 
+
+
+
 /* ==========================================================================
-   CSS HERO SLIDER COMPLET - CLEAN & RESPONSIVE 16:9 (SANS ZOOM)
+   CSS HERO SLIDER COMPLET - NETTOYÉ SANS AUCUN OVERLAY (COULEUR PALE)
    ========================================================================== */
 
-/* 1. GWO SEKSYON HERO A (Li toujou fòse fòma 16:9 sou nenpòt ekran) */
+/* 1. GWO SEKSYON HERO A (16:9 sou nenpòt ekran) */
 .hero-section {
     position: relative;
     width: 100%;
     margin: 0 auto;
     overflow: hidden;
     background-color: #0b133a; /* Fond sekirite */
-    
-    /* Sekrè a: Li toujou kalkile wotè a dapre lajè ekran an nan fòma 16:9 */
     aspect-ratio: 16 / 9; 
 }
 
@@ -609,24 +610,23 @@ section h2 {
     z-index: 1;
 }
 
-/* 3. CHAK FOTO KI NAN SLIDER LA (PA GEN OKENN ANIMASYON ZOOM) */
+/* 3. CHAK FOTO (SANS ZOOM, SANS FILTRE) */
 .slide {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-size: cover; /* Oubyen 'contain' si w vle wè tout foto a nèt san l pa taye */
+    background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     
-    /* Tranzisyon senp ak rapid ant foto yo */
     opacity: 0;
     transition: opacity 0.8s ease-in-out;
     z-index: 1;
 }
 
-/* Lè slide la aktif, li parèt san l pa deplase oswa fè zoom */
+/* Lè slide la aktif */
 .slide.active {
     opacity: 1;
     z-index: 2;
@@ -650,18 +650,7 @@ section h2 {
     box-shadow: 0 0 10px rgba(247, 107, 0, 0.8);
 }
 
-/* 5. KOUCH LONBRAJ POU TÈKS KA SOTI BYEN */
-.video-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to bottom, rgba(11, 19, 58, 0.3), rgba(11, 19, 58, 0.6));
-    z-index: 3;
-}
-
-/* 6. VESO TÈKS AK BOUTON AN (FLEXBOX VÈTIKAL POU YO PA JANM CHEVAUCHER) */
+/* 5. VESO TÈKS AK BOUTON AN */
 .slide-info {
     position: absolute;
     top: 50%;
@@ -676,7 +665,7 @@ section h2 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px; /* Espas solid ant Tit, Paragraf ak Bouton */
+    gap: 20px;
     
     opacity: 0;
     transition: opacity 0.6s ease;
@@ -686,14 +675,14 @@ section h2 {
     opacity: 1;
 }
 
-/* STIL TÈKS YO (DESKTOP) */
+/* STIL TÈKS YO AC LONBRAJ POU LÈ FOTO YO KLÈ */
 .slide-info h2 {
     font-size: 3rem;
     font-weight: 800;
     color: #ffffff;
     text-transform: uppercase;
     margin: 0;
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8); /* Fòs lonbraj pou lèt yo soti byen kounye a */
 }
 
 .slide-info p {
@@ -702,10 +691,10 @@ section h2 {
     color: #f1f5f9;
     max-width: 650px;
     margin: 0;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
-/* 7. DESIGN BOUTON ANLIY (AVÈK IKÒN MENM JAN OU TE MANDÈ L LA) */
+/* 6. DESIGN BOUTON AN */
 .btn-decouvrir {
     display: inline-flex;
     align-items: center;
@@ -731,15 +720,15 @@ section h2 {
 }
 
 /* ==========================================================================
-   BLÒK RESPONSIVE AKSELEWE POU MOBIL (TOUT AP ADAPTE AN 16:9)
+   BLÒK RESPONSIVE POU MOBIL (16:9)
    ========================================================================== */
 @media (max-width: 768px) {
     .slide-info {
-        gap: 12px; /* Redwi espas pou ti ekran */
+        gap: 12px;
     }
 
     .slide-info h2 {
-        font-size: 1.5rem !important; /* Adapté pafè pou mobil */
+        font-size: 1.5rem !important;
         line-height: 1.2;
     }
 
@@ -753,6 +742,21 @@ section h2 {
         font-size: 0.85rem !important;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /* ==========================================================================
