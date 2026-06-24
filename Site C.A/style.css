@@ -583,15 +583,88 @@ section h2 {
 
 
 
-
 /* ==========================================================================
-   CSS HERO SLIDER AVÈK BOUTON FIXÉ ANBA TÈKS LA (VERSION PRO)
+   CSS HERO SLIDER COMPLET - CLEAN & RESPONSIVE 16:9 (SANS ZOOM)
    ========================================================================== */
 
-/* Pozisyon veso santral la anndan chak slide */
+/* 1. GWO SEKSYON HERO A (Li toujou fòse fòma 16:9 sou nenpòt ekran) */
+.hero-section {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+    overflow: hidden;
+    background-color: #0b133a; /* Fond sekirite */
+    
+    /* Sekrè a: Li toujou kalkile wotè a dapre lajè ekran an nan fòma 16:9 */
+    aspect-ratio: 16 / 9; 
+}
+
+/* 2. VESO SLIDER LA */
+.hero-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* 3. CHAK FOTO KI NAN SLIDER LA (PA GEN OKENN ANIMASYON ZOOM) */
+.slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover; /* Oubyen 'contain' si w vle wè tout foto a nèt san l pa taye */
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* Tranzisyon senp ak rapid ant foto yo */
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+    z-index: 1;
+}
+
+/* Lè slide la aktif, li parèt san l pa deplase oswa fè zoom */
+.slide.active {
+    opacity: 1;
+    z-index: 2;
+}
+
+/* 4. TI BAR DEKORATIF KI ANBA A */
+.progress-bar-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.15);
+    z-index: 10;
+}
+
+.progress-line {
+    height: 100%;
+    width: 0%;
+    background-color: #F76B00; /* Zoranj Competence Academy */
+    box-shadow: 0 0 10px rgba(247, 107, 0, 0.8);
+}
+
+/* 5. KOUCH LONBRAJ POU TÈKS KA SOTI BYEN */
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(11, 19, 58, 0.3), rgba(11, 19, 58, 0.6));
+    z-index: 3;
+}
+
+/* 6. VESO TÈKS AK BOUTON AN (FLEXBOX VÈTIKAL POU YO PA JANM CHEVAUCHER) */
 .slide-info {
     position: absolute;
-    top: 50%; /* Santre pafè nan mitan ekran an */
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
@@ -600,84 +673,45 @@ section h2 {
     color: #ffffff;
     z-index: 5;
     
-    /* Nou itilize flexbox pou mete yo an kolòn san yo pa janm sipèpoze */
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 25px; /* Bay yon bèl espas 25px fiks ant Tit, Paragraf ak Bouton an */
+    gap: 20px; /* Espas solid ant Tit, Paragraf ak Bouton */
     
     opacity: 0;
-    transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1), 
-                opacity 1.0s ease;
-}
-
-/* --- LÈ SLIDE LA AKTIF --- */
-
-/* Netwaye CSS tranzisyon slide yo konsa pou evite bloke twazyèm lan */
-.slide {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    
-    /* Tout foto kache pa defo */
-    opacity: 1;
-    transform: scale(1.1);
-    transition: transform 1s ease, opacity 0.9s ease;
-    z-index: 1;
-}
-
-/* Sèlman sa ki gen .active la k ap parèt byen klè */
-.slide.active {
-    opacity: 1;
-    transform: scale(1);
-    z-index: 2;
+    transition: opacity 0.6s ease;
 }
 
 .slide.active .slide-info {
     opacity: 1;
-    transform: translate(-50%, -50%);
 }
 
-/* LÈ SLIDE LA SOTI */
-.slide.prev .slide-info {
-    opacity: 0;
-    transform: translate(-50%, -65%);
-    transition: all 0.6s ease;
-}
-
-/* --- STIL TÈKS YO --- */
+/* STIL TÈKS YO (DESKTOP) */
 .slide-info h2 {
-    font-size: 3.2rem;
+    font-size: 3rem;
     font-weight: 800;
     color: #ffffff;
     text-transform: uppercase;
     margin: 0;
-    letter-spacing: -0.5px;
-    text-shadow: 0 4px 15px rgba(11, 19, 58, 0.7);
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
 .slide-info p {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 400;
-    color: #ffffff;
+    color: #f1f5f9;
     max-width: 650px;
     margin: 0;
-    text-shadow: 0 2px 8px rgba(11, 19, 58, 0.7);
-    line-height: 1.5;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
-/* --- DESIGN BOUTON AN (KLIYOTE AK VAG ZORANJ) --- */
+/* 7. DESIGN BOUTON ANLIY (AVÈK IKÒN MENM JAN OU TE MANDÈ L LA) */
 .btn-decouvrir {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    padding: 16px 42px;
-    background-color: #F76B00; /* Zoranj Competence Academy */
+    padding: 15px 40px;
+    background-color: #F76B00;
     color: #ffffff;
     font-size: 1.2rem;
     font-weight: 800;
@@ -685,88 +719,27 @@ section h2 {
     border-radius: 50px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border: 2px solid transparent;
-    
-    box-shadow: 0 8px 25px rgba(247, 107, 0, 0.4);
-    transition: all 0.4s ease;
-    
-    /* Lanse animasyon vag la */
-    animation: buttonPulse 2s infinite ease-in-out;
+    box-shadow: 0 6px 20px rgba(247, 107, 0, 0.4);
+    transition: all 0.3s ease;
 }
 
-/* Hover sou bouton an */
 .btn-decouvrir:hover {
     background-color: #ffffff;
-    color: #111E62; /* Tèks la vin ble fonse */
-    border-color: #ffffff;
-    transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.4);
-    animation: none; /* Kanpe pulse la lè w sou li */
+    color: #111E62;
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
 }
-
-.btn-decouvrir i {
-    font-size: 1.3rem;
-    transition: transform 0.3s ease;
-}
-
-.btn-decouvrir:hover i {
-    transform: translateX(3px);
-}
-
-/* --- ANIMASYON VAG LONBRAJ LA (PULSE) --- */
-@keyframes buttonPulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(247, 107, 0, 0.7), 0 8px 25px rgba(247, 107, 0, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 15px rgba(247, 107, 0, 0), 0 8px 25px rgba(247, 107, 0, 0.4);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(247, 107, 0, 0), 0 8px 25px rgba(247, 107, 0, 0.4);
-    }
-}
-
-
-
-
 
 /* ==========================================================================
-   KÒD RESPONSIVE VIP POU HEADER 16:9 SOU TELEFÒN (KORIJE)
+   BLÒK RESPONSIVE AKSELEWE POU MOBIL (TOUT AP ADAPTE AN 16:9)
    ========================================================================== */
 @media (max-width: 768px) {
-    /* 1. Nou retire 100vh a epi nou fòse yon rapò 16:9 solid */
-    .hero-section {
-        height: auto !important; /* Retire wotè fiks la */
-        width: 100%;
-        /* Sa a se sekrè 16:9 la: wotè a ap kalkile dapre lajè a (56.25% de lajè a) */
-        aspect-ratio: 16 / 9; 
-        
-        display: block; /* Retire flexbox la pou evite deformation kontni */
-    }
-
-    /* 2. Asire w videyo a oswa slider a pran tout espas 16:9 la */
-    .hero-slider,
-    .bg-video {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover; /* Anpeche videyo a tire oswa squish */
-        aspect-ratio: 16 / 9;
-    }
-
-    /* 3. Ajuste kontni an (Tèks ak Bouton) anndan kare 16:9 la */
     .slide-info {
-        top: 50% !important; /* Re-santre vètikalman nan 16:9 la */
-        transform: translate(-50%, -50%) scale(0.9); /* Gwosè yon ti kras pi piti */
-        width: 90%;
-        gap: 12px; /* Redwi espas sou mobil */
+        gap: 12px; /* Redwi espas pou ti ekran */
     }
 
-    /* 4. Gwosè tèks pou mobil anndan 16:9 */
     .slide-info h2 {
-        font-size: 1.4rem !important; /* Pi piti pou l pa pran twòp plas */
+        font-size: 1.5rem !important; /* Adapté pafè pou mobil */
         line-height: 1.2;
     }
 
@@ -775,21 +748,11 @@ section h2 {
         line-height: 1.3;
     }
 
-    /* 5. Bouton an vin pi piti pou mobil */
     .btn-decouvrir {
         padding: 10px 24px !important;
-        font-size: 0.9rem !important;
-    }
-
-    .btn-decouvrir i {
-        font-size: 1rem !important;
+        font-size: 0.85rem !important;
     }
 }
-
-
-
-
-
 
 
 /* ==========================================================================
