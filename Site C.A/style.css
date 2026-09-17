@@ -1616,6 +1616,42 @@ ul li img {
     }
 }
 
+
+
+
+/* ==========================================================================
+   Bouton konfidensyalite
+   ========================================================================== */
+
+.back-btn {
+    display: inline-block;
+    background-color: #01046b;
+    color: #ffffff;
+    padding: 12px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 86, 179, 0.2);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.button-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 25px;
+}
+
+.back-btn:hover {
+    background-color: #ed5f01;
+    transform: translateY(-2px);
+}
+
+
+
+
+
 /* ==========================================================================
    KOREKSYON: SANTRAJ LYEN YO SÈLMAN SOU MOBIL (PA SOU LAPTOP)
    ========================================================================== */
