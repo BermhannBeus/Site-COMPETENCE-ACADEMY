@@ -3,6 +3,8 @@ const urlsToCache = [
   '/',
   '/Cours en Ligne.html',
   '/Logo.png'
+  '/privacy.html',
+  '/style.css',
 ];
 
 self.addEventListener('install', event => {
