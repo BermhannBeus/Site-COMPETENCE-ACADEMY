@@ -1,15 +1,23 @@
 {
   "name": "Competence Academy",
-  "short_name": "Competence",
+  "short_name": "Competence Academy",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0056b3",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
