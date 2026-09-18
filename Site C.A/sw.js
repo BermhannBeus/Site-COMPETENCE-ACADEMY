@@ -2,9 +2,9 @@ const CACHE_NAME = 'competence-academy-v2';
 const urlsToCache = [
   '/',
   '/Cours en Ligne.html',
-  '/Logo.png'
+  '/Logo.png',
   '/privacy.html',
-  '/style.css',
+  '/style.css'
 ];
 
 self.addEventListener('install', event => {
@@ -13,6 +13,20 @@ self.addEventListener('install', event => {
       .then(cache => {
         return cache.addAll(urlsToCache);
       })
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    })
   );
 });
 
