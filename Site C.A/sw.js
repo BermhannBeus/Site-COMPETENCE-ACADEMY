@@ -1,4 +1,4 @@
-const CACHE_NAME = 'competence-academy-v1';
+const CACHE_NAME = 'competence-academy-v2';
 const urlsToCache = [
   '/',
   '/Cours en Ligne.html',
