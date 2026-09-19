@@ -237,8 +237,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
     console.log(`Server Competence Academy Run ${PORT}`);
 });
-
-const cors = require('cors');
-
-// Otorize tout orijin (Lokal ak Netlify/GitHub Pages)
-app.use(cors());
