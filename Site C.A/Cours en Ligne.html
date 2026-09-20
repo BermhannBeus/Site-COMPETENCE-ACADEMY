@@ -84,7 +84,8 @@
                 </span>
                 <div>
                     <h2>Présence en direct</h2>
-                    <p>Les étudiants connectés actuellement</p>
+                    <p>Nombre d'étudiants connectés actuellement</p>
+                    <span id="onlineIdentity" class="online-identity"></span>
                 </div>
             </div>
             <div class="online-count" aria-live="polite">
@@ -92,9 +93,6 @@
                 <strong id="onlineCount">0</strong>
                 <span>en ligne</span>
             </div>
-        </div>
-        <div id="onlineUsers" class="online-users" aria-live="polite">
-            <span class="online-empty">Aucun étudiant connecté pour le moment</span>
         </div>
     </section>
 
@@ -754,28 +752,18 @@ function telechargerResultat() {
         withCredentials: true
     });
 
-    socket.on('onlineUsers', (users) => {
+    socket.on('onlineCount', (count) => {
         const counterElement = document.getElementById('onlineCount');
-        const usersElement = document.getElementById('onlineUsers');
-        if (!counterElement || !usersElement) return;
+        if (!counterElement) return;
 
-        counterElement.textContent = users.length;
-        const userItems = users.map((user) => {
-            const item = document.createElement('span');
-            item.className = 'online-user';
-            item.innerHTML = '<span class="online-user-dot"></span>';
-            item.append(document.createTextNode(user.name));
-            return item;
-        });
+        counterElement.textContent = count;
+    });
 
-        if (userItems.length === 0) {
-            const emptyState = document.createElement('span');
-            emptyState.className = 'online-empty';
-            emptyState.textContent = 'Aucun étudiant connecté pour le moment';
-            userItems.push(emptyState);
-        }
+    socket.on('onlineIdentity', (user) => {
+        const identityElement = document.getElementById('onlineIdentity');
+        if (!identityElement || !user || !user.name) return;
 
-        usersElement.replaceChildren(...userItems);
+        identityElement.textContent = `Vous êtes connecté(e) en tant que ${user.name}`;
     });
 </script>
 
