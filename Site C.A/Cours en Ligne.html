@@ -76,13 +76,11 @@
 
     <div class="nav-spacer"></div>
 
-    <!-- ==================== TI BWAT LIVE SIMULATION AN KI FÈ SIT LA BÈL ==================== -->
-
-
     <div class="online-badge">
     <span class="dot"></span> 
-    <span id="onlineCount">11</span>  <p> étudiants en ligne actuellement </p>
+    <span id="onlineCount">0</span>  <p> étudiants en ligne actuellement </p>
 </div>
+    <div id="onlineUsers" class="online-users" aria-live="polite"></div>
 
     <header class="main-header">
         <h1>ESPACE DE COURS PRÉ-ENREGISTRÉ</h1>
@@ -470,34 +468,6 @@
         "montage":      "CA-MONT-2026"    
     };
 
-    // Fonksyon pou simulation kontè "Live" la ki fè sit la bèl
-    function jereKonteLive() {
-        const panyelMoun = document.getElementById('moun-live');
-        if (!panyelMoun) return;
-        
-        function chanjeChif() {
-            let chifKounyeA = parseInt(panyelMoun.innerText);
-            let chans = Math.random();
-            
-            if (chans > 0.55 && chifKounyeA < 28) {
-                chifKounyeA += Math.floor(Math.random() * 2) + 1;
-            } else if (chans < 0.45 && chifKounyeA > 8) {
-                chifKounyeA -= Math.floor(Math.random() * 2) + 1;
-            }
-            
-            panyelMoun.innerText = chifKounyeA;
-            
-            let pwochenTan = Math.floor(Math.random() * 6000) + 4000;
-            setTimeout(chanjeChif, pwochenTan);
-        }
-        setTimeout(chanjeChif, 3000);
-    }
-    
-    // Nou asire evènman an byen fèmen ak parantèz ak pwen-virgil
-    window.addEventListener('DOMContentLoaded', function() {
-        jereKonteLive();
-    });
-
     // Fonksyon pou jere klik sou bouton filtè yo
     function filtrerCours(categorie) {
         const boutons = document.querySelectorAll('.filter-btn');
@@ -762,16 +732,25 @@ function telechargerResultat() {
 }
     </script>
 
-  <!-- Asire w ou mete liy sa a nan tèt oswa anba HTML la anvan script ou a -->
-<script src="http://localhost:5000/socket.io/socket.io.js"></script>
+<script src="https://site-competence-academy-backend.onrender.com/socket.io/socket.io.js"></script>
 <script>
-    const socket = io('http://localhost:5000');
-    
-    socket.on('updateOnlineCount', (count) => {
+    const socket = io('https://site-competence-academy-backend.onrender.com', {
+        withCredentials: true
+    });
+
+    socket.on('onlineUsers', (users) => {
         const counterElement = document.getElementById('onlineCount');
-        if (counterElement) {
-            counterElement.textContent = count;
-        }
+        const usersElement = document.getElementById('onlineUsers');
+        if (!counterElement || !usersElement) return;
+
+        counterElement.textContent = users.length;
+        usersElement.replaceChildren(...users.map((user) => {
+            const item = document.createElement('span');
+            item.className = 'online-user';
+            item.innerHTML = '<span class="online-user-dot"></span>';
+            item.append(document.createTextNode(user.name));
+            return item;
+        }));
     });
 </script>
 
