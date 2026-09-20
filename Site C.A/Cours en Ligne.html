@@ -17,23 +17,23 @@
     <title>Cours en Ligne - Competence Academy</title>
 
 <script>
-    // Tcheke si itilizatè a konekte, sinon voye l tcheke sou login la
-    if (!localStorage.getItem('ca_token')) {
-        window.location.href = 'login.html';
-    }
-</script>
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5000/api'
+        : 'https://site-competence-academy-backend.onrender.com/api';
 
-<script>
-    // Tcheke si itilizatè a konekte toutbon anvan l antre sou paj la
     window.addEventListener('DOMContentLoaded', () => {
-        const user = localStorage.getItem('competence_academy_user');
-        const token = localStorage.getItem('ca_token');
-
-        // Si pa gen itilizatè ni token, n ap bloke l
-        if (!user || !token) {
-            alert('Accès refusé ! Vous devez vous connecter ou créer un compte pour voir les cours de Competence Academy.');
-            window.location.href = 'Login.html'; // Voye l tounen sou paj login la
-        }
+        fetch(`${API_BASE_URL}/me`, { credentials: 'include' })
+            .then(response => {
+                if (!response.ok) throw new Error('Unauthorized');
+                return response.json();
+            })
+            .then(data => {
+                localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+            })
+            .catch(() => {
+                alert('Aksè refize! Ou dwe konekte oswa kreye yon kont pou w ka wè kou nan Competence Academy yo.');
+                window.location.href = '/login';
+            });
     });
 </script>
 
