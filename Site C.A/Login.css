@@ -46,6 +46,26 @@ body {
     transition: var(--transition);
 }
 
+.auth-message {
+    display: none;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #e9f7ef;
+    color: #176b3a;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.auth-message.visible {
+    display: block;
+}
+
+.auth-message.error {
+    background: #fff0f0;
+    color: #a12626;
+}
+
 .form-box {
     display: none;
     opacity: 0;
@@ -112,7 +132,7 @@ body {
     align-items: center;
 }
 
-.input-field-wrapper svg:not(.toggle-password svg) {
+.input-field-wrapper > svg {
     position: absolute;
     left: 16px;
     width: 20px;
@@ -132,6 +152,11 @@ body {
     background-color: #f8fafc;
     transition: var(--transition);
     outline: none;
+}
+
+.input-field-wrapper input::-ms-reveal,
+.input-field-wrapper input::-ms-clear {
+    display: none;
 }
 
 .input-field-wrapper input:focus {
@@ -191,6 +216,12 @@ body {
     cursor: pointer;
     box-shadow: 0 10px 20px rgba(13, 27, 62, 0.25);
     transition: var(--transition);
+}
+
+.btn-submit:disabled {
+    cursor: wait;
+    opacity: 0.65;
+    transform: none;
 }
 
 .btn-submit:hover {
