@@ -160,7 +160,7 @@ const authenticate = (req, res, next) => {
     const token = getCookie(req, 'ca_token') || req.headers.authorization?.replace(/^Bearer\s+/i, '');
 
     if (!token) {
-        return res.status(401).json({ success: false, message: 'Non authentifié.' });
+        return res.status(401).json({ success: false, message: 'Vous devez être connecté.' });
     }
 
     try {
@@ -193,7 +193,7 @@ app.post('/api/signup', authLimiter, async (req, res) => {
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'Imèl sa a deja anrejistre deja!' });
+            return res.status(400).json({ success: false, message: 'Cette adresse e-mail est déjà enregistrée.' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -205,12 +205,12 @@ app.post('/api/signup', authLimiter, async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: 'Kont ou an kreye avèk siksè!',
+            message: 'Votre compte a été créé avec succès !',
             user: { id: newUser.id, name: newUser.name, email: newUser.email }
         });
     } catch (error) {
         console.error('Signup error:', error);
-        res.status(500).json({ success: false, message: 'Gen yon erè sou sèvè a.' });
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 });
 
@@ -226,19 +226,19 @@ app.post('/api/login', authLimiter, async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ success: false, message: 'Imèl sa a oswa modpas la pa kòrèk.' });
+            return res.status(400).json({ success: false, message: 'L’adresse e-mail ou le mot de passe est incorrect.' });
         }
 
         if (!user.password) {
             return res.status(400).json({
                 success: false,
-                message: "Kont sa a te kreye ak Google. Tanpri klike sou 'Se connecter avec Google'."
+                message: "Ce compte a été créé avec Google. Cliquez sur « Se connecter avec Google »."
             });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ success: false, message: 'Imèl sa a oswa modpas la pa kòrèk.' });
+            return res.status(400).json({ success: false, message: 'L’adresse e-mail ou le mot de passe est incorrect.' });
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -246,12 +246,12 @@ app.post('/api/login', authLimiter, async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Ou konekte avèk siksè!',
+            message: 'Connexion réussie !',
             user: { id: user.id, name: user.name, email: user.email }
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ success: false, message: 'Gen yon erè sou sèvè a.' });
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 });
 
@@ -261,7 +261,7 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
         const { token } = req.body;
 
         if (!token) {
-            return res.status(400).json({ success: false, message: 'Token Google manke.' });
+            return res.status(400).json({ success: false, message: 'Le jeton Google est manquant.' });
         }
 
         const ticket = await client.verifyIdToken({
@@ -275,7 +275,7 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
         const googleId = payload?.sub;
 
         if (!email || !googleId) {
-            return res.status(400).json({ success: false, message: 'Token Google la pa valab.' });
+            return res.status(400).json({ success: false, message: 'Le jeton Google est invalide.' });
         }
 
         let user = await User.findOne({ email });
@@ -292,13 +292,13 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Koneksyon Google reyekti avèk siksè!',
+            message: 'Connexion Google réussie !',
             user: { id: user.id, name: user.name, email: user.email }
         });
 
     } catch (error) {
         console.error(error);
-        res.status(400).json({ success: false, message: 'Token Google la pa valab.' });
+        res.status(400).json({ success: false, message: 'Le jeton Google est invalide.' });
     }
 });
 
@@ -406,7 +406,7 @@ const onlineUsers = new Map();
 
 io.use((socket, next) => {
     const token = getCookie({ headers: socket.handshake.headers }, 'ca_token');
-    if (!token) return next(new Error('Non authentifié.'));
+    if (!token) return next(new Error('Authentification requise.'));
 
     try {
         socket.user = jwt.verify(token, JWT_SECRET);
