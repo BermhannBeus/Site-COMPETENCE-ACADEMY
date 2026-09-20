@@ -153,10 +153,7 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 
     try {
-        // Génération d'un code unique à 6 chiffres
         const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Enregistrement du code en mémoire
         resetCodes[email] = resetCode;
 
         const mailOptions = {
@@ -196,21 +193,16 @@ app.post('/api/reset-password-code', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Veuillez remplir tous les champs.' });
         }
 
-        // Vérification du code
         if (resetCodes[email] !== code) {
             return res.status(400).json({ success: false, message: 'Le code est incorrect ou a expiré !' });
         }
 
-        // Recherche de l'utilisateur
         const user = users.find(u => u.email === email);
         if (!user) {
             return res.status(404).json({ success: false, message: 'Cet utilisateur n\'existe pas.' });
         }
 
-        // Mise à jour du mot de passe
         user.password = await bcrypt.hash(newPassword, 10);
-
-        // Suppression du code utilisé
         delete resetCodes[email];
 
         res.json({ success: true, message: 'Votre mot de passe a été modifié avec succès !' });
