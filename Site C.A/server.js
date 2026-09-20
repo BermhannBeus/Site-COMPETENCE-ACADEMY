@@ -393,16 +393,57 @@ app.post('/api/logout', (req, res) => {
     res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
-// Gestion des utilisateurs en ligne (Socket.io)
-let onlineUsers = 0;
+// Gestion des utilisateurs connectés (Socket.io)
+const onlineUsers = new Map();
+
+io.use((socket, next) => {
+    const token = getCookie({ headers: socket.handshake.headers }, 'ca_token');
+    if (!token) return next(new Error('Non authentifié.'));
+
+    try {
+        socket.user = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch (error) {
+        next(new Error('Session expirée ou invalide.'));
+    }
+});
+
+const broadcastOnlineUsers = () => {
+    const users = [...onlineUsers.values()]
+        .sort((first, second) => first.name.localeCompare(second.name))
+        .map(({ id, name }) => ({ id, name }));
+    io.emit('onlineUsers', users);
+};
 
 io.on('connection', (socket) => {
-    onlineUsers++;
-    io.emit('updateOnlineCount', onlineUsers);
+    const userId = String(socket.user.id);
+    const currentUser = onlineUsers.get(userId) || {
+        id: userId,
+        name: socket.user.email,
+        sockets: new Set()
+    };
+    currentUser.sockets.add(socket.id);
+    onlineUsers.set(userId, currentUser);
+
+    User.findById(userId).select('name email').lean()
+        .then((user) => {
+            if (!user || !onlineUsers.has(userId)) return;
+            const connectedUser = onlineUsers.get(userId);
+            connectedUser.name = user.name || user.email;
+            broadcastOnlineUsers();
+        })
+        .catch((error) => {
+            console.error('Online user lookup error:', error);
+        });
+    broadcastOnlineUsers();
 
     socket.on('disconnect', () => {
-        onlineUsers--;
-        io.emit('updateOnlineCount', onlineUsers);
+        const connectedUser = onlineUsers.get(userId);
+        if (connectedUser) {
+            connectedUser.sockets.delete(socket.id);
+            if (connectedUser.sockets.size === 0) onlineUsers.delete(userId);
+        }
+        broadcastOnlineUsers();
     });
 });
 
