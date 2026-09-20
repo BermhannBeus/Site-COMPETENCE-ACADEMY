@@ -5,7 +5,6 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
-const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
@@ -45,18 +44,24 @@ const isStrongPassword = (password = '') => {
 };
 const createResetCode = () => crypto.randomInt(100000, 1000000).toString();
 const hashResetCode = (code) => crypto.createHash('sha256').update(code).digest('hex');
+const getCookie = (req, name) => {
+    const cookies = String(req.headers.cookie || '').split(';');
+    const cookie = cookies.find((item) => item.trim().startsWith(`${name}=`));
+    return cookie ? decodeURIComponent(cookie.trim().slice(name.length + 1)) : '';
+};
 const setAuthCookie = (res, token) => {
     const isProduction = process.env.NODE_ENV === 'production';
-    res.cookie('ca_token', token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'None' : 'Lax',
-        maxAge: 60 * 60 * 1000,
-        path: '/'
-    });
+    const attributes = [
+        'HttpOnly',
+        'Path=/',
+        'Max-Age=3600',
+        isProduction ? 'Secure' : '',
+        isProduction ? 'SameSite=None' : 'SameSite=Lax'
+    ].filter(Boolean).join('; ');
+    res.setHeader('Set-Cookie', `ca_token=${encodeURIComponent(token)}; ${attributes}`);
 };
 const clearAuthCookie = (res) => {
-    res.clearCookie('ca_token', { path: '/' });
+    res.setHeader('Set-Cookie', 'ca_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
 };
 
 // Configuration Nodemailer
@@ -78,7 +83,6 @@ const allowedOrigins = [
 
 // Middleware
 app.use(express.json({ limit: '1mb' }));
-app.use(cookieParser());
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
@@ -129,7 +133,7 @@ const User = mongoose.model('User', userSchema);
 const ResetCode = mongoose.model('ResetCode', resetCodeSchema);
 
 const authenticate = (req, res, next) => {
-    const token = req.cookies?.ca_token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    const token = getCookie(req, 'ca_token') || req.headers.authorization?.replace(/^Bearer\s+/i, '');
 
     if (!token) {
         return res.status(401).json({ success: false, message: 'Non authentifié.' });
@@ -428,4 +432,3 @@ startServer().catch((error) => {
     console.error('Server startup failed:', error.message);
     process.exit(1);
 });
-
