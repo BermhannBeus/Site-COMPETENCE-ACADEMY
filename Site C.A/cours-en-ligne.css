@@ -344,6 +344,32 @@ body {
     box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.2); /* Efè limyè otou pwen an */
 }
 
+.online-users {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 14px;
+    max-width: 900px;
+    margin: 8px auto 20px;
+}
+
+.online-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--academy-dark);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.online-user-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34a853;
+    box-shadow: 0 0 0 2px #d7f5df;
+}
+
 
 
 
