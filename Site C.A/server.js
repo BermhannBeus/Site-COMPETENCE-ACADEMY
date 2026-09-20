@@ -77,7 +77,7 @@ const sendResetEmail = async (to, resetCode) => {
             },
             to: [{ email: to }],
             subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
-            html: `
+            htmlContent: `
                 <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
                     <h2 style="color: #0056b3; text-align: center;">Competence Academy</h2>
                     <p>Bonjour,</p>
