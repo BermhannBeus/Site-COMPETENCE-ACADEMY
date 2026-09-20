@@ -318,6 +318,35 @@ body {
 .back-btn:hover { color: var(--academy-orange); }
 
 
+
+
+.online-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: #e6f4ea; /* Koulè fond vèt klè */
+    color: #137333; /* Koulè tèks la */
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    width: fit-content;
+}
+
+.online-badge .dot {
+    height: 8px;
+    width: 8px;
+    background-color: #34a853; /* Pwen vèt ki limen an */
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.2); /* Efè limyè otou pwen an */
+}
+
+
+
+
 /* ==========================================================================
    RESPONSIVE (ADAPTASYON MOBIL AK GWO EKRAN)
    ========================================================================== */
