@@ -10,10 +10,34 @@
 
   gtag('config', 'G-BXD7WDY3JD');
 </script>
+
  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cours en Ligne - Competence Academy</title>
+
+<script>
+    // Tcheke si itilizatè a konekte, sinon voye l tcheke sou login la
+    if (!localStorage.getItem('ca_token')) {
+        window.location.href = 'login.html';
+    }
+</script>
+
+<script>
+    // Tcheke si itilizatè a konekte toutbon anvan l antre sou paj la
+    window.addEventListener('DOMContentLoaded', () => {
+        const user = localStorage.getItem('competence_academy_user');
+        const token = localStorage.getItem('ca_token');
+
+        // Si pa gen itilizatè ni token, n ap bloke l
+        if (!user || !token) {
+            alert('Aksè refize! Ou dwe konekte oswa kreye yon kont pou w ka wè kou nan Competence Academy yo.');
+            window.location.href = 'Login.html'; // Voye l tounen sou paj login la
+        }
+    });
+</script>
+
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0056b3">
     <link rel="stylesheet" href="cours-en-ligne.css">
@@ -40,10 +64,10 @@
     <!-- ==================== TI BWAT LIVE SIMULATION AN KI FÈ SIT LA BÈL ==================== -->
 
 
-    <div class="live-counter-container">
-        <div class="live-dot"></div>
-        <span class="live-text"><strong id="moun-live">12</strong> étudiants en ligne actuellement</span>
-    </div>
+    <div class="online-badge">
+    <span class="dot"></span> 
+    <span id="onlineCount">11</span>  <p> étudiants en ligne actuellement </p>
+</div>
 
     <header class="main-header">
         <h1>ESPACE DE COURS PRÉ-ENREGISTRÉ</h1>
@@ -721,9 +745,20 @@ function telechargerResultat() {
         });
     }, 400);
 }
-
-
     </script>
+
+  <!-- Asire w ou mete liy sa a nan tèt oswa anba HTML la anvan script ou a -->
+<script src="http://localhost:5000/socket.io/socket.io.js"></script>
+<script>
+    const socket = io('http://localhost:5000');
+    
+    socket.on('updateOnlineCount', (count) => {
+        const counterElement = document.getElementById('onlineCount');
+        if (counterElement) {
+            counterElement.textContent = count;
+        }
+    });
+</script>
 
 </body>
 </html>
