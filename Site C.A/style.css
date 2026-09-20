@@ -1777,7 +1777,8 @@ ul li img {
 }
 /* PWA installation and update controls */
 #pwa-message,
-#install-app-button {
+#install-app-button,
+#enable-notifications-button {
   position: fixed;
   right: 18px;
   z-index: 2000;
@@ -1809,8 +1810,18 @@ ul li img {
   white-space: nowrap;
 }
 
-#install-app-button {
+#install-app-button,
+#enable-notifications-button {
   bottom: 18px;
   padding: 11px 15px;
   font-size: 0.85rem;
+}
+
+#enable-notifications-button {
+  bottom: 68px;
+  color: #111e62;
+  background: #ffffff;
+  border: 1px solid #dbe3f0;
+  cursor: pointer;
+  font-weight: 700;
 }
