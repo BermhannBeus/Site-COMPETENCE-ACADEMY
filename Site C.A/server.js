@@ -12,6 +12,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const webpush = require('web-push');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +28,9 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 const MONGODB_URI = process.env.MONGODB_URI;
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const PUSH_ADMIN_SECRET = process.env.PUSH_ADMIN_SECRET;
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
     .split(',')
     .map((url) => url.trim().replace(/\/$/, ''))
@@ -153,8 +157,15 @@ const resetCodeSchema = new mongoose.Schema({
     expiresAt: { type: Date, required: true, index: { expires: 0 } }
 });
 
+const pushSubscriptionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    endpoint: { type: String, required: true, unique: true },
+    subscription: { type: Object, required: true }
+}, { timestamps: true });
+
 const User = mongoose.model('User', userSchema);
 const ResetCode = mongoose.model('ResetCode', resetCodeSchema);
+const PushSubscription = mongoose.model('PushSubscription', pushSubscriptionSchema);
 
 const authenticate = (req, res, next) => {
     const token = getCookie(req, 'ca_token') || req.headers.authorization?.replace(/^Bearer\s+/i, '');
@@ -401,6 +412,77 @@ app.post('/api/logout', (req, res) => {
     res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
+app.get('/api/push/public-key', (req, res) => {
+    res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', async (req, res) => {
+    try {
+        const subscription = req.body?.subscription;
+        if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+            return res.status(400).json({ success: false, message: 'Abonnement de notification invalide.' });
+        }
+
+        let userId;
+        const token = getCookie(req, 'ca_token');
+        if (token) {
+            try {
+                userId = jwt.verify(token, JWT_SECRET).id;
+            } catch (error) {
+                userId = undefined;
+            }
+        }
+
+        await PushSubscription.findOneAndUpdate(
+            { endpoint: subscription.endpoint },
+            { userId, endpoint: subscription.endpoint, subscription },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        res.json({ success: true, message: 'Notifications activées avec succès.' });
+    } catch (error) {
+        console.error('Push subscription error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’activer les notifications.' });
+    }
+});
+
+app.delete('/api/push/subscribe', async (req, res) => {
+    try {
+        const endpoint = String(req.body?.endpoint || '');
+        if (!endpoint) return res.status(400).json({ success: false, message: 'Abonnement introuvable.' });
+        await PushSubscription.deleteOne({ endpoint });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Push unsubscribe error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de désactiver les notifications.' });
+    }
+});
+
+app.post('/api/push/notify', async (req, res) => {
+    if (!PUSH_ADMIN_SECRET || req.headers['x-push-admin-secret'] !== PUSH_ADMIN_SECRET) {
+        return res.status(401).json({ success: false, message: 'Accès non autorisé.' });
+    }
+
+    const title = String(req.body?.title || 'Competence Academy').slice(0, 100);
+    const body = String(req.body?.body || 'Une nouvelle mise à jour est disponible.').slice(0, 300);
+    const subscriptions = await PushSubscription.find().lean();
+    const results = await Promise.allSettled(subscriptions.map(async (item) => {
+        try {
+            await webpush.sendNotification(item.subscription, JSON.stringify({ title, body, url: '/' }));
+        } catch (error) {
+            if (error.statusCode === 404 || error.statusCode === 410) {
+                await PushSubscription.deleteOne({ _id: item._id });
+            }
+            throw error;
+        }
+    }));
+
+    res.json({
+        success: true,
+        sent: results.filter((result) => result.status === 'fulfilled').length,
+        removed: results.filter((result) => result.status === 'rejected').length
+    });
+});
+
 // Gestion des utilisateurs connectés (Socket.io)
 const onlineUsers = new Map();
 
@@ -462,12 +544,21 @@ const startServer = async () => {
         GOOGLE_CLIENT_ID,
         BREVO_API_KEY: process.env.BREVO_API_KEY,
         BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
+        VAPID_PUBLIC_KEY,
+        VAPID_PRIVATE_KEY,
+        PUSH_ADMIN_SECRET,
         FRONTEND_URLS: FRONTEND_URLS.join(',')
     };
     const missingEnvironment = Object.keys(requiredEnvironment).filter((key) => !requiredEnvironment[key]);
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
+
+    webpush.setVapidDetails(
+        'mailto:competenceacademy34@gmail.com',
+        VAPID_PUBLIC_KEY,
+        VAPID_PRIVATE_KEY
+    );
 
     await mongoose.connect(MONGODB_URI, {
         serverSelectionTimeoutMS: 10000
