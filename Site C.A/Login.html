@@ -331,7 +331,8 @@
 
                 if (response.ok && data.success) {
                     alert(data.message || 'Votre mot de passe a été modifié avec succès !');
-                    switchView('login');
+                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+                    window.location.href = '/cours%20en%20ligne';
                 } else {
                     alert('Erreur : ' + (data.message || 'Impossible de réinitialiser le mot de passe.'));
                 }
