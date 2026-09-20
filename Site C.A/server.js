@@ -64,15 +64,18 @@ const clearAuthCookie = (res) => {
 };
 
 const sendResetEmail = async (to, resetCode) => {
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            'api-key': process.env.BREVO_API_KEY,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            from: 'Competence Academy <onboarding@resend.dev>',
-            to: [to],
+            sender: {
+                name: 'Competence Academy',
+                email: process.env.BREVO_SENDER_EMAIL
+            },
+            to: [{ email: to }],
             subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
@@ -90,7 +93,7 @@ const sendResetEmail = async (to, resetCode) => {
 
     if (!response.ok) {
         const details = await response.text();
-        throw new Error(`Resend API ${response.status}: ${details}`);
+        throw new Error(`Brevo API ${response.status}: ${details}`);
     }
 };
 
@@ -458,7 +461,8 @@ const startServer = async () => {
         JWT_SECRET,
         MONGODB_URI,
         GOOGLE_CLIENT_ID,
-        RESEND_API_KEY: process.env.RESEND_API_KEY,
+        BREVO_API_KEY: process.env.BREVO_API_KEY,
+        BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
         FRONTEND_URLS: FRONTEND_URLS.join(',')
     };
     const missingEnvironment = Object.keys(requiredEnvironment).filter((key) => !requiredEnvironment[key]);
