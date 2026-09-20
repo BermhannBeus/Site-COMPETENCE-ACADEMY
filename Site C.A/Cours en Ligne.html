@@ -76,11 +76,27 @@
 
     <div class="nav-spacer"></div>
 
-    <div class="online-badge">
-    <span class="dot"></span> 
-    <span id="onlineCount">0</span>  <p> étudiants en ligne actuellement </p>
-</div>
-    <div id="onlineUsers" class="online-users" aria-live="polite"></div>
+    <section class="online-panel" aria-label="Étudiants actuellement en ligne">
+        <div class="online-panel-header">
+            <div class="online-panel-title">
+                <span class="online-status-icon" aria-hidden="true">
+                    <i class="fa-solid fa-signal"></i>
+                </span>
+                <div>
+                    <h2>Présence en direct</h2>
+                    <p>Les étudiants connectés actuellement</p>
+                </div>
+            </div>
+            <div class="online-count" aria-live="polite">
+                <span class="online-count-dot" aria-hidden="true"></span>
+                <strong id="onlineCount">0</strong>
+                <span>en ligne</span>
+            </div>
+        </div>
+        <div id="onlineUsers" class="online-users" aria-live="polite">
+            <span class="online-empty">Aucun étudiant connecté pour le moment</span>
+        </div>
+    </section>
 
     <header class="main-header">
         <h1>ESPACE DE COURS PRÉ-ENREGISTRÉ</h1>
@@ -744,13 +760,22 @@ function telechargerResultat() {
         if (!counterElement || !usersElement) return;
 
         counterElement.textContent = users.length;
-        usersElement.replaceChildren(...users.map((user) => {
+        const userItems = users.map((user) => {
             const item = document.createElement('span');
             item.className = 'online-user';
             item.innerHTML = '<span class="online-user-dot"></span>';
             item.append(document.createTextNode(user.name));
             return item;
-        }));
+        });
+
+        if (userItems.length === 0) {
+            const emptyState = document.createElement('span');
+            emptyState.className = 'online-empty';
+            emptyState.textContent = 'Aucun étudiant connecté pour le moment';
+            userItems.push(emptyState);
+        }
+
+        usersElement.replaceChildren(...userItems);
     });
 </script>
 
