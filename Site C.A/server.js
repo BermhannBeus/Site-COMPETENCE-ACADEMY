@@ -287,7 +287,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
     }
 
     try {
-        const user = users.find(u => u.email === email);
+        const user = await User.findOne({ email });
         if (!user) {
             return res.json({ success: true, message: 'Si votre adresse existe, un code de vérification a été envoyé.' });
         }
@@ -304,7 +304,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
         );
 
         const mailOptions = {
-            from: '"Competence Academy" <competenceacademy34@gmail.com>',
+            from: `"Competence Academy" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
             html: `
