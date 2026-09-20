@@ -16,25 +16,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cours en Ligne - Competence Academy</title>
 
+<style>
+    html.auth-pending body {
+        visibility: hidden;
+    }
+</style>
 <script>
     const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5000/api'
         : 'https://site-competence-academy-backend.onrender.com/api';
 
-    window.addEventListener('DOMContentLoaded', () => {
-        fetch(`${API_BASE_URL}/me`, { credentials: 'include' })
-            .then(response => {
-                if (!response.ok) throw new Error('Unauthorized');
-                return response.json();
-            })
-            .then(data => {
-                localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
-            })
-            .catch(() => {
-                alert('Aksè refize! Ou dwe konekte oswa kreye yon kont pou w ka wè kou nan Competence Academy yo.');
-                window.location.href = '/login';
-            });
-    });
+    document.documentElement.classList.add('auth-pending');
+
+    fetch(`${API_BASE_URL}/me`, { credentials: 'include' })
+        .then(response => {
+            if (!response.ok) throw new Error('Unauthorized');
+            return response.json();
+        })
+        .then(data => {
+            localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+            document.documentElement.classList.remove('auth-pending');
+        })
+        .catch(() => {
+            window.location.replace('/login');
+        });
 </script>
 
 
