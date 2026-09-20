@@ -35,9 +35,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Middleware
-app.use(express.json());
-app.use(cors());
 
 // Stockage en mémoire
 const users = [];
@@ -229,6 +226,6 @@ io.on('connection', (socket) => {
 });
 
 // Démarrage du serveur
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server Competence Academy Run ${PORT}`);
 });
