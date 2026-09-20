@@ -102,6 +102,8 @@ body {
     width: 36px;
     height: 36px;
     fill: var(--primary-color);
+    display: block;
+    overflow: visible;
 }
 
 .form-header h2 {
