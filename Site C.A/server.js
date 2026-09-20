@@ -361,8 +361,14 @@ app.post('/api/reset-password-code', resetLimiter, async (req, res) => {
         user.password = await bcrypt.hash(newPassword, 10);
 
         await ResetCode.deleteOne({ email });
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        setAuthCookie(res, token);
 
-        res.json({ success: true, message: 'Votre mot de passe a été modifié avec succès !' });
+        res.json({
+            success: true,
+            message: 'Votre mot de passe a été modifié avec succès !',
+            user: { id: user.id, name: user.name, email: user.email }
+        });
 
     } catch (error) {
         console.error('Reset password error:', error);
