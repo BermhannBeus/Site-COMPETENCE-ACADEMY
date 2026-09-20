@@ -1,4 +1,4 @@
-const CACHE_NAME = 'competence-academy-v3';
+const CACHE_NAME = 'competence-academy-v4';
 const urlsToCache = [
   '/',
   '/Logo.png',
@@ -26,7 +26,14 @@ self.addEventListener('activate', event => {
         })
       );
     })
+    .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', event => {
