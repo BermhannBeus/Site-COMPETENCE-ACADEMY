@@ -16,10 +16,75 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
-        .then(reg => console.log('Service Worker anrejistre avèk siksè !'))
-        .catch(err => console.log('Echèk enrejistreman Service Worker :', err));
+        .then(registration => {
+          let refreshing = false;
+
+          const showPwaMessage = (message, actionText, action) => {
+            const existing = document.getElementById('pwa-message');
+            if (existing) existing.remove();
+
+            const box = document.createElement('div');
+            box.id = 'pwa-message';
+            box.innerHTML = `<span>${message}</span><button type="button">${actionText}</button>`;
+            box.querySelector('button').addEventListener('click', action);
+            document.body.appendChild(box);
+          };
+
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showPwaMessage(
+                  'Une nouvelle version de Competence Academy est disponible.',
+                  'Mettre à jour',
+                  () => {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                );
+              }
+            });
+          });
+
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+
+          setInterval(() => registration.update(), 60 * 60 * 1000);
+        })
+        .catch(err => console.error('Échec de l’enregistrement du Service Worker :', err));
     });
   }
+</script>
+
+<script>
+  let deferredInstallPrompt;
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+
+    const installButton = document.createElement('button');
+    installButton.id = 'install-app-button';
+    installButton.type = 'button';
+    installButton.textContent = 'Installer l’application';
+    installButton.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installButton.remove();
+    });
+    document.body.appendChild(installButton);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    const installButton = document.getElementById('install-app-button');
+    if (installButton) installButton.remove();
+  });
 </script>
 
 
