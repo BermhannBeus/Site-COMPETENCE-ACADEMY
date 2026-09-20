@@ -1,7 +1,11 @@
 {
   "name": "Competence Academy",
   "short_name": "Competence Academy",
+  "description": "Plateforme de formation professionnelle de Competence Academy.",
+  "lang": "fr-FR",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0056b3",
