@@ -1,0 +1,371 @@
+:root {
+    --primary-color: #0d1b3e;
+    --primary-dark: #070f24;
+    --accent-orange: #ff7a00;
+    --bg-color: #f4f7fc;
+    --card-bg: #ffffff;
+    --text-main: #212529;
+    --text-muted: #6c757d;
+    --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #070f24 0%, #0d1b3e 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+}
+
+/* Container ki santre epi ki adapte sou tout ekran */
+.auth-wrapper {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.auth-container {
+    background: var(--card-bg);
+    width: 100%;
+    border-radius: 28px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    padding: 35px 30px;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.form-box {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: var(--transition);
+}
+
+.form-box.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Header & Avatar Icon - Korije ak amelyore proporsyon yo sou tout aparèy */
+.form-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.avatar-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(13, 27, 62, 0.08), rgba(255, 122, 0, 0.15));
+    border: 2px solid rgba(255, 122, 0, 0.2);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 15px auto;
+    box-shadow: 0 10px 20px rgba(13, 27, 62, 0.08);
+}
+
+.avatar-icon svg {
+    width: 36px;
+    height: 36px;
+    fill: var(--primary-color);
+}
+
+.form-header h2 {
+    font-size: 1.7rem;
+    color: var(--primary-color);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+/* Form Fields */
+.input-group {
+    margin-bottom: 18px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.input-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-field-wrapper svg:not(.toggle-password svg) {
+    position: absolute;
+    left: 16px;
+    width: 20px;
+    height: 20px;
+    fill: var(--text-muted);
+    transition: var(--transition);
+    pointer-events: none;
+}
+
+.input-field-wrapper input {
+    width: 100%;
+    padding: 14px 45px 14px 48px; /* Kite espas sou bò gòch (pou ikòn kadna/imèl) ak bò dwat (pou je a) */
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    transition: var(--transition);
+    outline: none;
+}
+
+.input-field-wrapper input:focus {
+    border-color: var(--primary-color);
+    background-color: #fff;
+}
+
+/* Stil pou bouton preview (je a) */
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    padding: 4px;
+    transition: var(--transition);
+}
+
+.toggle-password:hover {
+    color: var(--primary-color);
+}
+
+.forgot-pass {
+    text-align: right;
+    margin-top: -8px;
+    margin-bottom: 20px;
+}
+
+.forgot-pass a {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.forgot-pass a:hover {
+    color: var(--accent-orange);
+}
+
+/* Action Buttons */
+.btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(13, 27, 62, 0.25);
+    transition: var(--transition);
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, var(--accent-orange), #e66d00);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 25px rgba(255, 122, 0, 0.3);
+}
+
+/* Social Login Dividers */
+.divider {
+    text-align: center;
+    position: relative;
+    margin: 22px 0;
+}
+
+.divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.divider span {
+    background: var(--card-bg);
+    padding: 0 12px;
+    position: relative;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+}
+
+/* Social Buttons */
+.social-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.social-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: var(--transition);
+}
+
+.social-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.social-btn:hover {
+    border-color: var(--primary-color);
+    background: #f8fafc;
+    transform: translateY(-2px);
+}
+
+/* Switch Links */
+.switch-text {
+    text-align: center;
+    margin-top: 22px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.switch-text a {
+    color: var(--accent-orange);
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 4px;
+}
+
+.switch-text a:hover {
+    text-decoration: underline;
+}
+
+/* User Dashboard Profile View */
+.profile-card {
+    text-align: center;
+}
+
+.profile-avatar {
+    width: 85px;
+    height: 85px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-orange));
+    color: white;
+    font-size: 2.2rem;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px auto;
+    box-shadow: 0 12px 25px rgba(13, 27, 62, 0.25);
+}
+
+.profile-info h3 {
+    font-size: 1.4rem;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+    font-weight: 800;
+}
+
+.profile-info p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+}
+
+.btn-logout {
+    background: #fff5f5;
+    color: #e53e3e;
+    border: 1.5px solid #fed7d7;
+    width: 100%;
+    padding: 12px;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-logout:hover {
+    background: #e53e3e;
+    color: white;
+    border-color: #e53e3e;
+    transform: translateY(-2px);
+}
+
+/* Ekstrèmman Responsive sou ti telefòn (iPhone SE, Galaxy 360px, etc.) */
+@media (max-width: 420px) {
+    body {
+        padding: 10px;
+    }
+    .auth-container {
+        padding: 25px 18px;
+        border-radius: 20px;
+    }
+    .form-header h2 {
+        font-size: 1.5rem;
+    }
+    .avatar-icon {
+        width: 70px;
+        height: 70px;
+    }
+}
+/* Style pou fòm validation kòd la */
+#resetCodeForm .input-field-wrapper input[type="text"] {
+    letter-spacing: 4px;
+    font-weight: bold;
+    text-align: center;
+    font-size: 18px;
+    color: #0056b3;
+    background-color: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 10px;
+    transition: border-color 0.3s ease;
+}
+
+#resetCodeForm .input-field-wrapper input[type="text"]:focus {
+    border-color: #0056b3;
+    outline: none;
+    background-color: #ffffff;
+}

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competence Academy - Connexion & Inscription</title>
+    <link rel="stylesheet" href="Login.css">
+
+    <!-- Google Sign-In SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script>
+        async function handleCredentialResponse(response) {
+            try {
+                const res = await fetch('https://site-competence-academy-backend.onrender.com/api/google-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('ca_token', data.token);
+                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+                    alert('Connexion réussie avec Google !');
+                    showProfile(data.user);
+                } else {
+                    alert('Erreur de connexion : ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue sur le serveur.');
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="auth-wrapper">
+        <div class="auth-container">
+
+            <!-- 1. LOGIN FORM -->
+            <div id="loginForm" class="form-box active">
+                <div class="form-header">
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                    <h2>Connexion</h2>
+                </div>
+                <form onsubmit="handleLoginOrSignup(event, 'login')">
+                    <div class="input-group">
+                        <label>Email</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <input type="email" id="loginEmail" placeholder="votre.email@academy.com" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Mot de passe</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                            <input type="password" id="loginPassword" placeholder="••••••••" required>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">
+                                <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="forgot-pass">
+                        <a href="#" onclick="switchView('forgot')">Mot de passe oublié ?</a>
+                    </div>
+                    <button type="submit" class="btn-submit">Se connecter</button>
+                </form>
+
+                <div class="divider"><span>Ou continuer avec</span></div>
+                
+                <div class="social-buttons">
+                    <div id="g_id_onload"
+                         data-client_id="745679796774-7jodshecnt3upfn3g307q24sn8fm91it.apps.googleusercontent.com"
+                         data-callback="handleCredentialResponse"
+                         data-auto_select="false">
+                    </div>
+                    <div class="g_id_signin" data-type="standard" data-size="large" data-width="100%"></div>
+                </div>
+
+                <div class="switch-text">
+                    Vous n'avez pas de compte ? <a href="#" onclick="switchView('signup')">Créer un compte</a>
+                </div>
+            </div>
+
+            <!-- 2. SIGN UP FORM -->
+            <div id="signupForm" class="form-box">
+                <div class="form-header">
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M15 14c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm-9-4V7H4v3H1v2h3v3h2v-3h3v-2H6zm6 4c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4 z"/></svg>
+                    </div>
+                    <h2>Créer un Compte</h2>
+                </div>
+                <form onsubmit="handleLoginOrSignup(event, 'signup')">
+                    <div class="input-group">
+                        <label>Nom complet</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                            <input type="text" id="signupName" placeholder="Jean Bernard" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <input type="email" id="signupEmail" placeholder="votre.email@academy.com" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Mot de passe</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                            <input type="password" id="signupPassword" placeholder="Créer un mot de passe" required>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('signupPassword', this)">
+                                <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit">S'inscrire</button>
+                </form>
+
+                <div class="switch-text">
+                    Déjà un compte ? <a href="#" onclick="switchView('login')">Se connecter</a>
+                </div>
+            </div>
+
+            <!-- 3. FORGOT PASSWORD FORM -->
+            <div id="forgotForm" class="form-box">
+                <div class="form-header">
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                    </div>
+                    <h2>Récupération</h2>
+                    <p style="font-size: 13px; color: #666; margin-top: 5px;">Entrez votre email pour recevoir votre code à 6 chiffres.</p>
+                </div>
+                <form onsubmit="handleForgotPassword(event)">
+                    <div class="input-group">
+                        <label>Email</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <input type="email" id="forgotEmail" placeholder="votre.email@academy.com" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit">Envoyer le code</button>
+                </form>
+
+                <div class="switch-text" style="margin-top: 15px;">
+                    <a href="#" onclick="switchView('login')">← Retour à la connexion</a>
+                </div>
+            </div>
+
+            <!-- 4. RESET CODE & NEW PASSWORD FORM (AJOUTÉ) -->
+            <div id="resetCodeForm" class="form-box">
+                <div class="form-header">
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                    </div>
+                    <h2>Changer le mot de passe</h2>
+                    <p style="font-size: 13px; color: #666; margin-top: 5px;">Entrez le code reçu par email et votre nouveau mot de passe.</p>
+                </div>
+                <form onsubmit="handleResetPasswordWithCode(event)">
+                    <div class="input-group">
+                        <label>Code de vérification (6 chiffres)</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                            <input type="text" id="resetCode" placeholder="123456" maxlength="6" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Nouveau mot de passe</label>
+                        <div class="input-field-wrapper">
+                            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                            <input type="password" id="newPassword" placeholder="Nouveau mot de passe" required>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('newPassword', this)">
+                                <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit">Valider le changement</button>
+                </form>
+
+                <div class="switch-text" style="margin-top: 15px;">
+                    <a href="#" onclick="switchView('login')">← Annuler</a>
+                </div>
+            </div>
+
+            <!-- 5. PROFILE DASHBOARD -->
+            <div id="profileView" class="form-box">
+                <div class="profile-card">
+                    <div class="profile-avatar" id="userAvatarInitial">J</div>
+                    <div class="profile-info">
+                        <h3 id="profileName">Jean Bernard</h3>
+                        <p id="profileEmail">jean.bernard@academy.com</p>
+                    </div>
+                    <button class="btn-logout" onclick="handleLogout()">Se déconnecter</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+<!-- JavaScript Logik pou login.html -->
+    <script>
+        // URL baz pou backend Render
+       const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+         ? 'http://localhost:5000/api'
+         : 'https://site-competence-academy-backend.onrender.com/api';
+        function switchView(viewType) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const forgotForm = document.getElementById('forgotForm');
+            const resetCodeForm = document.getElementById('resetCodeForm');
+            const profileView = document.getElementById('profileView');
+
+            if (loginForm) loginForm.classList.remove('active');
+            if (signupForm) signupForm.classList.remove('active');
+            if (forgotForm) forgotForm.classList.remove('active');
+            if (resetCodeForm) resetCodeForm.classList.remove('active');
+            if (profileView) profileView.classList.remove('active');
+
+            if (viewType === 'login' && loginForm) loginForm.classList.add('active');
+            else if (viewType === 'signup' && signupForm) signupForm.classList.add('active');
+            else if (viewType === 'forgot' && forgotForm) forgotForm.classList.add('active');
+            else if (viewType === 'resetCode' && resetCodeForm) resetCodeForm.classList.add('active');
+            else if (viewType === 'profile' && profileView) profileView.classList.add('active');
+        }
+
+        async function handleLoginOrSignup(event, endpoint) {
+            event.preventDefault();
+            
+            const name = endpoint === 'signup' ? document.getElementById('signupName').value : '';
+            const email = document.getElementById(endpoint === 'signup' ? 'signupEmail' : 'loginEmail').value;
+            const password = document.getElementById(endpoint === 'signup' ? 'signupPassword' : 'loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('ca_token', data.token);
+                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+                    // Redireksyon vè paj kou yo lè li fin konekte ak siksè
+                    window.location.href = 'Cours en Ligne.html';
+                } else {
+                    alert(data.message || 'Une erreur est survenue.');
+                }
+
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                alert('Échec de la connexion au serveur.');
+            }
+        }
+
+        // Fonksyon pou kòd Google OAuth la
+        async function handleCredentialResponse(response) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/google-login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('ca_token', data.token);
+                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+                    // Redireksyon vè paj kou yo lè li fin konekte ak Google
+                    window.location.href = 'Cours en Ligne.html';
+                } else {
+                    alert(data.message || 'Erreur lors de la connexion Google.');
+                }
+            } catch (error) {
+                console.error('Erreur Google Login:', error);
+                alert('Impossible de se connecter avec Google.');
+            }
+        }
+
+     async function handleForgotPassword(event) {
+          event.preventDefault();
+          const email = document.getElementById('forgotEmail').value;
+          
+          try {
+              const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email })
+              });
+
+              const data = await response.json();
+
+              if (response.ok && data.success) {
+                  alert(data.message || 'Un code à 6 chiffres a été envoyé.');
+                  switchView('resetCode');
+              } else {
+                  alert('Erreur : ' + (data.message || 'Impossible d\'envoyer l\'email.'));
+              }
+          } catch (error) {
+              console.error('Erreur forgot-password:', error);
+              alert('Erreur réelle : ' + error.message);
+          }
+      }
+      
+        async function handleResetPasswordWithCode(event) {
+            event.preventDefault();
+
+            // Sèvi ak 'forgotEmail' oubyen 'resetEmail' selon sa ki disponib
+            const emailField = document.getElementById('forgotEmail') || document.getElementById('resetEmail');
+            const email = emailField ? emailField.value : '';
+            
+            const code = document.getElementById('resetCode') ? document.getElementById('resetCode').value : '';
+            const newPassword = document.getElementById('newPassword') ? document.getElementById('newPassword').value : '';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/reset-password-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code, newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    alert(data.message || 'Votre mot de passe a été modifié avec succès !');
+                    switchView('login');
+                } else {
+                    alert('Erreur : ' + (data.message || 'Impossible de réinitialiser le mot de passe.'));
+                }
+            } catch (error) {
+                console.error('Erreur reset-password-code:', error);
+                alert('Impossible de contacter le serveur. Vérifiez votre connexion.');
+            }
+        }
+
+        function showProfile(user) {
+            if (document.getElementById('profileName')) {
+                document.getElementById('profileName').innerText = user.name || user.email;
+            }
+            if (document.getElementById('profileEmail')) {
+                document.getElementById('profileEmail').innerText = user.email;
+            }
+            if (document.getElementById('userAvatarInitial')) {
+                const initial = (user.name || user.email).charAt(0).toUpperCase();
+                document.getElementById('userAvatarInitial').innerText = initial;
+            }
+            switchView('profile');
+        }
+
+        function togglePasswordVisibility(fieldId, button) {
+            const passwordField = document.getElementById(fieldId);
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                button.classList.add('show');
+            } else {
+                passwordField.type = 'password';
+                button.classList.remove('show');
+            }
+        }
+
+        // Lè paj la chaje, toujou afiche form login la san li pa sote ale sou paj kou a
+        window.addEventListener('DOMContentLoaded', () => {
+            switchView('login');
+        });
+
+        function handleLogout() {
+            localStorage.removeItem('competence_academy_user');
+            localStorage.removeItem('ca_token');
+            if (document.getElementById('loginEmail')) document.getElementById('loginEmail').value = '';
+            if (document.getElementById('loginPassword')) document.getElementById('loginPassword').value = '';
+            switchView('login');
+        }
+    </script>
+</body>
+</html>
