@@ -1775,3 +1775,42 @@ ul li img {
         width: 100% !important;
     }
 }
+/* PWA installation and update controls */
+#pwa-message,
+#install-app-button {
+  position: fixed;
+  right: 18px;
+  z-index: 2000;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
+  font-family: inherit;
+}
+
+#pwa-message {
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(420px, calc(100vw - 36px));
+  padding: 14px 16px;
+  color: #fff;
+  background: #111e62;
+  font-size: 0.85rem;
+}
+
+#pwa-message button,
+#install-app-button {
+  padding: 9px 12px;
+  color: #fff;
+  background: #f76b00;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#install-app-button {
+  bottom: 18px;
+  padding: 11px 15px;
+  font-size: 0.85rem;
+}
