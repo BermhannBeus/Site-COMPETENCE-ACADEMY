@@ -8,13 +8,16 @@ const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
 const app = express();
+
+// Otorize CORS pou tout demann ak Express
+
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST"]
+}));
+
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
+const io = new Server(server);
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'competence_academy_secret_key_2026';
