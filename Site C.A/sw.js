@@ -1,7 +1,6 @@
-const CACHE_NAME = 'competence-academy-v2';
+const CACHE_NAME = 'competence-academy-v3';
 const urlsToCache = [
   '/',
-  '/Cours en Ligne.html',
   '/Logo.png',
   '/privacy.html',
   '/style.css'
@@ -31,6 +30,15 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const requestUrl = new URL(event.request.url);
+  const isCoursePage = requestUrl.pathname.toLowerCase().includes('cours%20en%20ligne')
+    || decodeURIComponent(requestUrl.pathname).toLowerCase().includes('cours en ligne');
+
+  if (isCoursePage || event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {
