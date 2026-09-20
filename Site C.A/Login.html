@@ -9,35 +9,12 @@
     <!-- Google Sign-In SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <script>
-        async function handleCredentialResponse(response) {
-            try {
-                const res = await fetch('https://site-competence-academy-backend.onrender.com/api/google-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    localStorage.setItem('ca_token', data.token);
-                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
-                    alert('Connexion réussie avec Google !');
-                    showProfile(data.user);
-                } else {
-                    alert('Erreur de connexion : ' + data.message);
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-                alert('Une erreur est survenue sur le serveur.');
-            }
-        }
-    </script>
 </head>
 <body>
 
     <div class="auth-wrapper">
         <div class="auth-container">
+            <div id="authMessage" class="auth-message" role="alert" aria-live="polite"></div>
 
             <!-- 1. LOGIN FORM -->
             <div id="loginForm" class="form-box active">
@@ -232,33 +209,53 @@
 
         async function handleLoginOrSignup(event, endpoint) {
             event.preventDefault();
-            
+            const submitButton = event.submitter;
+            const originalButtonText = submitButton ? submitButton.textContent : '';
             const name = endpoint === 'signup' ? document.getElementById('signupName').value : '';
             const email = document.getElementById(endpoint === 'signup' ? 'signupEmail' : 'loginEmail').value;
             const password = document.getElementById(endpoint === 'signup' ? 'signupPassword' : 'loginPassword').value;
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = endpoint === 'signup' ? 'Création...' : 'Connexion...';
+            }
+            showAuthMessage('');
 
             try {
                 const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ name, email, password })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    localStorage.setItem('ca_token', data.token);
                     localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
                     // Redireksyon vè paj kou yo lè li fin konekte ak siksè
-                    window.location.href = 'Cours en Ligne.html';
+                    window.location.href = '/cours%20en%20ligne';
                 } else {
-                    alert(data.message || 'Une erreur est survenue.');
+                    showAuthMessage(data.message || 'Une erreur est survenue.', true);
                 }
 
             } catch (error) {
                 console.error('Erreur de connexion:', error);
-                alert('Échec de la connexion au serveur.');
+                showAuthMessage('Échec de la connexion au serveur.', true);
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalButtonText;
+                }
             }
+        }
+
+        function showAuthMessage(message, isError = false) {
+            const messageElement = document.getElementById('authMessage');
+            if (!messageElement) return;
+            messageElement.textContent = message;
+            messageElement.classList.toggle('error', isError);
+            messageElement.classList.toggle('visible', Boolean(message));
         }
 
         // Fonksyon pou kòd Google OAuth la
@@ -267,22 +264,22 @@
                 const res = await fetch(`${API_BASE_URL}/google-login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ token: response.credential })
                 });
 
                 const data = await res.json();
 
                 if (data.success) {
-                    localStorage.setItem('ca_token', data.token);
                     localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
                     // Redireksyon vè paj kou yo lè li fin konekte ak Google
-                    window.location.href = 'Cours en Ligne.html';
+                    window.location.href = '/cours%20en%20ligne';
                 } else {
-                    alert(data.message || 'Erreur lors de la connexion Google.');
+                    showAuthMessage(data.message || 'Erreur lors de la connexion Google.', true);
                 }
             } catch (error) {
                 console.error('Erreur Google Login:', error);
-                alert('Impossible de se connecter avec Google.');
+                showAuthMessage('Impossible de se connecter avec Google.', true);
             }
         }
 
@@ -294,6 +291,7 @@
               const response = await fetch(`${API_BASE_URL}/forgot-password`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
                   body: JSON.stringify({ email })
               });
 
@@ -325,6 +323,7 @@
                 const response = await fetch(`${API_BASE_URL}/reset-password-code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ email, code, newPassword })
                 });
 
@@ -372,9 +371,17 @@
             switchView('login');
         });
 
-        function handleLogout() {
+        async function handleLogout() {
+            try {
+                await fetch(`${API_BASE_URL.replace('/api', '')}/api/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.warn('Logout server request failed:', error);
+            }
+
             localStorage.removeItem('competence_academy_user');
-            localStorage.removeItem('ca_token');
             if (document.getElementById('loginEmail')) document.getElementById('loginEmail').value = '';
             if (document.getElementById('loginPassword')) document.getElementById('loginPassword').value = '';
             switchView('login');
