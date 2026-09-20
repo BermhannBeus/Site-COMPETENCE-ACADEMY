@@ -28,7 +28,17 @@
 
     document.documentElement.classList.add('auth-pending');
 
-    fetch(`${API_BASE_URL}/me`, { credentials: 'include' })
+    const isRefresh = performance.getEntriesByType('navigation')[0]?.type === 'reload';
+    const invalidateSessionOnRefresh = isRefresh
+        ? fetch(`${API_BASE_URL.replace('/api', '')}/api/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        }).finally(() => {
+            localStorage.removeItem('competence_academy_user');
+        })
+        : Promise.resolve();
+
+    invalidateSessionOnRefresh.then(() => fetch(`${API_BASE_URL}/me`, { credentials: 'include' }))
         .then(response => {
             if (!response.ok) throw new Error('Unauthorized');
             return response.json();
