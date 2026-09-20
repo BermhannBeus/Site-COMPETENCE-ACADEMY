@@ -417,10 +417,7 @@ io.use((socket, next) => {
 });
 
 const broadcastOnlineUsers = () => {
-    const users = [...onlineUsers.values()]
-        .sort((first, second) => first.name.localeCompare(second.name))
-        .map(({ id, name }) => ({ id, name }));
-    io.emit('onlineUsers', users);
+    io.emit('onlineCount', onlineUsers.size);
 };
 
 io.on('connection', (socket) => {
@@ -432,12 +429,14 @@ io.on('connection', (socket) => {
     };
     currentUser.sockets.add(socket.id);
     onlineUsers.set(userId, currentUser);
+    socket.emit('onlineIdentity', { id: userId, name: currentUser.name });
 
     User.findById(userId).select('name email').lean()
         .then((user) => {
             if (!user || !onlineUsers.has(userId)) return;
             const connectedUser = onlineUsers.get(userId);
             connectedUser.name = user.name || user.email;
+            socket.emit('onlineIdentity', { id: userId, name: connectedUser.name });
             broadcastOnlineUsers();
         })
         .catch((error) => {
