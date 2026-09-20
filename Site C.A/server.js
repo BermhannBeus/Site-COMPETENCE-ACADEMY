@@ -12,7 +12,6 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
@@ -64,17 +63,36 @@ const clearAuthCookie = (res) => {
     res.setHeader('Set-Cookie', 'ca_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
 };
 
-// Configuration Nodemailer
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+const sendResetEmail = async (to, resetCode) => {
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            from: 'Competence Academy <onboarding@resend.dev>',
+            to: [to],
+            subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <h2 style="color: #0056b3; text-align: center;">Competence Academy</h2>
+                    <p>Bonjour,</p>
+                    <p>Voici votre code de vérification pour réinitialiser votre mot de passe :</p>
+                    <div style="text-align: center; margin: 25px 0;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0056b3; background: #f0f4f8; padding: 10px 20px; border-radius: 6px;">${resetCode}</span>
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">Ce code expire dans 10 minutes.</p>
+                </div>
+            `
+        })
+    });
+
+    if (!response.ok) {
+        const details = await response.text();
+        throw new Error(`Resend API ${response.status}: ${details}`);
     }
-});
+};
 
 const allowedOrigins = [
     'http://localhost',
@@ -306,26 +324,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
             { upsert: true, new: true }
         );
 
-        const mailOptions = {
-            from: `"Competence Academy" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
-                    <h2 style="color: #0056b3; text-align: center;">Competence Academy</h2>
-                    <p>Bonjour,</p>
-                    <p>Voici votre code de vérification pour réinitialiser votre mot de passe :</p>
-                    <div style="text-align: center; margin: 25px 0;">
-                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0056b3; background: #f0f4f8; padding: 10px 20px; border-radius: 6px;">${resetCode}</span>
-                    </div>
-                    <p style="font-size: 0.9em; color: #666;">Entrez ce code sur le site pour choisir votre nouveau mot de passe.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
-                    <p style="font-size: 0.8em; color: #999; text-align: center;">Competence Academy — Formation Pratique & Professionnelle</p>
-                </div>
-            `
-        };
-
-        await transporter.sendMail(mailOptions);
+        await sendResetEmail(email, resetCode);
         return res.json({ success: true, message: 'Un code à 6 chiffres a été envoyé sur votre email !' });
 
     } catch (error) {
@@ -453,8 +452,7 @@ const startServer = async () => {
         JWT_SECRET,
         MONGODB_URI,
         GOOGLE_CLIENT_ID,
-        EMAIL_USER: process.env.EMAIL_USER,
-        EMAIL_PASS: process.env.EMAIL_PASS,
+        RESEND_API_KEY: process.env.RESEND_API_KEY,
         FRONTEND_URLS: FRONTEND_URLS.join(',')
     };
     const missingEnvironment = Object.keys(requiredEnvironment).filter((key) => !requiredEnvironment[key]);
