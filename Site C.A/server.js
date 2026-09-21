@@ -179,15 +179,15 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
             },
             body: JSON.stringify({
                 sender: {
-                    name: 'Formulaire Competence Academy',
+                    name: 'Commentaire du site',
                     email: process.env.BREVO_SENDER_EMAIL
                 },
                 to: [{ email: 'competenceacademy34@gmail.com', name: 'Competence Academy' }],
                 replyTo: { email, name },
-                subject: `Nouveau message du site - ${name}`,
+                subject: `Commentaire du site - ${name}`,
                 htmlContent: `
                     <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#17213d">
-                        <h2 style="color:#111e62">Nouveau message depuis le site</h2>
+                        <h2 style="color:#111e62">Commentaire du site</h2>
                         <p><strong>Nom :</strong> ${escapeHtml(name)}</p>
                         <p><strong>E-mail :</strong> ${escapeHtml(email)}</p>
                         <p><strong>Message :</strong></p>
