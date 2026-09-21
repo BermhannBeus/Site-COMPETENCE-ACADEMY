@@ -7,9 +7,6 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-
-
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0056b3">
 <script>
@@ -25,8 +22,18 @@
 
             const box = document.createElement('div');
             box.id = 'pwa-message';
-            box.innerHTML = `<span>${message}</span><button type="button">${actionText}</button>`;
+            box.setAttribute('role', 'status');
+            box.innerHTML = `
+              <span class="pwa-message-icon" aria-hidden="true"><i class="fa-solid fa-rotate"></i></span>
+              <span class="pwa-message-content">
+                <strong>Mise à jour disponible</strong>
+                <span>${message}</span>
+              </span>
+              <button type="button">${actionText}</button>
+              <button type="button" class="pwa-message-close" aria-label="Fermer">&times;</button>
+            `;
             box.querySelector('button').addEventListener('click', action);
+            box.querySelector('.pwa-message-close').addEventListener('click', () => box.remove());
             document.body.appendChild(box);
           };
 
@@ -73,7 +80,7 @@
     const button = document.createElement('button');
     button.id = 'enable-notifications-button';
     button.type = 'button';
-    button.textContent = 'Activer les notifications';
+    button.innerHTML = '<i class="fa-regular fa-bell" aria-hidden="true"></i><span>Activer les notifications</span>';
     button.addEventListener('click', async () => {
       button.disabled = true;
       try {
@@ -98,12 +105,12 @@
           body: JSON.stringify({ subscription })
         });
         if (!response.ok) throw new Error('Abonnement refusé');
-        button.textContent = 'Notifications activées';
+        button.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i><span>Notifications activées</span>';
         setTimeout(() => button.remove(), 2500);
       } catch (error) {
         console.error('Erreur notifications:', error);
         button.disabled = false;
-        button.textContent = 'Réessayer les notifications';
+        button.innerHTML = '<i class="fa-solid fa-rotate-right" aria-hidden="true"></i><span>Réessayer les notifications</span>';
       }
     });
     document.body.appendChild(button);
@@ -125,7 +132,7 @@
     const installButton = document.createElement('button');
     installButton.id = 'install-app-button';
     installButton.type = 'button';
-    installButton.textContent = 'Installer l’application';
+    installButton.innerHTML = '<i class="fa-solid fa-download" aria-hidden="true"></i><span>Installer l’application</span>';
     installButton.addEventListener('click', async () => {
       if (!deferredInstallPrompt) return;
       deferredInstallPrompt.prompt();
@@ -167,10 +174,6 @@
 
   
   <script>
-  (function(){
-    emailjs.init("osyslXsvP736liCI-");
-  })();
-
   function ouvrirPDF(file){
     window.open(file, "_blank");
   }
@@ -189,20 +192,43 @@
     }
   }
 
-  function envoyerFormulaire(event) {
-    event.preventDefault(); // Anpeche paj la rafrechi
-    
-    // Montre mesaj siksè a
+  async function envoyerFormulaire(event) {
+    event.preventDefault();
+    const form = document.getElementById('contact-form');
+    const submitButton = form.querySelector('.submit-btn');
     const successMsg = document.getElementById('form-success-msg');
-    successMsg.style.display = 'flex';
-    
-    // Netwaye fòm nan
-    document.getElementById('contact-form').reset();
-    
-    // Kache mesaj la apre 4 segond
-    setTimeout(() => {
-        successMsg.style.display = 'none';
-    }, 400);
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000/api/contact'
+      : 'https://site-competence-academy-backend.onrender.com/api/contact';
+
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours...';
+    successMsg.className = 'success-message';
+    successMsg.style.display = 'none';
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('form-name').value,
+          email: document.getElementById('form-email').value,
+          message: document.getElementById('form-message').value
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Échec de l’envoi');
+      successMsg.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${result.message}`;
+      successMsg.style.display = 'flex';
+      form.reset();
+    } catch (error) {
+      successMsg.className = 'success-message error-message';
+      successMsg.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${error.message}`;
+      successMsg.style.display = 'flex';
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = 'Envoyer le message <i class="fa-solid fa-paper-plane"></i>';
+    }
 }
 
 // Tann paj la fin chaje nèt anvan li kouri
