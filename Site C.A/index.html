@@ -155,7 +155,7 @@
 <!-- Ekran Chajman / Splash Screen Style Samsung Good Lock -->
 <div id="splash-screen" class="goodlock-splash">
     <div class="splash-card">
-        <img src="Logo.png" alt="Logo Competence Academy" class="splash-logo">
+        <img src="icon-192.png" alt="Logo Competence Academy" class="splash-logo">
     </div>
     <h2 class="splash-title">COMPETENCE ACADEMY</h2>
     <div class="splash-loader-bar">
@@ -395,13 +395,13 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 
   <ul class="nav-links" id="nav-links">
-    <li><a href="#" onclick="toggleMenu()">Accueil</a></li>
-    <li><a href="#historique" onclick="toggleMenu()">Histoire</a></li>
-    <li><a href="#formations" onclick="toggleMenu()">Nos Cours</a></li>
-    <li><a href="#why-choose-us" onclick="toggleMenu()">Choisir</a></li>
-    <li><a href="#founders" onclick="toggleMenu()">Nos Fondateurs</a></li>
-    <li><a href="Cours en ligne.html" onclick="toggleMenu()">Cours pré-enregistré</a></li>
-   <li><a href="#Contact" onclick="toggleMenu()">Contact</a></li>
+    <li><a href="#" data-label="Accueil" aria-label="Accueil" title="Accueil" onclick="toggleMenu()"><i class="fa-solid fa-house" aria-hidden="true"></i></a></li>
+    <li><a href="#historique" data-label="Notre histoire" aria-label="Notre histoire" title="Notre histoire" onclick="toggleMenu()"><i class="fa-solid fa-landmark" aria-hidden="true"></i></a></li>
+    <li><a href="#formations" data-label="Nos cours" aria-label="Nos cours" title="Nos cours" onclick="toggleMenu()"><i class="fa-solid fa-book-open" aria-hidden="true"></i></a></li>
+    <li><a href="#why-choose-us" data-label="Pourquoi nous choisir" aria-label="Pourquoi nous choisir" title="Pourquoi nous choisir" onclick="toggleMenu()"><i class="fa-solid fa-star" aria-hidden="true"></i></a></li>
+    <li><a href="#founders" data-label="Nos fondateurs" aria-label="Nos fondateurs" title="Nos fondateurs" onclick="toggleMenu()"><i class="fa-solid fa-users" aria-hidden="true"></i></a></li>
+    <li><a href="Cours en ligne.html" data-label="Cours en ligne" aria-label="Cours en ligne" title="Cours en ligne" onclick="toggleMenu()"><i class="fa-solid fa-circle-play" aria-hidden="true"></i></a></li>
+    <li><a href="#Contact" data-label="Contact" aria-label="Contact" title="Contact" onclick="toggleMenu()"><i class="fa-solid fa-envelope" aria-hidden="true"></i></a></li>
   </ul>
 
   <div class="menu-icon" id="menu-btn" onclick="toggleMenu()">
