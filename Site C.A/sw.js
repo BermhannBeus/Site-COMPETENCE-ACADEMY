@@ -1,7 +1,9 @@
-const CACHE_NAME = 'competence-academy-v4';
+const CACHE_NAME = 'competence-academy-v5';
 const urlsToCache = [
   '/',
   '/Logo.png',
+  '/icon-192.png',
+  '/icon-512.png',
   '/privacy.html',
   '/style.css'
 ];
@@ -41,8 +43,8 @@ self.addEventListener('push', event => {
   const title = data.title || 'Competence Academy';
   const options = {
     body: data.body || 'Une nouvelle mise à jour est disponible.',
-    icon: '/Logo.png',
-    badge: '/Logo.png',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     data: { url: data.url || '/' }
   };
   event.waitUntil(self.registration.showNotification(title, options));
