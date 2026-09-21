@@ -54,19 +54,56 @@ section h2 {
 
 .nav-links {
   display: flex;
-  gap: 25px;
+  align-items: center;
+  gap: 10px;
   list-style: none;
 }
 
 .nav-links li a {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
   color: white;
   text-decoration: none;
-  font-size: 16px;
-  transition: 0.3s;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  transition: color 0.25s ease, background 0.25s ease, transform 0.25s ease;
 }
 
 .nav-links li a:hover {
   color: #F76B00;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.nav-links li a::after {
+  content: attr(data-label);
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  z-index: 20;
+  padding: 6px 9px;
+  color: #fff;
+  background: #0a123a;
+  border-radius: 7px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.nav-links li a:hover::after,
+.nav-links li a:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .menu-icon {
@@ -165,6 +202,23 @@ section h2 {
     }
     .historique p {
         font-size: 1rem;
+    }
+
+    .nav-links li a {
+      width: 48px;
+      height: 48px;
+      font-size: 1.15rem;
+    }
+
+    .nav-links li a::after {
+      top: 50%;
+      left: calc(100% + 10px);
+      transform: translateY(-50%);
+    }
+
+    .nav-links li a:hover::after,
+    .nav-links li a:focus-visible::after {
+      transform: translateY(-50%);
     }
 }
 
