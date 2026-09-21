@@ -293,6 +293,7 @@ section h2 {
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(17, 30, 98, 0.04); /* Lonbraj ki baze sou ble ofisyèl la */
     border: 1px solid #e2e8f0;
+    margin: 0 auto;
 }
 
 /* --- Pati Gòch (Bwat Enfòmasyon an) --- */
@@ -460,12 +461,64 @@ section h2 {
     gap: 8px;
 }
 
+.error-message {
+    color: #b91c1c;
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+.submit-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
 /* ==========================================================================
    RESPONSIVE POU TELEFÒN AK TABLÈT (KORÈK)
    ========================================================================== */
 @media (max-width: 991px) {
     .Contact-section {
         padding: 60px 20px;
+    }
+
+    @media (max-width: 600px) {
+        .Contact-section {
+            padding: 42px 12px;
+            overflow: hidden;
+        }
+        .contact-header h2 {
+            font-size: 1.65rem;
+            line-height: 1.25;
+        }
+        .contact-header p {
+            font-size: 0.88rem;
+        }
+        .Contact-container {
+            width: 100%;
+            border-radius: 16px;
+        }
+        .contact-info-box,
+        .contact-form-box {
+            min-width: 0;
+            padding: 30px 18px;
+        }
+        .contact-info-box h2 {
+            font-size: 1.65rem;
+        }
+        .detail-item {
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.82rem;
+            overflow-wrap: anywhere;
+        }
+        .form-group input,
+        .form-group textarea {
+            max-width: 100%;
+            font-size: 16px;
+        }
+        .submit-btn {
+            min-height: 52px;
+            font-size: 0.9rem;
+        }
     }
     .contact-header h2 {
         font-size: 2rem;
@@ -1782,38 +1835,106 @@ ul li img {
   position: fixed;
   right: 18px;
   z-index: 2000;
-  border: 0;
-  border-radius: 12px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(8, 19, 51, 0.24);
   font-family: inherit;
 }
 
 #pwa-message {
-  bottom: 18px;
+  bottom: 120px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   max-width: min(420px, calc(100vw - 36px));
-  padding: 14px 16px;
+  padding: 14px 14px 14px 16px;
   color: #fff;
-  background: #111e62;
+  background: linear-gradient(135deg, #111e62, #1c3181);
   font-size: 0.85rem;
+  line-height: 1.35;
+  animation: pwa-slide-in 0.35s ease-out;
+}
+
+.pwa-message-icon {
+  display: grid;
+  flex: 0 0 38px;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: #111e62;
+  background: #fff;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.pwa-message-content {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  line-height: 1.35;
+}
+
+.pwa-message-content strong {
+  font-size: 0.84rem;
+}
+
+.pwa-message-content > span {
+  color: #dbeafe;
+  font-size: 0.73rem;
 }
 
 #pwa-message button,
 #install-app-button {
-  padding: 9px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 13px;
   color: #fff;
   background: #f76b00;
   cursor: pointer;
+  border: 0;
+  border-radius: 10px;
   font-weight: 700;
   white-space: nowrap;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+#pwa-message button:not(.pwa-message-close) {
+  min-height: 38px;
+  box-shadow: 0 6px 14px rgba(247, 107, 0, 0.25);
+}
+
+#pwa-message button:hover,
+#install-app-button:hover {
+  background: #ff8126;
+  transform: translateY(-1px);
+}
+
+#pwa-message .pwa-message-close {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #dbeafe;
+  background: transparent;
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+#pwa-message .pwa-message-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  transform: none;
 }
 
 #install-app-button,
 #enable-notifications-button {
-  bottom: 18px;
-  padding: 11px 15px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 17px;
   font-size: 0.85rem;
 }
 
@@ -1824,4 +1945,61 @@ ul li img {
   border: 1px solid #dbe3f0;
   cursor: pointer;
   font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#enable-notifications-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(16, 29, 79, 0.18);
+}
+
+#enable-notifications-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+@keyframes pwa-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  #pwa-message {
+    right: 12px;
+    bottom: 148px;
+    left: 12px;
+    max-width: none;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 14px;
+  }
+
+  .pwa-message-content {
+    flex: 1 1 calc(100% - 54px);
+  }
+
+  #pwa-message button:not(.pwa-message-close) {
+    flex: 1 1 auto;
+    margin-left: 50px;
+    padding: 9px 10px;
+    font-size: 0.73rem;
+  }
+
+  #install-app-button,
+  #enable-notifications-button {
+    right: 12px;
+    left: 12px;
+    justify-content: center;
+    width: auto;
+  }
+
+  #enable-notifications-button {
+    bottom: 74px;
+  }
 }
