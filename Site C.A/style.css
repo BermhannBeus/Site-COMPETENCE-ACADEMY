@@ -1730,8 +1730,8 @@ ul li img {
 }
 
 .splash-card {
-    width: 170px;
-    height: 170px;
+    width: 148px;
+    height: 148px;
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -1746,11 +1746,11 @@ ul li img {
 }
 
 .splash-logo {
-    width: 154px;
-    height: 154px;
+    width: 138px;
+    height: 138px;
     object-fit: contain;
-    border-radius: 30px;
-    transform: scale(1.08);
+    border-radius: 24px;
+    transform: scale(1.28);
 }
 
 .splash-title {
@@ -1973,14 +1973,14 @@ ul li img {
 
 @media (max-width: 600px) {
   .splash-card {
-    width: 154px;
-    height: 154px;
+    width: 132px;
+    height: 132px;
     border-radius: 34px;
   }
 
   .splash-logo {
-    width: 140px;
-    height: 140px;
+    width: 122px;
+    height: 122px;
   }
 
   .splash-title {
