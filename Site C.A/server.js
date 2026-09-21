@@ -45,6 +45,13 @@ const isStrongPassword = (password = '') => {
     if (typeof password !== 'string') return false;
     return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
 };
+
+const escapeHtml = (value = '') => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 const createResetCode = () => crypto.randomInt(100000, 1000000).toString();
 const hashResetCode = (code) => crypto.createHash('sha256').update(code).digest('hex');
 const getCookie = (req, name) => {
@@ -142,6 +149,63 @@ const resetLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: 'Trop de demandes de récupération. Veuillez réessayer plus tard.' }
+});
+const contactLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Trop de messages envoyés. Veuillez réessayer plus tard.' }
+});
+
+app.post('/api/contact', contactLimiter, async (req, res) => {
+    try {
+        const name = String(req.body?.name || '').trim();
+        const email = sanitizeEmail(req.body?.email);
+        const message = String(req.body?.message || '').trim();
+
+        if (!name || name.length > 100 || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Veuillez vérifier votre nom et votre adresse e-mail.' });
+        }
+        if (!message || message.length > 5000) {
+            return res.status(400).json({ success: false, message: 'Veuillez saisir un message valide.' });
+        }
+
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'api-key': process.env.BREVO_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: {
+                    name: 'Formulaire Competence Academy',
+                    email: process.env.BREVO_SENDER_EMAIL
+                },
+                to: [{ email: 'competenceacademy34@gmail.com', name: 'Competence Academy' }],
+                replyTo: { email, name },
+                subject: `Nouveau message du site - ${name}`,
+                htmlContent: `
+                    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#17213d">
+                        <h2 style="color:#111e62">Nouveau message depuis le site</h2>
+                        <p><strong>Nom :</strong> ${escapeHtml(name)}</p>
+                        <p><strong>E-mail :</strong> ${escapeHtml(email)}</p>
+                        <p><strong>Message :</strong></p>
+                        <div style="padding:16px;background:#f5f7fb;border-left:4px solid #f76b00;white-space:pre-wrap">${escapeHtml(message)}</div>
+                    </div>
+                `
+            })
+        });
+
+        if (!response.ok) {
+            const details = await response.text();
+            throw new Error(`Brevo contact API ${response.status}: ${details}`);
+        }
+        res.json({ success: true, message: 'Votre message a été envoyé avec succès.' });
+    } catch (error) {
+        console.error('Contact form error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’envoyer votre message pour le moment.' });
+    }
 });
 
 const userSchema = new mongoose.Schema({
