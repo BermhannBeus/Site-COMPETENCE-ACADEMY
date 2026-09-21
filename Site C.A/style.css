@@ -1807,6 +1807,10 @@ ul li img {
     transform: scale(1.28);
 }
 
+.splash-logo.fallback-logo {
+    transform: scale(2.05);
+}
+
 .splash-title {
     color: #ffffff;
     font-family: 'Segoe UI', system-ui, sans-serif;
@@ -2035,6 +2039,10 @@ ul li img {
   .splash-logo {
     width: 122px;
     height: 122px;
+  }
+
+  .splash-logo.fallback-logo {
+    transform: scale(1.9);
   }
 
   .splash-title {
