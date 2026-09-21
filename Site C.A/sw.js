@@ -12,7 +12,9 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        return cache.addAll(urlsToCache);
+        return Promise.all(urlsToCache.map((url) => cache.add(url).catch((error) => {
+          console.error(`Impossible de mettre en cache ${url}:`, error);
+        })));
       })
   );
 });
