@@ -89,10 +89,17 @@
   async function setupPushNotifications(registration) {
     if (!('PushManager' in window) || !('Notification' in window)) return;
     if (Notification.permission === 'denied') return;
+    const notificationPromptKey = 'competence_academy_notification_prompt_seen';
+    if (Notification.permission === 'granted') {
+      localStorage.setItem(notificationPromptKey, '1');
+      return;
+    }
+    if (localStorage.getItem(notificationPromptKey) === '1') return;
 
     const button = document.createElement('button');
     button.id = 'enable-notifications-button';
     button.type = 'button';
+    localStorage.setItem(notificationPromptKey, '1');
     button.innerHTML = '<i class="fa-regular fa-bell" aria-hidden="true"></i><span>Activer les notifications</span>';
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -139,7 +146,10 @@
   let deferredInstallPrompt;
 
   window.addEventListener('beforeinstallprompt', event => {
+    const installPromptKey = 'competence_academy_install_prompt_seen';
+    if (localStorage.getItem(installPromptKey) === '1') return;
     event.preventDefault();
+    localStorage.setItem(installPromptKey, '1');
     deferredInstallPrompt = event;
 
     const installButton = document.createElement('button');
