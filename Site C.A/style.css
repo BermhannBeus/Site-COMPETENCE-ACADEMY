@@ -209,6 +209,7 @@ section h2 {
     .historique h2 {
         font-size: 2rem;
     }
+
     .historique p {
         font-size: 1rem;
     }
@@ -2081,6 +2082,23 @@ ul li img {
 #enable-notifications-button:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+@media (max-width: 768px) {
+  .nav-links,
+  .nav-links.active,
+  [class*="nav-links"].active {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+  }
+
+  .nav-links li {
+    flex: 0 0 auto !important;
+  }
 }
 
 @keyframes pwa-slide-in {
