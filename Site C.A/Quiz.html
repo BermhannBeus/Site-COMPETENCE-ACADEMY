@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Quiz de compétences numériques de Competence Academy.">
+  <title>Quiz | Competence Academy</title>
+  <link rel="stylesheet" href="Quiz.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+  <header class="quiz-header">
+    <a class="brand" href="index.html" aria-label="Retour à l'accueil">
+      <img class="brand-logo" src="Logo.png" alt="Logo Competence Academy">
+      <span>Quiz</span>
+    </a>
+    <button id="themeToggle" class="icon-button" type="button" aria-label="Activer le mode sombre">
+      <i class="fa fa-moon-o" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <main class="quiz-shell">
+    <section id="startScreen" class="screen card">
+      <p class="eyebrow">Évaluation interactive</p>
+      <h1>Quiz de compétences numériques</h1>
+      <p>Répondez aux questions et découvrez votre résultat à la fin.</p>
+      <label class="formation-label" for="formationSelect">Choisissez votre formation</label>
+      <select id="formationSelect" class="formation-select">
+        <option value="informatique">Informatique bureautique</option>
+        <option value="infographie">Infographie créative</option>
+        <option value="photographie">Photographie professionnelle</option>
+        <option value="videographie">Vidéographie</option>
+        <option value="montage">Montage vidéo</option>
+        <option value="quickbooks">QuickBooks</option>
+        <option value="surveillance">Caméra de surveillance</option>
+      </select>
+      <button id="startButton" class="primary-button" type="button">Commencer le quiz</button>
+    </section>
+
+    <section id="quizScreen" class="screen card" hidden>
+      <div class="quiz-progress">
+        <span id="questionCounter">Question 1</span>
+        <span id="scoreLabel">Score : 0</span>
+      </div>
+      <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+      <p id="categoryLabel" class="eyebrow"></p>
+      <h2 id="questionText"></h2>
+      <div id="optionsList" class="options-grid" role="radiogroup" aria-label="Choix de réponse"></div>
+      <div class="quiz-actions">
+        <button id="nextButton" class="primary-button" type="button" disabled>Question suivante</button>
+      </div>
+      <p id="feedback" class="feedback" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="resultScreen" class="screen card" hidden>
+      <p class="eyebrow">Résultat final</p>
+      <h2 id="resultTitle"></h2>
+      <p id="resultScore" class="result-score"></p>
+      <div id="resultDetails" class="result-details"></div>
+      <div class="result-actions">
+        <button id="downloadButton" class="secondary-button" type="button">Télécharger le résultat PDF</button>
+        <button id="restartButton" class="primary-button" type="button">Recommencer</button>
+      </div>
+    </section>
+
+    <p id="errorMessage" class="error-message" role="alert" hidden></p>
+    <a class="quiz-home-link" href="Cours en Ligne.html">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i>
+      Retour aux cours en ligne
+    </a>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="Quiz.js" defer></script>
+</body>
+</html>
