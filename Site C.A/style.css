@@ -47,10 +47,10 @@ section h2 {
 }
 
 .logo img {
-    height: 84px !important;
-    width: 84px !important;
+    height: 72px !important;
+    width: 72px !important;
     object-fit: contain;
-    transform: scale(1.55);
+    transform: none;
 }
 
 .nav-links {
@@ -655,10 +655,10 @@ section h2 {
   }
 
   .navbar .logo img {
-    width: 52px !important;
-    height: 52px !important;
+    width: 48px !important;
+    height: 48px !important;
     object-fit: contain;
-    transform: scale(1.8);
+    transform: none;
   }
 
   section h2 {
