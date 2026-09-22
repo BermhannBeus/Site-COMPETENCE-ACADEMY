@@ -644,8 +644,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .password-box input::-ms-clear {
     display: none;
 }
-.password-box input:focus { border-color: var(--academy-orange); box-shadow: 0 0 10px rgba(247, 107, 0, 0.4); }
-.password-toggle {
+.password-box .password-toggle {
     position: absolute;
     top: 7px;
     right: 10px;
@@ -659,14 +658,13 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     background: transparent;
     color: #ffffff;
     cursor: pointer;
+    padding: 0;
     transition: background 0.2s ease, color 0.2s ease;
 }
-.password-toggle i { color: inherit; font-size: 0.95rem; }
-.password-toggle:hover,
-.password-toggle:focus-visible { background: rgba(255, 255, 255, 0.12); color: #ffc107; }
-.password-toggle:focus-visible { outline: 2px solid #ffc107; outline-offset: 2px; }
-.password-box button { width: 100%; padding: 12px; background: var(--academy-orange); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-.password-box button:hover { background: #e06200; }
+.password-box .password-toggle i { color: inherit; font-size: 0.95rem; }
+.password-box .password-toggle:hover,
+.password-box .password-toggle:focus-visible { background: rgba(255, 255, 255, 0.12); color: #ffc107; }
+.password-box .password-toggle:focus-visible { outline: 2px solid #ffc107; outline-offset: 2px; }
 .error-msg { color: #ffc107; font-size: 0.8rem; margin-top: 10px; display: none; font-weight: 600; }
 
 /* Info */
