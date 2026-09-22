@@ -120,9 +120,10 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="bureautique-video" poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600">
+                        <video id="bureautique-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600">
                             <source src="Cours/video-bureautique-intro.mp4" type="video/mp4">
                         </video>
+                        <button class="video-preview-button" type="button" onclick="lancerPreview('bureautique-video')"><i class="fa-solid fa-play"></i> Preview</button>
                     </div>
                     <div class="overlay-lock" id="lock-bureautique">
                         <div class="lock-form-container">
@@ -168,9 +169,10 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="photo-video" poster="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600">
+                        <video id="photo-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600">
                             <source src="Cours/video-photo-pro.mp4" type="video/mp4">
                         </video>
+                        <button class="video-preview-button" type="button" onclick="lancerPreview('photo-video')"><i class="fa-solid fa-play"></i> Preview</button>
                     </div>
                     <div class="overlay-lock" id="lock-photo">
                         <div class="lock-form-container">
@@ -216,9 +218,10 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="design-video" poster="https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=600">
+                        <video id="design-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=600">
                             <source src="Cours/video-design-logo.mp4" type="video/mp4">
                         </video>
+                        <button class="video-preview-button" type="button" onclick="lancerPreview('design-video')"><i class="fa-solid fa-play"></i> Preview</button>
                     </div>
                     <div class="overlay-lock" id="lock-design">
                         <div class="lock-form-container">
@@ -264,9 +267,10 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="video-vid" poster="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=600">
+                        <video id="video-vid" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=600">
                             <source src="Cours/video-cadrage.mp4" type="video/mp4">
                         </video>
+                        <button class="video-preview-button" type="button" onclick="lancerPreview('video-vid')"><i class="fa-solid fa-play"></i> Preview</button>
                     </div>
                     <div class="overlay-lock" id="lock-vid">
                         <div class="lock-form-container">
@@ -312,9 +316,10 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="montage-video" poster="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=600">
+                        <video id="montage-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=600">
                             <source src="Cours/video-montage-premiere.mp4" type="video/mp4">
                         </video>
+                        <button class="video-preview-button" type="button" onclick="lancerPreview('montage-video')"><i class="fa-solid fa-play"></i> Preview</button>
                     </div>
                     <div class="overlay-lock" id="lock-montage">
                         <div class="lock-form-container">
@@ -607,6 +612,31 @@
         "quickbooks":   "CA-QUICK-2026",
         "surveillance": "CA-SURV-2026"
     };
+
+    function lancerPreview(videoId) {
+        const video = document.getElementById(videoId);
+        if (!video) return;
+        video.controls = true;
+        video.currentTime = 0;
+        video.play().catch(() => {});
+        window.clearTimeout(video.previewTimer);
+        video.previewTimer = window.setTimeout(() => {
+            video.pause();
+            video.currentTime = 0;
+            video.controls = false;
+        }, 3000);
+    }
+
+    document.querySelectorAll('.video-preview-button').forEach(function(button) {
+        const wrapper = button.closest('.video-wrapper');
+        if (wrapper) wrapper.appendChild(button);
+    });
+
+    document.querySelectorAll('.video-container video').forEach(function(video) {
+        video.addEventListener('contextmenu', function(event) {
+            event.preventDefault();
+        });
+    });
 
     // Fonksyon pou jere klik sou bouton filtè yo
     function filtrerCours(categorie) {
