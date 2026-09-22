@@ -72,8 +72,23 @@
             window.location.reload();
           });
 
-          registration.update();
-          setInterval(() => registration.update(), 60 * 1000);
+          const isInstalledPwa = window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+          const updateCheckInterval = isInstalledPwa ? 1000 : 60 * 1000;
+          let updateCheckRunning = false;
+          const checkForUpdate = async () => {
+            if (updateCheckRunning || document.visibilityState === 'hidden') return;
+            updateCheckRunning = true;
+            try {
+              await registration.update();
+            } catch (error) {
+              console.error('Échec de la vérification de mise à jour :', error);
+            } finally {
+              updateCheckRunning = false;
+            }
+          };
+          checkForUpdate();
+          setInterval(checkForUpdate, updateCheckInterval);
           setupPushNotifications(registration);
         })
         .catch(err => console.error('Échec de l’enregistrement du Service Worker :', err));
