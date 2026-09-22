@@ -16,6 +16,7 @@ self.addEventListener('install', event => {
           console.error(`Impossible de mettre en cache ${url}:`, error);
         })));
       })
+      .then(() => self.skipWaiting())
   );
 });
 
