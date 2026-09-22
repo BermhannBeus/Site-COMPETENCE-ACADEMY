@@ -130,7 +130,7 @@
                             <p>Ce contenu est réservé aux étudiants inscrits en Informatique Bureautique.</p>
                             <div class="password-box">
                                 <input type="password" id="input-bureautique" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-bureautique', 'lock-bureautique', 'bureautique-video', 'tag-bureautique', 'doc-bureautique', 'text-bureautique', 'icon-lock-bureautique', '1.2 MB')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-bureautique', 'lock-bureautique', 'bureautique-video', 'tag-bureautique', 'doc-bureautique', 'text-bureautique', 'icon-lock-bureautique', '1.2 MB', 'quiz-bureautique')">Débloquer</button>
                             </div>
                             <p class="error-msg" id="err-bureautique"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -152,8 +152,8 @@
                                 <i class="fa-solid fa-lock" id="icon-lock-bureautique" style="color: #ef4444;"></i>
                             </a>
                         </div>
-                        <a class="course-quiz-button" href="Quiz.html?formation=informatique">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <a class="course-quiz-button is-locked" id="quiz-bureautique" href="Quiz.html?formation=informatique" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz Informatique</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -178,7 +178,7 @@
                             <p>Ce contenu est réservé aux étudiants inscrits en Photographie.</p>
                             <div class="password-box">
                                 <input type="password" id="input-photo" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-photo', 'lock-photo', 'photo-video', 'tag-photo', 'doc-photo', 'text-photo', 'icon-lock-photo', '3.5 MB')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-photo', 'lock-photo', 'photo-video', 'tag-photo', 'doc-photo', 'text-photo', 'icon-lock-photo', '3.5 MB', 'quiz-photo')">Débloquer</button>
                             </div>
                             <p class="error-msg" id="err-photo"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -200,8 +200,8 @@
                                 <i class="fa-solid fa-lock" id="icon-lock-photo" style="color: #ef4444;"></i>
                             </a>
                         </div>
-                        <a class="course-quiz-button" href="Quiz.html?formation=photographie">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <a class="course-quiz-button is-locked" id="quiz-photo" href="Quiz.html?formation=photographie" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz Photographie</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -226,7 +226,7 @@
                             <p>Ce contenu est réservé aux étudiants inscrits en Design Graphic.</p>
                             <div class="password-box">
                                 <input type="password" id="input-design" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-design', 'lock-design', 'design-video', 'tag-design', 'doc-design', 'text-design', 'icon-lock-design', '4.2 MB')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-design', 'lock-design', 'design-video', 'tag-design', 'doc-design', 'text-design', 'icon-lock-design', '4.2 MB', 'quiz-design')">Débloquer</button>
                             </div>
                             <p class="error-msg" id="err-design"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -248,8 +248,8 @@
                                 <i class="fa-solid fa-lock" id="icon-lock-design" style="color: #ef4444;"></i>
                             </a>
                         </div>
-                        <a class="course-quiz-button" href="Quiz.html?formation=infographie">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <a class="course-quiz-button is-locked" id="quiz-design" href="Quiz.html?formation=infographie" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz Infographie</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -274,7 +274,7 @@
                             <p>Ce contenu est réservé aux étudiants inscrits en Vidéographie.</p>
                             <div class="password-box">
                                 <input type="password" id="input-vid" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-vid', 'lock-vid', 'video-vid', 'tag-vid', 'doc-vid', 'text-vid', 'icon-lock-vid', '2.8 MB')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-vid', 'lock-vid', 'video-vid', 'tag-vid', 'doc-vid', 'text-vid', 'icon-lock-vid', '2.8 MB', 'quiz-vid')">Débloquer</button>
                             </div>
                             <p class="error-msg" id="err-vid"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -296,8 +296,8 @@
                                 <i class="fa-solid fa-lock" id="icon-lock-vid" style="color: #ef4444;"></i>
                             </a>
                         </div>
-                        <a class="course-quiz-button" href="Quiz.html?formation=videographie">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <a class="course-quiz-button is-locked" id="quiz-vid" href="Quiz.html?formation=videographie" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz Vidéographie</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -322,7 +322,7 @@
                             <p>Ce contenu est réservé aux étudiants inscrits en Montage Vidéo.</p>
                             <div class="password-box">
                                 <input type="password" id="input-montage" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-montage', 'lock-montage', 'montage-video', 'tag-montage', 'doc-montage', 'text-montage', 'icon-lock-montage', '5.1 MB')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-montage', 'lock-montage', 'montage-video', 'tag-montage', 'doc-montage', 'text-montage', 'icon-lock-montage', '5.1 MB', 'quiz-montage')">Débloquer</button>
                             </div>
                             <p class="error-msg" id="err-montage"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -344,8 +344,8 @@
                                 <i class="fa-solid fa-lock" id="icon-lock-montage" style="color: #ef4444;"></i>
                             </a>
                         </div>
-                        <a class="course-quiz-button" href="Quiz.html?formation=montage">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <a class="course-quiz-button is-locked" id="quiz-montage" href="Quiz.html?formation=montage" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz Montage vidéo</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -359,16 +359,37 @@
             <div class="category-badge">QuickBooks</div>
             <section class="course-card">
                 <div class="video-wrapper course-placeholder">
-                    <i class="fa-solid fa-calculator" aria-hidden="true"></i>
-                    <span>Formation professionnelle</span>
+                    <div class="course-preview-image course-preview-quickbooks" role="img" aria-label="Aperçu de la formation QuickBooks"></div>
+                    <div class="overlay-lock" id="lock-quickbooks">
+                        <div class="lock-form-container">
+                            <i class="fa-solid fa-lock"></i>
+                            <p>Ce contenu est réservé aux étudiants inscrits en QuickBooks.</p>
+                            <div class="password-box">
+                                <input type="password" id="input-quickbooks" placeholder="Code d'accès">
+                                <button type="button" onclick="verifierCode('input-quickbooks', 'lock-quickbooks', '', 'tag-quickbooks', 'doc-quickbooks', 'text-quickbooks', 'icon-lock-quickbooks', 'Document réservé', 'quiz-quickbooks')">Débloquer</button>
+                            </div>
+                            <p class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
+                        </div>
+                    </div>
+                    <span class="badge-status pou-peye" id="tag-quickbooks">Premium <i class="fa-solid fa-lock"></i></span>
                 </div>
                 <div class="course-info">
                     <h2>Gestion comptable avec QuickBooks</h2>
                     <p class="course-description">Apprenez à organiser les revenus, dépenses, factures et rapports financiers de votre activité.</p>
                     <div class="resources-section">
-                        <h3><i class="fa-solid fa-graduation-cap"></i> Évaluation</h3>
-                        <a class="course-quiz-button" href="Quiz.html?formation=quickbooks">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
+                        <div class="document-list">
+                            <div class="document-item document-item-locked" id="doc-quickbooks" aria-disabled="true">
+                                <div class="doc-icon"><i class="fa-solid fa-file-lines"></i></div>
+                                <div class="doc-details">
+                                    <span class="doc-name">Guide QuickBooks.pdf</span>
+                                    <span class="doc-size" id="text-quickbooks">Bloqué • Document réservé</span>
+                                </div>
+                                <i class="fa-solid fa-lock" id="icon-lock-quickbooks" style="color: #ef4444;"></i>
+                            </div>
+                        </div>
+                        <a class="course-quiz-button is-locked" id="quiz-quickbooks" href="Quiz.html?formation=quickbooks" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz QuickBooks</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -382,16 +403,37 @@
             <div class="category-badge">Caméra de surveillance</div>
             <section class="course-card">
                 <div class="video-wrapper course-placeholder">
-                    <i class="fa-solid fa-video-camera" aria-hidden="true"></i>
-                    <span>Formation professionnelle</span>
+                    <div class="course-preview-image course-preview-surveillance" role="img" aria-label="Aperçu de la formation Caméra de surveillance"></div>
+                    <div class="overlay-lock" id="lock-surveillance">
+                        <div class="lock-form-container">
+                            <i class="fa-solid fa-lock"></i>
+                            <p>Ce contenu est réservé aux étudiants inscrits en Caméra de surveillance.</p>
+                            <div class="password-box">
+                                <input type="password" id="input-surveillance" placeholder="Code d'accès">
+                                <button type="button" onclick="verifierCode('input-surveillance', 'lock-surveillance', '', 'tag-surveillance', 'doc-surveillance', 'text-surveillance', 'icon-lock-surveillance', 'Document réservé', 'quiz-surveillance')">Débloquer</button>
+                            </div>
+                            <p class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
+                        </div>
+                    </div>
+                    <span class="badge-status pou-peye" id="tag-surveillance">Premium <i class="fa-solid fa-lock"></i></span>
                 </div>
                 <div class="course-info">
                     <h2>Installation de caméras de surveillance</h2>
                     <p class="course-description">Découvrez les bases du positionnement, du câblage et de la configuration d’un système de surveillance.</p>
                     <div class="resources-section">
-                        <h3><i class="fa-solid fa-graduation-cap"></i> Évaluation</h3>
-                        <a class="course-quiz-button" href="Quiz.html?formation=surveillance">
-                            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+                        <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
+                        <div class="document-list">
+                            <div class="document-item document-item-locked" id="doc-surveillance" aria-disabled="true">
+                                <div class="doc-icon"><i class="fa-solid fa-file-lines"></i></div>
+                                <div class="doc-details">
+                                    <span class="doc-name">Guide Caméra.pdf</span>
+                                    <span class="doc-size" id="text-surveillance">Bloqué • Document réservé</span>
+                                </div>
+                                <i class="fa-solid fa-lock" id="icon-lock-surveillance" style="color: #ef4444;"></i>
+                            </div>
+                        </div>
+                        <a class="course-quiz-button is-locked" id="quiz-surveillance" href="Quiz.html?formation=surveillance" aria-disabled="true">
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <span>Passer le quiz Surveillance</span>
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -487,7 +529,7 @@
         </div>
 
         <div class="modules-table-container">
-            <h4>Détails des Modules & Évaluation</h4>
+            <h4>Détails des Modules</h4>
             <table class="modules-table">
                 <thead>
                     <tr>
@@ -552,7 +594,9 @@
         "photographie": "CA-PHOTO-2026",  
         "design":       "CA-DES-2026",    
         "videographie": "CA-VID-2026",    
-        "montage":      "CA-MONT-2026"    
+        "montage":      "CA-MONT-2026",
+        "quickbooks":   "CA-QUICK-2026",
+        "surveillance": "CA-SURV-2026"
     };
 
     // Fonksyon pou jere klik sou bouton filtè yo
@@ -577,7 +621,7 @@
     }
 
     // Fonksyon Verifikasyon Modpas
-    function verifierCode(inputId, lockId, videoId, tagId, docId, textId, iconId, sizeText) {
+    function verifierCode(inputId, lockId, videoId, tagId, docId, textId, iconId, sizeText, quizId) {
         const inputField = document.getElementById(inputId);
         const lockScreen = document.getElementById(lockId);
         const video = document.getElementById(videoId);
@@ -585,6 +629,7 @@
         const docItem = document.getElementById(docId);
         const statusText = document.getElementById(textId);
         const docIcon = document.getElementById(iconId);
+        const quizItem = document.getElementById(quizId);
         
         const wrapper = lockScreen.closest('.course-card-wrapper');
         const kategoriAktiv = wrapper.getAttribute('data-category');
@@ -594,10 +639,12 @@
 
         if (inputField.value === codeCorrect) {
             lockScreen.style.display = "none";
-            video.setAttribute("controls", "true");
+            if (video) video.setAttribute("controls", "true");
             
-            tag.innerHTML = "Débloqué <i class='fa-solid fa-unlock'></i>";
-            tag.style.backgroundColor = "#22c55e";
+            if (tag) {
+                tag.innerHTML = "Débloqué <i class='fa-solid fa-unlock'></i>";
+                tag.style.backgroundColor = "#22c55e";
+            }
             
             docItem.style.opacity = "1";
             docItem.style.pointerEvents = "auto";
@@ -605,6 +652,10 @@
             
             docIcon.className = "fa-solid fa-download download-icon";
             docIcon.style.color = "#22c55e";
+            if (quizItem) {
+                quizItem.classList.remove("is-locked");
+                quizItem.setAttribute("aria-disabled", "false");
+            }
         } else {
             errorMsg.style.display = "block";
             inputField.style.borderColor = "#ef4444";
@@ -618,6 +669,14 @@
         input.addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 this.nextElementSibling.click();
+            }
+        });
+    });
+
+    document.querySelectorAll('.course-quiz-button.is-locked').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            if (button.classList.contains('is-locked')) {
+                event.preventDefault();
             }
         });
     });
