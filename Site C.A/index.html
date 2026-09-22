@@ -45,8 +45,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="Logo.png">
-<link rel="apple-touch-icon" href="Logo.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#0056b3">
 <script>
   if ('serviceWorker' in navigator) {
@@ -166,7 +166,8 @@
 <!-- Ekran Chajman / Splash Screen Style Samsung Good Lock -->
 <div id="splash-screen" class="goodlock-splash">
     <div class="splash-card">
-        <img src="Logo.png" alt="Logo Competence Academy" class="splash-logo fallback-logo">
+        <img src="icon-192.png" alt="Logo Competence Academy" class="splash-logo"
+             onerror="this.onerror=null; this.src='Logo.png'; this.classList.add('fallback-logo');">
     </div>
     <h2 class="splash-title">COMPETENCE ACADEMY</h2>
     <div class="splash-loader-bar">
@@ -402,7 +403,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <nav class="navbar">
   <div class="logo">
-    <img src="Logo.png" alt="Logo Competence Academy">
+    <img src="icon-192.png" alt="Logo Competence Academy"
+         onerror="this.onerror=null; this.src='Logo.png'; this.classList.add('fallback-logo');">
   </div>
 
   <ul class="nav-links" id="nav-links">
