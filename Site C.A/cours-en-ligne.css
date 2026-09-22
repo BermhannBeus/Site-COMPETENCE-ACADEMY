@@ -615,6 +615,18 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 
 .course-quiz-button i:first-child { color: #ffc107; font-size: 1.1rem; }
 .course-quiz-button i:last-child { color: #fff; transition: transform 0.2s ease; }
+.course-quiz-button.is-locked {
+    cursor: not-allowed;
+    filter: grayscale(0.35);
+    opacity: 0.72;
+}
+.course-quiz-button.is-locked:hover,
+.course-quiz-button.is-locked:focus-visible {
+    transform: none;
+    background: linear-gradient(135deg, #111e62, #1d318b);
+    box-shadow: 0 8px 18px rgba(17, 30, 98, 0.18);
+}
+.course-quiz-button.is-locked i:first-child { color: #ef4444; }
 .course-quiz-button:hover,
 .course-quiz-button:focus-visible {
     background: linear-gradient(135deg, #f76b00, #ff8b2b);
@@ -638,6 +650,29 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     font-weight: 800;
 }
 .course-placeholder i { color: #ffc107; font-size: 3rem; }
+.course-preview-image {
+    position: absolute;
+    inset: 0;
+    background-image: url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200");
+    background-position: center;
+    background-size: cover;
+    filter: brightness(0.42);
+}
+.course-preview-image::after {
+    content: "Ce contenu est réservé aux étudiants inscrits.";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 800;
+    text-align: center;
+    background: rgba(10, 18, 58, 0.42);
+}
+.course-placeholder .overlay-lock { background: rgba(10, 18, 58, 0.82); }
+.document-item-locked { cursor: not-allowed; opacity: 0.58; }
 
 @media (max-width: 560px) {
     .course-quiz-button { grid-template-columns: auto 1fr auto; font-size: 0.88rem; padding: 11px 12px; }
