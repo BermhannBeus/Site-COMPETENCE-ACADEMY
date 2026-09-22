@@ -513,6 +513,58 @@ body {
     letter-spacing: 4px;
     font-weight: bold;
     text-align: center;
+}
+
+/* Stable authentication header icons on every viewport */
+.login-avatar::before {
+    content: "";
+    position: absolute;
+    top: 17px !important;
+    left: 50% !important;
+    width: 18px !important;
+    height: 18px !important;
+    background: #0d1b3e;
+    border: 0;
+    border-radius: 50%;
+    transform: translateX(-50%) !important;
+}
+
+.login-avatar::after {
+    content: "";
+    position: absolute;
+    top: 41px !important;
+    left: 50% !important;
+    width: 42px !important;
+    height: 22px !important;
+    background: #0d1b3e;
+    border-radius: 24px 24px 12px 12px;
+    transform: translateX(-50%) !important;
+}
+
+.recovery-avatar::before {
+    content: "";
+    position: absolute;
+    top: 22px !important;
+    left: 27px !important;
+    width: 22px !important;
+    height: 22px !important;
+    background: transparent;
+    border: 4px solid #0d1b3e !important;
+    border-radius: 50%;
+    transform: none !important;
+}
+
+.recovery-avatar::after {
+    content: "";
+    position: absolute;
+    top: 42px !important;
+    left: 43px !important;
+    width: 30px !important;
+    height: 8px !important;
+    background: #f76b00;
+    border-radius: 5px;
+    transform: rotate(-45deg) !important;
+    transform-origin: left center;
     font-size: 18px;
     color: #0056b3;
     background-color: #f8f9fa;
