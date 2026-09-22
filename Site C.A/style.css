@@ -47,8 +47,8 @@ section h2 {
 }
 
 .logo img {
-    height: 72px !important;
-    width: 72px !important;
+    height: 78px !important;
+    width: 78px !important;
     object-fit: contain;
     transform: none;
 }
@@ -655,8 +655,8 @@ section h2 {
   }
 
   .navbar .logo img {
-    width: 48px !important;
-    height: 48px !important;
+    width: 56px !important;
+    height: 56px !important;
     object-fit: contain;
     transform: none;
   }
