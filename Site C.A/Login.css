@@ -579,3 +579,44 @@ body {
     outline: none;
     background-color: #ffffff;
 }
+
+/* Font Awesome authentication icons stay centered and responsive. */
+.login-avatar::before,
+.login-avatar::after,
+.recovery-avatar::before,
+.recovery-avatar::after {
+    content: none !important;
+}
+
+.avatar-icon.login-avatar,
+.avatar-icon.recovery-avatar {
+    width: clamp(64px, 18vw, 80px);
+    height: clamp(64px, 18vw, 80px);
+    padding: 0;
+}
+
+.login-avatar i,
+.recovery-avatar i {
+    display: block;
+    font-size: clamp(34px, 10vw, 48px);
+    line-height: 1;
+    color: var(--primary-color);
+}
+
+.recovery-avatar i {
+    color: var(--accent-orange);
+}
+
+@media (max-width: 420px) {
+    .avatar-icon.login-avatar,
+    .avatar-icon.recovery-avatar {
+        width: 68px;
+        height: 68px;
+        margin-bottom: 12px;
+    }
+
+    .login-avatar i,
+    .recovery-avatar i {
+        font-size: 36px;
+    }
+}
