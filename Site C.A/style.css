@@ -49,7 +49,8 @@ section h2 {
 .logo img {
     height: 150px !important;       /* Ogmante wotè a pou l parèt byen gwo */
     width: 150px !important;        /* Mete menm lajè a pou l fòme yon kare pafè */
-    
+    object-fit: contain;
+    transform: scale(1.85);
 }
 
 .nav-links {
@@ -648,6 +649,7 @@ section h2 {
     width: 54px !important;
     height: 54px !important;
     object-fit: contain;
+    transform: scale(2.45);
   }
 
   section h2 {
