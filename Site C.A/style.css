@@ -624,6 +624,32 @@ section h2 {
 /* --- REGLAJE STRIK MOBIL (Maks 768px) --- */
 
 @media (max-width: 768px) {
+  body {
+    padding-top: 82px;
+    padding-bottom: 78px;
+  }
+
+  .navbar {
+    top: 0;
+    height: 66px;
+    padding: 0 16px;
+    justify-content: center;
+    box-shadow: 0 4px 18px rgba(7, 15, 36, 0.18);
+  }
+
+  .navbar .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 66px;
+  }
+
+  .navbar .logo img {
+    width: 54px !important;
+    height: 54px !important;
+    object-fit: contain;
+  }
+
   section h2 {
     font-size: 26px;
   }
@@ -634,25 +660,51 @@ section h2 {
 
   /* NAVBAR MOBIL CONFIGURATION */
   .menu-icon {
-    display: block; /* Montre bouton ☰ an */
+    display: none;
   }
 
   .nav-links {
-    position: absolute;
-    top: 70px;
+    position: fixed;
+    top: auto;
+    bottom: 0;
     left: 0;
     width: 100%;
+    min-height: 66px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     background: #111E62;
-    flex-direction: column;
-    text-align: center;
-    padding: 20px 0;
-    display: none; /* Kache pa defo */
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 2px;
+    display: flex;
     z-index: 9998;
+    box-shadow: 0 -5px 20px rgba(7, 15, 36, 0.2);
   }
 
-  /* Lè w klike sou ☰ klas sa jwe pou l louvri */
-  .nav-links.active {
-    display: flex; 
+  .nav-links li a {
+    width: 42px;
+    height: 42px;
+    color: #dbeafe;
+    font-size: 1rem;
+    border-radius: 12px;
+  }
+
+  .nav-links li a::after {
+    top: auto;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translate(-50%, 4px);
+  }
+
+  .nav-links li a:hover::after,
+  .nav-links li a:focus-visible::after {
+    transform: translate(-50%, 0);
+  }
+
+  .nav-links li a:hover,
+  .nav-links li a:focus-visible {
+    color: #fff;
+    background: rgba(247, 107, 0, 0.9);
+    transform: translateY(-2px);
   }
 }
 
