@@ -1,4 +1,4 @@
-const CACHE_NAME = 'competence-academy-v9';
+const CACHE_NAME = 'competence-academy-v10';
 const urlsToCache = [
   '/',
   '/Logo.png',
