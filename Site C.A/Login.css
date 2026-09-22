@@ -410,6 +410,19 @@ body {
     text-decoration: underline;
 }
 
+.back-to-login-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-left: 0 !important;
+}
+
+.back-to-login-link i {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
 /* User Dashboard Profile View */
 .profile-card {
     text-align: center;
