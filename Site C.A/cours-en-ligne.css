@@ -5,7 +5,7 @@
     --academy-blue: #111E62;   
     --academy-orange: #F76B00; 
     --academy-dark: #0a123a;   
-    --academy-danger: #ef4444; 
+    --academy-danger: #ffc107;
     
     --card-bg: #ffffff;
     --text-color: #334155;
@@ -197,9 +197,7 @@ body {
     z-index: 4;
 }
 
-.badge-status.pou-peye {
-    background: var(--academy-danger);
-}
+.badge-status.pou-peye { background: var(--academy-orange); }
 
 .overlay-lock {
     position: absolute;
@@ -460,7 +458,7 @@ body {
     --academy-blue: #111E62;   
     --academy-orange: #F76B00; 
     --academy-dark: #0a123a;   
-    --academy-danger: #ef4444; 
+    --academy-danger: #ffc107;
     --card-bg: #ffffff;
     --text-color: #334155;
     --light-gray: #f1f5f9;
@@ -569,13 +567,13 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .animated-circle { position: absolute; width: 260px; height: 260px; border: 4px solid var(--academy-orange); border-radius: 50%; opacity: 0.3; z-index: 1; animation: pulseCircle 4s infinite linear; }
 @keyframes pulseCircle { 0% { transform: scale(0.8); opacity: 0; } 50% { opacity: 0.3; } 100% { transform: scale(1.4); opacity: 0; } }
 
-.badge-status { position: absolute; top: 25px; right: 25px; background: var(--academy-orange); color: white; padding: 4px 14px; border-radius: 50px; font-weight: 600; font-size: 0.8rem; z-index: 4; }
+.badge-status { position: absolute; top: 12px; right: 12px; background: var(--academy-orange); color: white; padding: 5px 12px; border-radius: 50px; font-weight: 700; font-size: 0.75rem; z-index: 5; box-shadow: 0 4px 12px rgba(247, 107, 0, 0.3); }
 .badge-status.pou-peye { background: var(--academy-danger); }
 
 /* Lock Screen */
 .overlay-lock { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 18, 58, 0.96); z-index: 3; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
 .lock-form-container { text-align: center; max-width: 280px; width: 100%; padding: 10px; color: white; }
-.lock-form-container i { font-size: 2.5rem; color: #ef4444; margin-bottom: 10px; display: block; }
+.lock-form-container i { font-size: 2.5rem; color: #ffc107; margin-bottom: 10px; display: block; }
 .lock-form-container p { font-size: 0.95rem; font-weight: 600; margin-bottom: 15px; }
 
 .password-box { display: flex; flex-direction: column; gap: 10px; }
@@ -583,7 +581,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .password-box input:focus { border-color: var(--academy-orange); box-shadow: 0 0 10px rgba(247, 107, 0, 0.4); }
 .password-box button { width: 100%; padding: 12px; background: var(--academy-orange); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
 .password-box button:hover { background: #e06200; }
-.error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 10px; display: none; font-weight: 600; }
+.error-msg { color: #ffc107; font-size: 0.8rem; margin-top: 10px; display: none; font-weight: 600; }
 
 /* Info */
 .course-info { padding: 25px 20px; display: flex; flex-direction: column; }
@@ -626,7 +624,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     background: linear-gradient(135deg, #111e62, #1d318b);
     box-shadow: 0 8px 18px rgba(17, 30, 98, 0.18);
 }
-.course-quiz-button.is-locked i:first-child { color: #ef4444; }
+.course-quiz-button.is-locked i:first-child { color: #ffc107; }
 .course-quiz-button:hover,
 .course-quiz-button:focus-visible {
     background: linear-gradient(135deg, #f76b00, #ff8b2b);
@@ -682,6 +680,13 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .doc-name { display: block; font-weight: 600; color: var(--academy-dark); font-size: 0.9rem; }
 .doc-size { font-size: 0.75rem; color: #94a3b8; }
 .download-icon { color: #94a3b8; }
+#icon-lock-bureautique,
+#icon-lock-photo,
+#icon-lock-design,
+#icon-lock-vid,
+#icon-lock-montage,
+#icon-lock-quickbooks,
+#icon-lock-surveillance { color: #ffc107 !important; }
 .course-footer { text-align: center; margin-top: 20px; margin-bottom: 40px; }
 .back-btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #64748b; font-weight: 600; transition: var(--transition); }
 .back-btn:hover { color: var(--academy-orange); }
@@ -953,7 +958,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 }
 
 .results-error-msg {
-    color: #ef4444;
+    color: #ffc107;
     font-size: 0.85rem;
     font-weight: 600;
     margin-top: 15px;
@@ -1343,7 +1348,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 
 /* Mesaj Erè */
 .results-error-msg {
-    color: #ef4444;
+    color: #ffc107;
     font-size: 0.88rem;
     font-weight: 600;
     margin-top: 15px;
