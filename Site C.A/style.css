@@ -48,13 +48,27 @@ section h2 {
 
 .logo img {
     display: block;
-    height: 86px !important;
-    width: 86px !important;
+    height: 94px !important;
+    width: 94px !important;
     max-height: none !important;
     max-width: none !important;
-    flex: 0 0 86px;
+    flex: 0 0 94px;
     object-fit: contain;
     transform: none;
+}
+
+.navbar .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 88px;
+    overflow: visible;
+    flex: 0 0 100px;
+}
+
+.navbar .logo img.fallback-logo {
+    transform: scale(2.35);
 }
 
 .nav-links {
@@ -655,19 +669,23 @@ section h2 {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 68px;
-    height: 68px;
-    flex: 0 0 68px;
+    width: 76px;
+    height: 72px;
+    flex: 0 0 76px;
   }
 
   .navbar .logo img {
-    width: 64px !important;
-    height: 64px !important;
+    width: 72px !important;
+    height: 72px !important;
     max-width: none !important;
     max-height: none !important;
-    flex: 0 0 64px;
+    flex: 0 0 72px;
     object-fit: contain;
     transform: none;
+  }
+
+  .navbar .logo img.fallback-logo {
+    transform: scale(2.3);
   }
 
   section h2 {
