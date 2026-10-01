@@ -19,6 +19,7 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
+app.set('trust proxy', 1);
 const io = new Server(server, {
     cors: {
         origin: true,
@@ -131,12 +132,19 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
     message: { success: false, message: 'Trop de tentatives. Veuillez réessayer dans quelques minutes.' }
 });
-const resetLimiter = rateLimit({
+const resetRequestLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: 'Trop de demandes de récupération. Veuillez réessayer plus tard.' }
+});
+const resetVerificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Trop de tentatives de vérification. Veuillez réessayer plus tard.' }
 });
 const accessCodeLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -595,7 +603,7 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
 });
 
 // 4. Route de demande d’un code de récupération (envoi du code à 6 chiffres)
-app.post('/api/forgot-password', resetLimiter, async (req, res) => {
+app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
     const email = sanitizeEmail(req.body?.email);
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -603,7 +611,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
     }
 
     try {
-        const user = users.find(u => u.email === email);
+        const user = await User.findOne({ email });
         if (!user) {
             return res.json({ success: true, message: 'Si votre adresse existe, un code de vérification a été envoyé.' });
         }
@@ -648,7 +656,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
 });
 
 // 5. Route de vérification du code et de changement du mot de passe
-app.post('/api/reset-password-code', resetLimiter, async (req, res) => {
+app.post('/api/reset-password-code', resetVerificationLimiter, async (req, res) => {
     try {
         const email = sanitizeEmail(req.body?.email);
         const code = String(req.body?.code || '');
