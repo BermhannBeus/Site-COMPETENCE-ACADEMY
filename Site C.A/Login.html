@@ -4,24 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Competence Academy - Connexion & Inscription</title>
-    <link rel="stylesheet" href="Login.css?v=20260921-2">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <!-- Google Sign-In SDK -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="Login.css">
 
 </head>
 <body>
 
     <div class="auth-wrapper">
         <div class="auth-container">
-            <div id="authMessage" class="auth-message" role="alert" aria-live="polite"></div>
 
             <!-- 1. LOGIN FORM -->
             <div id="loginForm" class="form-box active">
                 <div class="form-header">
-                    <div class="avatar-icon login-avatar">
-                        <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
+                    <div class="avatar-icon login-avatar-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="11" fill="currentColor"/>
+                            <circle cx="12" cy="9" r="3.25" fill="#fff"/>
+                            <path d="M5.5 18.2c.65-3 3.15-5 6.5-5s5.85 2 6.5 5a9.6 9.6 0 0 1-13 0Z" fill="#fff"/>
+                        </svg>
                     </div>
                     <h2>Connexion</h2>
                 </div>
@@ -37,7 +36,7 @@
                         <label>Mot de passe</label>
                         <div class="input-field-wrapper">
                             <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-                            <input type="password" id="loginPassword" placeholder="⬢⬢⬢⬢⬢⬢⬢⬢" required>
+                            <input type="password" id="loginPassword" placeholder="••••••••" required>
                             <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">
                                 <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                             </button>
@@ -59,6 +58,9 @@
                     </div>
                     <div class="g_id_signin" data-type="standard" data-size="large" data-width="100%"></div>
                 </div>
+                <p id="googleLocalFileWarning" class="google-local-file-warning" hidden>
+                    Pour vous connecter avec Google, ouvrez le site depuis son adresse HTTPS ou depuis localhost. N’ouvrez pas directement le fichier Login.html.
+                </p>
 
                 <div class="switch-text">
                     Vous n'avez pas de compte ? <a href="#" onclick="switchView('signup')">Créer un compte</a>
@@ -68,17 +70,22 @@
             <!-- 2. SIGN UP FORM -->
             <div id="signupForm" class="form-box">
                 <div class="form-header">
-                    <div class="avatar-icon signup-avatar">
+                    <div class="avatar-icon">
                         <svg viewBox="0 0 24 24"><path d="M15 14c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm-9-4V7H4v3H1v2h3v3h2v-3h3v-2H6zm6 4c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4 z"/></svg>
                     </div>
                     <h2>Créer un Compte</h2>
                 </div>
                 <form onsubmit="handleLoginOrSignup(event, 'signup')">
+                    <p class="required-fields-note">Tous les champs sont obligatoires.</p>
                     <div class="input-group">
-                        <label>Nom complet</label>
+                        <label for="signupName">Nom complet pour le certificat</label>
                         <div class="input-field-wrapper">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.42 3.58-8 8-8s8 3.58 8 8H4z"/></svg>
-                            <input type="text" id="signupName" placeholder="Jean Bernard" required>
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="11" fill="currentColor"/>
+                                <circle cx="12" cy="9" r="3.25" fill="#fff"/>
+                                <path d="M5.5 18.2c.65-3 3.15-5 6.5-5s5.85 2 6.5 5a9.6 9.6 0 0 1-13 0Z" fill="#fff"/>
+                            </svg>
+                            <input type="text" id="signupName" placeholder="Nom et prénom tels qu’ils doivent apparaître sur le certificat" maxlength="100" autocomplete="name" required>
                         </div>
                     </div>
                     <div class="input-group">
@@ -89,10 +96,37 @@
                         </div>
                     </div>
                     <div class="input-group">
+                        <label for="signupPhone">Numéro de téléphone</label>
+                        <div class="input-field-wrapper">
+                            <input type="tel" id="signupPhone" placeholder="+509 0000 0000" maxlength="30" autocomplete="tel" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="signupLocation">Ville et pays</label>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="signupLocation" placeholder="Ville, pays" maxlength="100" autocomplete="address-level2" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="signupCourse">Formation choisie</label>
+                        <div class="input-field-wrapper">
+                            <select id="signupCourse" required>
+                                <option value="" selected disabled>Choisissez une formation</option>
+                                <option value="bureautique">Informatique Bureautique</option>
+                                <option value="photographie">Photographie</option>
+                                <option value="design">Design Graphic</option>
+                                <option value="videographie">Vidéographie</option>
+                                <option value="montage">Montage Vidéo</option>
+                                <option value="quickbooks">QuickBooks</option>
+                                <option value="surveillance">Surveillance</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-group">
                         <label>Mot de passe</label>
                         <div class="input-field-wrapper">
                             <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-                            <input type="password" id="signupPassword" placeholder="Créer un mot de passe" required>
+                            <input type="password" id="signupPassword" placeholder="Créer un mot de passe" minlength="8" pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}" title="Le mot de passe doit contenir au moins 8 caractères, dont une lettre et un chiffre." autocomplete="new-password" required>
                             <button type="button" class="toggle-password" onclick="togglePasswordVisibility('signupPassword', this)">
                                 <svg class="eye-icon" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                             </button>
@@ -106,11 +140,82 @@
                 </div>
             </div>
 
+            <div id="certificateProfileForm" class="form-box">
+                <div class="form-header">
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5zm5-4H7v-2h10zm0-4H7V7h10z"/></svg>
+                    </div>
+                    <h2>Informations pour le certificat</h2>
+                    <p class="access-confirmation-message">Renseignez ces informations afin qu’elles apparaissent correctement sur votre certificat de formation.</p>
+                </div>
+                <form onsubmit="saveCertificateProfile(event)">
+                    <p class="required-fields-note">Tous les champs sont obligatoires.</p>
+                    <div class="input-group">
+                        <label for="certificateName">Nom complet tel qu’il doit apparaître sur le certificat</label>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="certificateName" maxlength="100" autocomplete="name" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="certificatePhone">Numéro de téléphone</label>
+                        <div class="input-field-wrapper">
+                            <input type="tel" id="certificatePhone" maxlength="30" autocomplete="tel" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="certificateLocation">Ville et pays</label>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="certificateLocation" maxlength="100" autocomplete="address-level2" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="certificateCourse">Formation choisie</label>
+                        <div class="input-field-wrapper">
+                            <select id="certificateCourse" required>
+                                <option value="" selected disabled>Choisissez une formation</option>
+                                <option value="bureautique">Informatique Bureautique</option>
+                                <option value="photographie">Photographie</option>
+                                <option value="design">Design Graphic</option>
+                                <option value="videographie">Vidéographie</option>
+                                <option value="montage">Montage Vidéo</option>
+                                <option value="quickbooks">QuickBooks</option>
+                                <option value="surveillance">Surveillance</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p id="certificateProfileError" class="access-confirmation-error" role="alert" hidden></p>
+                    <button type="submit" class="btn-submit">Enregistrer les informations et continuer</button>
+                </form>
+            </div>
+
+            <div id="accessConfirmationForm" class="form-box">
+                <div class="form-header">
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm2.1-7.75-.9.92A3 3 0 0 0 13 12.5V13h-2v-1a4 4 0 0 1 1.2-2.8l1.2-1.22A1.98 1.98 0 0 0 14 6.5a2 2 0 0 0-4 0H8a4 4 0 1 1 8 0 3.9 3.9 0 0 1-.9 2.75z"/></svg>
+                    </div>
+                    <h2>En attente de confirmation</h2>
+                    <p id="accessConfirmationMessage" class="access-confirmation-message" role="status">Votre demande de connexion a été envoyée à l’administration. Attendez le code, puis saisissez-le ci-dessous.</p>
+                </div>
+                <form onsubmit="confirmAccessCode(event)">
+                    <div class="input-group">
+                        <label for="accessConfirmationCode">Code de confirmation</label>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="accessConfirmationCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required>
+                        </div>
+                    </div>
+                    <p id="accessConfirmationError" class="access-confirmation-error" role="alert" hidden></p>
+                    <button type="submit" class="btn-submit">Confirmer et accéder aux formations</button>
+                </form>
+                <div class="switch-text">
+                    <a href="#" onclick="switchView('login')">Retour à la connexion</a>
+                </div>
+            </div>
+
             <!-- 3. FORGOT PASSWORD FORM -->
             <div id="forgotForm" class="form-box">
                 <div class="form-header">
-                    <div class="avatar-icon recovery-avatar">
-                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                    <div class="avatar-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
                     </div>
                     <h2>Récupération</h2>
                     <p style="font-size: 13px; color: #666; margin-top: 5px;">Entrez votre email pour recevoir votre code à 6 chiffres.</p>
@@ -127,17 +232,14 @@
                 </form>
 
                 <div class="switch-text" style="margin-top: 15px;">
-                    <a href="#" class="back-to-login-link" onclick="switchView('login'); return false;">
-                        <i class="fa-solid fa-hand-point-left" aria-hidden="true"></i>
-                        <span>Retour à la connexion</span>
-                    </a>
+                    <a href="#" onclick="switchView('login')">← Retour à la connexion</a>
                 </div>
             </div>
 
-            <!-- 4. RESET CODE & NEW PASSWORD FORM (AJOUT�0) -->
+            <!-- 4. RESET CODE & NEW PASSWORD FORM (AJOUTÉ) -->
             <div id="resetCodeForm" class="form-box">
                 <div class="form-header">
-                    <div class="avatar-icon reset-avatar">
+                    <div class="avatar-icon">
                         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
                     </div>
                     <h2>Changer le mot de passe</h2>
@@ -165,7 +267,7 @@
                 </form>
 
                 <div class="switch-text" style="margin-top: 15px;">
-                    <a href="#" onclick="switchView('login')">� � Annuler</a>
+                    <a href="#" onclick="switchView('login')">← Annuler</a>
                 </div>
             </div>
 
@@ -181,114 +283,201 @@
                 </div>
             </div>
 
-            <a class="return-home-button" href="index.html">
-                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-                <span>Retour à l'accueil</span>
-            </a>
-
         </div>
     </div>
 
 
-<!-- JavaScript Logik pou login.html -->
+<!-- Scripts de la page de connexion -->
     <script>
-        // URL baz pou backend Render
+        // URL de base du serveur Render
        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
          ? 'http://localhost:5000/api'
          : 'https://site-competence-academy-backend.onrender.com/api';
+        let activeAccessChallengeId = sessionStorage.getItem('ca_access_challenge_id') || '';
+
+        function showAccessConfirmation(challengeId, message) {
+            activeAccessChallengeId = challengeId;
+            sessionStorage.setItem('ca_access_challenge_id', challengeId);
+            localStorage.removeItem('ca_token');
+            document.getElementById('accessConfirmationMessage').textContent = message;
+            document.getElementById('accessConfirmationError').hidden = true;
+            document.getElementById('accessConfirmationCode').value = '';
+            switchView('accessConfirmation');
+            document.getElementById('accessConfirmationCode').focus();
+        }
+
+        function continueAfterAuthentication(data) {
+            sessionStorage.removeItem('ca_access_challenge_id');
+            activeAccessChallengeId = '';
+            localStorage.removeItem('ca_token');
+            localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+            if (data.profileComplete) {
+                window.location.href = 'Cours en Ligne.html';
+            } else {
+                showCertificateProfile(data.user);
+            }
+        }
+
         function switchView(viewType) {
             const loginForm = document.getElementById('loginForm');
             const signupForm = document.getElementById('signupForm');
             const forgotForm = document.getElementById('forgotForm');
             const resetCodeForm = document.getElementById('resetCodeForm');
             const profileView = document.getElementById('profileView');
+            const accessConfirmationForm = document.getElementById('accessConfirmationForm');
+            const certificateProfileForm = document.getElementById('certificateProfileForm');
 
             if (loginForm) loginForm.classList.remove('active');
             if (signupForm) signupForm.classList.remove('active');
             if (forgotForm) forgotForm.classList.remove('active');
             if (resetCodeForm) resetCodeForm.classList.remove('active');
             if (profileView) profileView.classList.remove('active');
+            if (accessConfirmationForm) accessConfirmationForm.classList.remove('active');
+            if (certificateProfileForm) certificateProfileForm.classList.remove('active');
 
             if (viewType === 'login' && loginForm) loginForm.classList.add('active');
             else if (viewType === 'signup' && signupForm) signupForm.classList.add('active');
             else if (viewType === 'forgot' && forgotForm) forgotForm.classList.add('active');
             else if (viewType === 'resetCode' && resetCodeForm) resetCodeForm.classList.add('active');
             else if (viewType === 'profile' && profileView) profileView.classList.add('active');
+            else if (viewType === 'accessConfirmation' && accessConfirmationForm) accessConfirmationForm.classList.add('active');
+            else if (viewType === 'certificateProfile' && certificateProfileForm) certificateProfileForm.classList.add('active');
         }
 
         async function handleLoginOrSignup(event, endpoint) {
             event.preventDefault();
-            const submitButton = event.submitter;
-            const originalButtonText = submitButton ? submitButton.textContent : '';
-            const name = endpoint === 'signup' ? document.getElementById('signupName').value : '';
+            
+            const name = endpoint === 'signup' ? document.getElementById('signupName').value.trim() : '';
             const email = document.getElementById(endpoint === 'signup' ? 'signupEmail' : 'loginEmail').value;
             const password = document.getElementById(endpoint === 'signup' ? 'signupPassword' : 'loginPassword').value;
-
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = endpoint === 'signup' ? 'Création...' : 'Connexion...';
-            }
-            showAuthMessage('');
+            const registrationDetails = endpoint === 'signup' ? {
+                phone: document.getElementById('signupPhone').value.trim(),
+                location: document.getElementById('signupLocation').value.trim(),
+                registeredCourse: document.getElementById('signupCourse').value
+            } : {};
 
             try {
                 const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ name, email, password })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, ...registrationDetails })
                 });
 
                 const data = await response.json();
 
-                if (data.success) {
-                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
-                    // Redireksyon vè paj kou yo lè li fin konekte ak siksè
-                    window.location.href = '/cours%20en%20ligne';
+                if (response.ok && data.success && data.authenticated) {
+                    continueAfterAuthentication(data);
+                } else if (response.ok && data.success && data.challengeId) {
+                    showAccessConfirmation(data.challengeId, data.message);
                 } else {
-                    showAuthMessage(data.message || 'Une erreur est survenue.', true);
+                    alert(data.message || 'Une erreur est survenue.');
                 }
 
             } catch (error) {
                 console.error('Erreur de connexion:', error);
-                showAuthMessage('�0chec de la connexion au serveur.', true);
-            } finally {
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.textContent = originalButtonText;
-                }
+                alert('Échec de la connexion au serveur.');
             }
         }
 
-        function showAuthMessage(message, isError = false) {
-            const messageElement = document.getElementById('authMessage');
-            if (!messageElement) return;
-            messageElement.textContent = message;
-            messageElement.classList.toggle('error', isError);
-            messageElement.classList.toggle('visible', Boolean(message));
-        }
-
-        // Fonksyon pou kòd Google OAuth la
+        // Traitement de la réponse Google OAuth
         async function handleCredentialResponse(response) {
             try {
                 const res = await fetch(`${API_BASE_URL}/google-login`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: response.credential })
                 });
 
                 const data = await res.json();
 
-                if (data.success) {
-                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
-                    // Redireksyon vè paj kou yo lè li fin konekte ak Google
-                    window.location.href = '/cours%20en%20ligne';
+                if (res.ok && data.success && data.authenticated) {
+                    continueAfterAuthentication(data);
+                } else if (res.ok && data.success && data.challengeId) {
+                    showAccessConfirmation(data.challengeId, data.message);
                 } else {
-                    showAuthMessage(data.message || 'Erreur lors de la connexion Google.', true);
+                    alert(data.message || 'Erreur lors de la connexion Google.');
                 }
             } catch (error) {
                 console.error('Erreur Google Login:', error);
-                showAuthMessage('Impossible de se connecter avec Google.', true);
+                alert('Impossible de se connecter avec Google.');
+            }
+        }
+
+        async function confirmAccessCode(event) {
+            event.preventDefault();
+            const errorMessage = document.getElementById('accessConfirmationError');
+            errorMessage.hidden = true;
+            if (!activeAccessChallengeId) {
+                errorMessage.textContent = 'Aucune demande de confirmation active. Veuillez vous reconnecter.';
+                errorMessage.hidden = false;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/confirm-access`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        challengeId: activeAccessChallengeId,
+                        code: document.getElementById('accessConfirmationCode').value.trim()
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    errorMessage.textContent = data.message || 'Le code est incorrect ou a expiré.';
+                    errorMessage.hidden = false;
+                    return;
+                }
+
+                continueAfterAuthentication(data);
+            } catch (error) {
+                console.error('Access confirmation failed:', error);
+                errorMessage.textContent = 'Impossible de contacter le serveur. Veuillez réessayer.';
+                errorMessage.hidden = false;
+            }
+        }
+
+        function showCertificateProfile(user) {
+            document.getElementById('certificateName').value = user.nameOnCertificate || user.name || '';
+            document.getElementById('certificatePhone').value = user.phone || '';
+            document.getElementById('certificateLocation').value = user.location || '';
+            document.getElementById('certificateCourse').value = user.registeredCourse || '';
+            document.getElementById('certificateProfileError').hidden = true;
+            switchView('certificateProfile');
+        }
+
+        async function saveCertificateProfile(event) {
+            event.preventDefault();
+            const errorMessage = document.getElementById('certificateProfileError');
+            errorMessage.hidden = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/me/certificate-profile`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nameOnCertificate: document.getElementById('certificateName').value.trim(),
+                        phone: document.getElementById('certificatePhone').value.trim(),
+                        location: document.getElementById('certificateLocation').value.trim(),
+                        registeredCourse: document.getElementById('certificateCourse').value
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    errorMessage.textContent = data.message || 'Vérifiez les informations saisies et réessayez.';
+                    errorMessage.hidden = false;
+                    return;
+                }
+                localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+                window.location.href = 'Cours en Ligne.html';
+            } catch (error) {
+                console.error('Certificate profile save failed:', error);
+                errorMessage.textContent = 'Impossible d’enregistrer les informations pour le moment. Veuillez réessayer.';
+                errorMessage.hidden = false;
             }
         }
 
@@ -300,7 +489,6 @@
               const response = await fetch(`${API_BASE_URL}/forgot-password`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
                   body: JSON.stringify({ email })
               });
 
@@ -321,7 +509,7 @@
         async function handleResetPasswordWithCode(event) {
             event.preventDefault();
 
-            // Sèvi ak 'forgotEmail' oubyen 'resetEmail' selon sa ki disponib
+            // Utiliser le champ d’adresse e-mail disponible
             const emailField = document.getElementById('forgotEmail') || document.getElementById('resetEmail');
             const email = emailField ? emailField.value : '';
             
@@ -332,7 +520,6 @@
                 const response = await fetch(`${API_BASE_URL}/reset-password-code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
                     body: JSON.stringify({ email, code, newPassword })
                 });
 
@@ -340,8 +527,7 @@
 
                 if (response.ok && data.success) {
                     alert(data.message || 'Votre mot de passe a été modifié avec succès !');
-                    localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
-                    window.location.href = '/cours%20en%20ligne';
+                    switchView('login');
                 } else {
                     alert('Erreur : ' + (data.message || 'Impossible de réinitialiser le mot de passe.'));
                 }
@@ -376,22 +562,48 @@
             }
         }
 
-        // Lè paj la chaje, toujou afiche form login la san li pa sote ale sou paj kou a
+        // Afficher le formulaire de connexion au chargement sans ouvrir automatiquement les formations.
         window.addEventListener('DOMContentLoaded', () => {
-            switchView('login');
+            if (window.location.protocol === 'file:') {
+                document.querySelector('.divider').hidden = true;
+                document.querySelector('.social-buttons').hidden = true;
+                document.getElementById('googleLocalFileWarning').hidden = false;
+            } else {
+                const googleSignInSdk = document.createElement('script');
+                googleSignInSdk.src = 'https://accounts.google.com/gsi/client';
+                googleSignInSdk.async = true;
+                googleSignInSdk.defer = true;
+                document.head.appendChild(googleSignInSdk);
+            }
+
+            const pendingChallengeId = sessionStorage.getItem('ca_access_challenge_id');
+            if (pendingChallengeId) {
+                showAccessConfirmation(
+                    pendingChallengeId,
+                    'Votre demande de connexion a déjà été envoyée à l’administration. Le code expire après 20 minutes; saisissez celui qu’elle vous a transmis.'
+                );
+            } else {
+                switchView('login');
+            }
         });
 
         async function handleLogout() {
             try {
-                await fetch(`${API_BASE_URL.replace('/api', '')}/api/logout`, {
+                const response = await fetch(`${API_BASE_URL}/logout`, {
                     method: 'POST',
                     credentials: 'include'
                 });
+                if (!response.ok) throw new Error('Le serveur n’a pas pu fermer la session.');
             } catch (error) {
-                console.warn('Logout server request failed:', error);
+                console.error('Logout failed:', error);
+                alert('Impossible de fermer la session avec le serveur. Réessayez.');
+                return;
             }
 
             localStorage.removeItem('competence_academy_user');
+            localStorage.removeItem('ca_token');
+            sessionStorage.removeItem('ca_access_challenge_id');
+            activeAccessChallengeId = '';
             if (document.getElementById('loginEmail')) document.getElementById('loginEmail').value = '';
             if (document.getElementById('loginPassword')) document.getElementById('loginPassword').value = '';
             switchView('login');
