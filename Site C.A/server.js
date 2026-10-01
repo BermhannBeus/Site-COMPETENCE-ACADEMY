@@ -38,6 +38,24 @@ const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_U
     .map((url) => url.trim().replace(/\/$/, ''))
     .filter(Boolean);
 
+io.use((socket, next) => {
+    const cookieHeader = socket.handshake.headers.cookie || '';
+    const authCookie = cookieHeader.split(';').map((cookie) => cookie.trim())
+        .find((cookie) => cookie.startsWith('ca_token='));
+    const token = authCookie ? authCookie.slice('ca_token='.length) : '';
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (!decoded.id || decoded.accessConfirmed !== true) {
+            return next(new Error('Authentication required'));
+        }
+        socket.data.userId = String(decoded.id);
+        next();
+    } catch (error) {
+        next(new Error('Authentication required'));
+    }
+});
+
 // Client ID Google
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -1219,16 +1237,23 @@ app.post('/api/logout', (req, res) => {
     res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
-// Gestion des utilisateurs en ligne (Socket.io)
-let onlineUsers = 0;
+// Count authenticated students, not browser tabs or devices.
+const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
-    onlineUsers++;
-    io.emit('updateOnlineCount', onlineUsers);
+    const userId = socket.data.userId;
+    const userSockets = onlineUsers.get(userId) || new Set();
+    userSockets.add(socket.id);
+    onlineUsers.set(userId, userSockets);
+    io.emit('onlineCount', onlineUsers.size);
 
     socket.on('disconnect', () => {
-        onlineUsers--;
-        io.emit('updateOnlineCount', onlineUsers);
+        const activeSockets = onlineUsers.get(userId);
+        if (activeSockets) {
+            activeSockets.delete(socket.id);
+            if (activeSockets.size === 0) onlineUsers.delete(userId);
+        }
+        io.emit('onlineCount', onlineUsers.size);
     });
 });
 
