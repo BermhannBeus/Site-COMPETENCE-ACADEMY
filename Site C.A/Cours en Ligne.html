@@ -28,17 +28,7 @@
 
     document.documentElement.classList.add('auth-pending');
 
-    const isRefresh = performance.getEntriesByType('navigation')[0]?.type === 'reload';
-    const invalidateSessionOnRefresh = isRefresh
-        ? fetch(`${API_BASE_URL.replace('/api', '')}/api/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        }).finally(() => {
-            localStorage.removeItem('competence_academy_user');
-        })
-        : Promise.resolve();
-
-    invalidateSessionOnRefresh.then(() => fetch(`${API_BASE_URL}/me`, { credentials: 'include' }))
+    fetch(`${API_BASE_URL}/me`, { credentials: 'include' })
         .then(response => {
             if (!response.ok) throw new Error('Unauthorized');
             return response.json();
@@ -120,13 +110,8 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="bureautique-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600">
-                            <source src="Cours/video-bureautique-intro.mp4" type="video/mp4">
-                        </video>
+                        <video id="bureautique-video" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600"></video>
                     </div>
-                    <button class="video-preview-button" type="button" onclick="lancerPreview('bureautique-video')">
-                        <i class="fa-solid fa-play" aria-hidden="true"></i> Preview
-                    </button>
                     <div class="overlay-lock" id="lock-bureautique">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
@@ -143,6 +128,14 @@
                 <div class="course-info">
                     <h2>Introduction à Microsoft Word Professionnel</h2>
                     <p class="course-description">Apprenez à structurer vos rapports, lettres administratives et documents officiels.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="bureautique-word" data-video-src="/course-videos/bureautique-word" onclick="selectionnerVideo('bureautique-word')">
+                                <span>Introduction à Microsoft Word Professionnel</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -171,13 +164,8 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="photo-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600">
-                            <source src="Cours/video-photo-pro.mp4" type="video/mp4">
-                        </video>
+                        <video id="photo-video" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600"></video>
                     </div>
-                    <button class="video-preview-button" type="button" onclick="lancerPreview('photo-video')">
-                        <i class="fa-solid fa-play" aria-hidden="true"></i> Preview
-                    </button>
                     <div class="overlay-lock" id="lock-photo">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
@@ -194,6 +182,14 @@
                 <div class="course-info">
                     <h2>Maîtriser le Mode Manuel (Ouverture, Vitesse, ISO)</h2>
                     <p class="course-description">Prenez le contrôle total de votre appareil photo pour réussir vos portraits et paysages.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="photographie-manuel" data-video-src="/course-videos/photographie-manuel" onclick="selectionnerVideo('photographie-manuel')">
+                                <span>Maîtriser le Mode Manuel (Ouverture, Vitesse, ISO)</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -222,13 +218,8 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="design-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=600">
-                            <source src="Cours/video-design-logo.mp4" type="video/mp4">
-                        </video>
+                        <video id="design-video" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=600"></video>
                     </div>
-                    <button class="video-preview-button" type="button" onclick="lancerPreview('design-video')">
-                        <i class="fa-solid fa-play" aria-hidden="true"></i> Preview
-                    </button>
                     <div class="overlay-lock" id="lock-design">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
@@ -245,6 +236,14 @@
                 <div class="course-info">
                     <h2>Création de Logo Vectoriel sur Adobe Illustrator</h2>
                     <p class="course-description">Apprenez à utiliser les grilles et l'outil Plume pour concevoir des logos professionnels.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="design-logo" data-video-src="/course-videos/design-logo" onclick="selectionnerVideo('design-logo')">
+                                <span>Création de Logo Vectoriel sur Adobe Illustrator</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -273,13 +272,8 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="video-vid" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=600">
-                            <source src="Cours/video-cadrage.mp4" type="video/mp4">
-                        </video>
+                        <video id="video-vid" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=600"></video>
                     </div>
-                    <button class="video-preview-button" type="button" onclick="lancerPreview('video-vid')">
-                        <i class="fa-solid fa-play" aria-hidden="true"></i> Preview
-                    </button>
                     <div class="overlay-lock" id="lock-vid">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
@@ -296,6 +290,14 @@
                 <div class="course-info">
                     <h2>Les Règles de Cadrage et Mouvements de Caméra</h2>
                     <p class="course-description">Découvrez les secrets des travellings, panos et la règle des tiers au cinéma.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="videographie-cadrage" data-video-src="/course-videos/videographie-cadrage" onclick="selectionnerVideo('videographie-cadrage')">
+                                <span>Les Règles de Cadrage et Mouvements de Caméra</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -324,13 +326,8 @@
             <section class="course-card">
                 <div class="video-wrapper">
                     <div class="video-container">
-                        <video id="montage-video" controlsList="nodownload noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=600">
-                            <source src="Cours/video-montage-premiere.mp4" type="video/mp4">
-                        </video>
+                        <video id="montage-video" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?q=80&w=600"></video>
                     </div>
-                    <button class="video-preview-button" type="button" onclick="lancerPreview('montage-video')">
-                        <i class="fa-solid fa-play" aria-hidden="true"></i> Preview
-                    </button>
                     <div class="overlay-lock" id="lock-montage">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
@@ -347,6 +344,14 @@
                 <div class="course-info">
                     <h2>Montage Rythmique et Transitions sur Adobe Premiere Pro</h2>
                     <p class="course-description">Apprenez à couper sur le temps de la musique et intégrer des effets fluides.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="montage-rythmique" data-video-src="/course-videos/montage-rythmique" onclick="selectionnerVideo('montage-rythmique')">
+                                <span>Montage Rythmique et Transitions sur Adobe Premiere Pro</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -373,15 +378,17 @@
         <div class="course-card-wrapper" data-category="quickbooks">
             <div class="category-badge">QuickBooks</div>
             <section class="course-card">
-                <div class="video-wrapper course-placeholder">
-                    <div class="course-preview-image course-preview-quickbooks" role="img" aria-label="Aperçu de la formation QuickBooks"></div>
+                <div class="video-wrapper">
+                    <div class="video-container">
+                        <video id="quickbooks-video" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=600"></video>
+                    </div>
                     <div class="overlay-lock" id="lock-quickbooks">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
                             <p>Cours complet en QuickBooks.</p>
                             <div class="password-box">
                                 <input type="password" id="input-quickbooks" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-quickbooks', 'lock-quickbooks', '', 'tag-quickbooks', 'doc-quickbooks', 'text-quickbooks', 'icon-lock-quickbooks', 'Document réservé', 'quiz-quickbooks')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-quickbooks', 'lock-quickbooks', 'quickbooks-video', 'tag-quickbooks', 'doc-quickbooks', 'text-quickbooks', 'icon-lock-quickbooks', 'Document réservé', 'quiz-quickbooks')">Débloquer</button>
                             </div>
                             <p class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -391,6 +398,14 @@
                 <div class="course-info">
                     <h2>Gestion comptable avec QuickBooks</h2>
                     <p class="course-description">Apprenez à organiser les revenus, dépenses, factures et rapports financiers de votre activité.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="quickbooks-introduction" data-video-src="/course-videos/quickbooks-introduction" onclick="selectionnerVideo('quickbooks-introduction')">
+                                <span>Introduction à QuickBooks</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -417,15 +432,17 @@
         <div class="course-card-wrapper" data-category="surveillance">
             <div class="category-badge">Caméra de surveillance</div>
             <section class="course-card">
-                <div class="video-wrapper course-placeholder">
-                    <div class="course-preview-image course-preview-surveillance" role="img" aria-label="Aperçu de la formation Caméra de surveillance"></div>
+                <div class="video-wrapper">
+                    <div class="video-container">
+                        <video id="surveillance-video" crossorigin="use-credentials" preload="none" controlsList="nodownload noremoteplayback noplaybackrate" disablePictureInPicture poster="https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=600"></video>
+                    </div>
                     <div class="overlay-lock" id="lock-surveillance">
                         <div class="lock-form-container">
                             <i class="fa-solid fa-lock"></i>
                             <p>Cours complet en Caméra de surveillance.</p>
                             <div class="password-box">
                                 <input type="password" id="input-surveillance" placeholder="Code d'accès">
-                                <button type="button" onclick="verifierCode('input-surveillance', 'lock-surveillance', '', 'tag-surveillance', 'doc-surveillance', 'text-surveillance', 'icon-lock-surveillance', 'Document réservé', 'quiz-surveillance')">Débloquer</button>
+                                <button type="button" onclick="verifierCode('input-surveillance', 'lock-surveillance', 'surveillance-video', 'tag-surveillance', 'doc-surveillance', 'text-surveillance', 'icon-lock-surveillance', 'Document réservé', 'quiz-surveillance')">Débloquer</button>
                             </div>
                             <p class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -435,6 +452,14 @@
                 <div class="course-info">
                     <h2>Installation de caméras de surveillance</h2>
                     <p class="course-description">Découvrez les bases du positionnement, du câblage et de la configuration d’un système de surveillance.</p>
+                    <div class="resources-section course-videos-section">
+                        <h3><i class="fa-solid fa-circle-play"></i> Vidéos de formation</h3>
+                        <div class="course-video-list">
+                            <button class="course-video-item" type="button" data-video-id="surveillance-installation" data-video-src="/course-videos/surveillance-installation" onclick="selectionnerVideo('surveillance-installation')">
+                                <span>Installation de caméras de surveillance</span><span class="course-video-status"><i class="fa-solid fa-lock"></i> Verrouillé</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="resources-section">
                         <h3><i class="fa-solid fa-folder-open"></i> Documents</h3>
                         <div class="document-list">
@@ -613,19 +638,22 @@
     // ==========================================================================
     // GESTIONNAIRE DES MOTS DE PASS
     // ==========================================================================
-    const MODPAS_FORMATIONS = {
-        "bureautique":  "CA-BUR-2026",    
-        "photographie": "CA-PHOTO-2026",  
-        "design":       "CA-DES-2026",    
-        "videographie": "CA-VID-2026",    
-        "montage":      "CA-MONT-2026",
-        "quickbooks":   "CA-QUICK-2026",
-        "surveillance": "CA-SURV-2026"
-    };
+    const COURSE_API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5000/api'
+        : 'https://site-competence-academy-backend.onrender.com/api';
+    const courseProgress = { unlockedVideoIds: [], completedVideoIds: [] };
+    const furthestWatchedByVideo = new Map();
+    const watchSessionByVideo = new Map();
+    const lastWatchReportByVideo = new Map();
+    const watchReportQueueByVideo = new Map();
+    let activeVideoId = null;
 
-    document.querySelectorAll('.video-container video').forEach(function(video) {
-        video.addEventListener('contextmenu', function(event) {
+    document.querySelectorAll('.video-wrapper').forEach(function(wrapper) {
+        wrapper.addEventListener('contextmenu', function(event) {
             event.preventDefault();
+        });
+        wrapper.addEventListener('dragstart', function(event) {
+            if (event.target.closest('video')) event.preventDefault();
         });
     });
 
@@ -669,55 +697,292 @@
         });
     }
 
-    // Fonksyon Verifikasyon Modpas
-    function verifierCode(inputId, lockId, videoId, tagId, docId, textId, iconId, sizeText, quizId) {
+    async function courseApiRequest(path, options) {
+        const token = localStorage.getItem('ca_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
+
+        const response = await fetch(`${COURSE_API_BASE_URL}${path}`, {
+            ...options,
+            headers: { ...headers, ...(options && options.headers) },
+            credentials: 'include'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Une erreur est survenue lors de la mise à jour de votre progression.');
+        }
+        return data;
+    }
+
+    function isVideoUnlocked(videoId) {
+        return courseProgress.unlockedVideoIds.includes(videoId);
+    }
+
+    function syncCourseProgress() {
+        document.querySelectorAll('.course-video-item').forEach(function(item) {
+            const videoId = item.dataset.videoId;
+            const wrapper = item.closest('.course-card-wrapper');
+            const unlocked = isVideoUnlocked(videoId);
+            const completed = courseProgress.completedVideoIds.includes(videoId);
+            const status = item.querySelector('.course-video-status');
+            const video = wrapper.querySelector('video');
+            const lockScreen = wrapper.querySelector('.overlay-lock');
+            const tag = wrapper.querySelector('.badge-status');
+            const documentItem = wrapper.querySelector('.document-item');
+            const documentStatus = wrapper.querySelector('.doc-size');
+            const documentIcon = wrapper.querySelector('.document-item > i');
+            const quiz = wrapper.querySelector('.course-quiz-button');
+            const sizeText = documentStatus.dataset.size;
+
+            item.classList.toggle('is-active', videoId === activeVideoId);
+            status.innerHTML = completed
+                ? "<i class='fa-solid fa-circle-check'></i> Terminé"
+                : unlocked
+                    ? "<i class='fa-solid fa-unlock'></i> Disponible"
+                    : "<i class='fa-solid fa-lock'></i> Verrouillé";
+
+            video.controls = unlocked;
+            lockScreen.style.display = unlocked ? 'none' : 'flex';
+            if (tag) {
+                tag.innerHTML = unlocked
+                    ? "Débloqué <i class='fa-solid fa-unlock'></i>"
+                    : "Premium <i class='fa-solid fa-lock'></i>";
+                tag.style.backgroundColor = unlocked ? '#22c55e' : '';
+            }
+            if (documentItem) {
+                documentItem.style.opacity = unlocked ? '1' : '0.5';
+                documentItem.style.pointerEvents = unlocked ? 'auto' : 'none';
+            }
+            if (documentStatus && sizeText) {
+                documentStatus.textContent = unlocked ? `PDF • ${sizeText}` : `Bloqué • ${sizeText}`;
+            }
+            if (documentIcon) {
+                documentIcon.className = unlocked ? 'fa-solid fa-download download-icon' : 'fa-solid fa-lock';
+                documentIcon.style.color = unlocked ? '#22c55e' : '';
+            }
+            if (quiz) {
+                quiz.classList.toggle('is-locked', !unlocked);
+                quiz.setAttribute('aria-disabled', String(!unlocked));
+            }
+        });
+    }
+
+    function showCourseError(wrapper, message) {
+        let notice = wrapper.querySelector('.course-video-error');
+        if (!notice) {
+            notice = document.createElement('p');
+            notice.className = 'course-video-error';
+            notice.setAttribute('role', 'alert');
+            wrapper.querySelector('.video-wrapper').appendChild(notice);
+        }
+        notice.textContent = message;
+        notice.hidden = !message;
+    }
+
+    function reportVideoWatchProgress(videoId, video) {
+        const watchSessionId = watchSessionByVideo.get(videoId);
+        if (!watchSessionId || !Number.isFinite(video.duration) || video.duration <= 0) {
+            return Promise.reject(new Error('Le suivi de lecture vidéo n’est pas prêt.'));
+        }
+
+        const previousRequest = watchReportQueueByVideo.get(videoId) || Promise.resolve();
+        const request = previousRequest.catch(function() {}).then(function() {
+            return courseApiRequest('/course-progress/watch', {
+                method: 'POST',
+                body: JSON.stringify({
+                    videoId,
+                    watchSessionId,
+                    currentTime: video.currentTime,
+                    duration: video.duration
+                })
+            });
+        });
+        watchReportQueueByVideo.set(videoId, request);
+        return request;
+    }
+
+    async function selectionnerVideo(videoId) {
+        const item = document.querySelector(`.course-video-item[data-video-id="${videoId}"]`);
+        if (!item) return;
+
+        activeVideoId = videoId;
+        const wrapper = item.closest('.course-card-wrapper');
+        const video = wrapper.querySelector('video');
+        showCourseError(wrapper, '');
+
+        syncCourseProgress();
+        if (!isVideoUnlocked(videoId)) {
+            const input = wrapper.querySelector('.lock-form-container input');
+            if (input) input.focus();
+            return;
+        }
+
+        const protectedVideoUrl = `${COURSE_API_BASE_URL}${item.dataset.videoSrc}`;
+        if (video.dataset.protectedSource !== protectedVideoUrl) {
+            video.dataset.protectedSource = protectedVideoUrl;
+            video.src = protectedVideoUrl;
+            video.load();
+        }
+
+        try {
+            if (video.readyState > 0) video.currentTime = 0;
+            const result = await courseApiRequest('/course-progress/start', {
+                method: 'POST',
+                body: JSON.stringify({ videoId })
+            });
+            watchSessionByVideo.set(videoId, result.watchSessionId);
+            lastWatchReportByVideo.set(videoId, 0);
+            furthestWatchedByVideo.set(videoId, 0);
+            await video.play();
+        } catch (error) {
+            console.error('Course video playback failed:', error);
+            showCourseError(wrapper, error.message || 'La vidéo est indisponible. Vérifiez que le MP4 est présent dans le stockage privé du serveur.');
+        }
+    }
+
+    async function verifierCode(inputId, lockId, videoId, tagId, docId, textId, iconId, sizeText, quizId) {
         const inputField = document.getElementById(inputId);
         const lockScreen = document.getElementById(lockId);
-        const video = document.getElementById(videoId);
+        const wrapper = lockScreen.closest('.course-card-wrapper');
+        const videoItem = wrapper.querySelector('.course-video-item');
+        const video = videoId ? document.getElementById(videoId) : null;
         const tag = document.getElementById(tagId);
         const docItem = document.getElementById(docId);
         const statusText = document.getElementById(textId);
         const docIcon = document.getElementById(iconId);
         const quizItem = document.getElementById(quizId);
-        
-        const wrapper = lockScreen.closest('.course-card-wrapper');
-        const kategoriAktiv = wrapper.getAttribute('data-category');
-        const codeCorrect = MODPAS_FORMATIONS[kategoriAktiv]; 
-        
         const errorMsg = lockScreen.querySelector('.error-msg');
 
-        if (inputField.value === codeCorrect) {
-            lockScreen.style.display = "none";
-            if (video) video.setAttribute("controls", "true");
-            
-            if (tag) {
-                tag.innerHTML = "Débloqué <i class='fa-solid fa-unlock'></i>";
-                tag.style.backgroundColor = "#22c55e";
+        try {
+            const code = inputField.value.trim();
+            if (videoItem) {
+                const result = await courseApiRequest('/course-progress/unlock', {
+                    method: 'POST',
+                    body: JSON.stringify({ videoId: videoItem.dataset.videoId, accessCode: code })
+                });
+                courseProgress.unlockedVideoIds = result.progress.unlockedVideoIds;
+                courseProgress.completedVideoIds = result.progress.completedVideoIds;
+                syncCourseProgress();
+                await selectionnerVideo(videoItem.dataset.videoId);
+            } else {
+                await courseApiRequest('/course-access/verify', {
+                    method: 'POST',
+                    body: JSON.stringify({ category: wrapper.dataset.category, accessCode: code })
+                });
+                lockScreen.style.display = 'none';
+                if (tag) {
+                    tag.innerHTML = "Débloqué <i class='fa-solid fa-unlock'></i>";
+                    tag.style.backgroundColor = '#22c55e';
+                }
+                if (docItem) {
+                    docItem.style.opacity = '1';
+                    docItem.style.pointerEvents = 'auto';
+                }
+                if (statusText) statusText.innerText = `PDF • ${sizeText}`;
+                if (docIcon) {
+                    docIcon.className = 'fa-solid fa-download download-icon';
+                    docIcon.style.color = '#22c55e';
+                }
+                if (quizItem) {
+                    quizItem.classList.remove('is-locked');
+                    quizItem.setAttribute('aria-disabled', 'false');
+                }
             }
-            
-            docItem.style.opacity = "1";
-            docItem.style.pointerEvents = "auto";
-            statusText.innerText = "PDF • " + sizeText;
-            
-            docIcon.className = "fa-solid fa-download download-icon";
-            docIcon.style.color = "#22c55e";
-            if (quizItem) {
-                quizItem.classList.remove("is-locked");
-                quizItem.setAttribute("aria-disabled", "false");
+            errorMsg.style.display = 'none';
+            inputField.value = '';
+        } catch (error) {
+            if (error.message.toLowerCase().includes('incorrect')) {
+                errorMsg.style.display = 'block';
+                inputField.style.borderColor = '#ffc107';
+                inputField.value = '';
+                inputField.focus();
+                return;
             }
-        } else {
-            errorMsg.style.display = "block";
-            inputField.style.borderColor = "#ffc107";
-            inputField.value = "";
-            inputField.focus();
+            console.error('Course access verification failed:', error);
+            showCourseError(wrapper, error.message);
         }
+    }
+
+    function initializeCourseVideos() {
+        document.querySelectorAll('.course-video-item').forEach(function(item) {
+            const videoId = item.dataset.videoId;
+            const wrapper = item.closest('.course-card-wrapper');
+            const video = wrapper.querySelector('video');
+            furthestWatchedByVideo.set(videoId, 0);
+
+            const documentStatus = wrapper.querySelector('.doc-size');
+            if (documentStatus) {
+                documentStatus.dataset.size = documentStatus.textContent.split('•').pop().trim();
+            }
+
+            video.addEventListener('timeupdate', function() {
+                furthestWatchedByVideo.set(videoId, Math.max(furthestWatchedByVideo.get(videoId), video.currentTime));
+                const lastReportedAt = lastWatchReportByVideo.get(videoId) || 0;
+                if (!video.paused && watchSessionByVideo.has(videoId)
+                    && video.currentTime - lastReportedAt >= 4) {
+                    lastWatchReportByVideo.set(videoId, video.currentTime);
+                    reportVideoWatchProgress(videoId, video).catch(function(error) {
+                        console.error('Course video watch progress could not be saved:', error);
+                        showCourseError(wrapper, error.message);
+                    });
+                }
+            });
+            video.addEventListener('seeking', function() {
+                const furthestWatched = furthestWatchedByVideo.get(videoId) || 0;
+                if (video.currentTime > furthestWatched + 1) video.currentTime = furthestWatched;
+            });
+            video.addEventListener('ended', function() {
+                if (!Number.isFinite(video.duration) || video.currentTime < video.duration - 1) return;
+                reportVideoWatchProgress(videoId, video).then(function() {
+                    return courseApiRequest('/course-progress/complete', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            videoId,
+                            watchSessionId: watchSessionByVideo.get(videoId),
+                            currentTime: video.currentTime,
+                            duration: video.duration
+                        })
+                    });
+                }).then(function(result) {
+                    courseProgress.unlockedVideoIds = result.progress.unlockedVideoIds;
+                    courseProgress.completedVideoIds = result.progress.completedVideoIds;
+                    syncCourseProgress();
+                }).catch(function(error) {
+                    console.error('Course completion could not be saved:', error);
+                    showCourseError(wrapper, error.message);
+                });
+            });
+            video.addEventListener('error', function() {
+                if (isVideoUnlocked(videoId)) {
+                    showCourseError(wrapper, 'La vidéo est indisponible. Vérifiez que le fichier de formation est présent.');
+                }
+            });
+        });
+
+        const firstVideo = document.querySelector('.course-video-item');
+        if (firstVideo) activeVideoId = firstVideo.dataset.videoId;
+
+        courseApiRequest('/course-progress', { method: 'GET' }).then(function(result) {
+            courseProgress.unlockedVideoIds = result.progress.unlockedVideoIds;
+            courseProgress.completedVideoIds = result.progress.completedVideoIds;
+            syncCourseProgress();
+        }).catch(function(error) {
+            console.error('Course progress could not be loaded:', error);
+            document.querySelectorAll('.course-video-item').forEach(function(item) {
+                item.disabled = true;
+            });
+            const wrapper = document.querySelector('.course-card-wrapper[data-category="bureautique"]');
+            if (wrapper) showCourseError(wrapper, error.message);
+        });
     }
 
     // Pèmèt elèv yo peze Enter pou debloke rapid
     document.querySelectorAll('.lock-form-container input').forEach(function(input) {
-        input.addEventListener("keypress", function(event) {
+        input.addEventListener("keydown", function(event) {
             if (event.key === "Enter") {
-                this.nextElementSibling.click();
+                event.preventDefault();
+                const unlockButton = this.closest('.password-box').querySelector('button:not(.password-toggle)');
+                if (unlockButton) unlockButton.click();
             }
         });
     });
@@ -730,6 +995,7 @@
         });
     });
 
+    initializeCourseVideos();
 
 
 
