@@ -91,11 +91,117 @@ const sendAuthenticatedSession = (res, user) => {
 // Configuration Nodemailer
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
 });
+
+const sendEmail = async (mailOptions) => {
+    if (process.env.BREVO_API_KEY) {
+        const senderEmail = process.env.BREVO_SENDER_EMAIL;
+        if (!senderEmail) {
+            const error = new Error('BREVO_SENDER_EMAIL must be configured when using Brevo.');
+            error.code = 'EMAIL_DELIVERY_FAILED';
+            throw error;
+        }
+
+        let response;
+        try {
+            response = await fetch('https://api.brevo.com/v3/smtp/email', {
+                method: 'POST',
+                headers: {
+                    'api-key': process.env.BREVO_API_KEY,
+                    'Content-Type': 'application/json',
+                    accept: 'application/json'
+                },
+                body: JSON.stringify({
+                    sender: {
+                        email: senderEmail,
+                        name: process.env.BREVO_SENDER_NAME || 'Competence Academy'
+                    },
+                    to: (Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to])
+                        .map((recipient) => typeof recipient === 'string'
+                            ? { email: recipient }
+                            : recipient),
+                    subject: mailOptions.subject,
+                    ...(mailOptions.text ? { textContent: mailOptions.text } : {}),
+                    ...(mailOptions.html ? { htmlContent: mailOptions.html } : {})
+                }),
+                signal: AbortSignal.timeout(15000)
+            });
+        } catch (cause) {
+            const error = new Error('Brevo could not be reached to send the email.');
+            error.code = 'EMAIL_DELIVERY_FAILED';
+            error.cause = cause;
+            throw error;
+        }
+
+        if (!response.ok) {
+            const details = await response.text();
+            const error = new Error(`Brevo rejected the email (${response.status}): ${details}`);
+            error.code = 'EMAIL_DELIVERY_FAILED';
+            throw error;
+        }
+        return response.json();
+    }
+
+    if (process.env.RESEND_API_KEY) {
+        const from = process.env.EMAIL_FROM;
+        if (!from) {
+            const error = new Error('EMAIL_FROM must be configured when using Resend.');
+            error.code = 'EMAIL_DELIVERY_FAILED';
+            throw error;
+        }
+
+        let response;
+        try {
+            response = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    from,
+                    to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
+                    subject: mailOptions.subject,
+                    ...(mailOptions.text ? { text: mailOptions.text } : {}),
+                    ...(mailOptions.html ? { html: mailOptions.html } : {})
+                }),
+                signal: AbortSignal.timeout(15000)
+            });
+        } catch (cause) {
+            const error = new Error('The email provider could not be reached.');
+            error.code = 'EMAIL_DELIVERY_FAILED';
+            error.cause = cause;
+            throw error;
+        }
+
+        if (!response.ok) {
+            const details = await response.text();
+            const error = new Error(`Email provider rejected the message (${response.status}): ${details}`);
+            error.code = 'EMAIL_DELIVERY_FAILED';
+            throw error;
+        }
+        return response.json();
+    }
+
+    try {
+        return await transporter.sendMail({
+            ...mailOptions,
+            from: process.env.EMAIL_FROM || mailOptions.from || process.env.EMAIL_USER
+        });
+    } catch (cause) {
+        const error = new Error('SMTP email delivery failed.');
+        error.code = 'EMAIL_DELIVERY_FAILED';
+        error.cause = cause;
+        throw error;
+    }
+};
 
 const allowedOrigins = [
     'http://localhost',
@@ -256,8 +362,7 @@ const grantCourseAccess = async (user, courseId) => {
     const grantedAt = new Date();
     await CourseEnrollmentAccess.create({ userId: user._id, courseId, codeHash: hashResetCode(code), grantedAt });
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        await sendEmail({
             to: user.email,
             subject: `Votre code d’accès - ${COURSE_TITLES[courseId]} | Competence Academy`,
             text: `Bonjour ${user.name},\n\nVotre paiement ayant été confirmé, voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} » :\n\n${code}\n\nCe code est réservé à votre compte et à cette formation. Il reste valable tant que votre accès à la formation est actif. Ne le partagez pas.\n\nCompetence Academy`
@@ -284,8 +389,7 @@ const createAccessConfirmation = async (user) => {
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        await sendEmail({
             to: approvalEmail,
             subject: 'Demande de confirmation de connexion - Competence Academy',
             text: `Nouvelle demande de connexion à l’espace de cours.\n\nNom : ${user.name}\nE-mail : ${user.email}\nCode personnel de cet étudiant : ${code}\n\nCe code reste le même pour cette adresse e-mail tant que JWT_SECRET ne change pas. Cette demande expire dans 20 minutes. Après une première confirmation réussie, aucune nouvelle confirmation ne sera demandée pour ce compte.`
@@ -463,6 +567,12 @@ app.post('/api/signup', authLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('Signup error:', error);
+        if (error.code === 'EMAIL_DELIVERY_FAILED') {
+            return res.status(503).json({
+                success: false,
+                message: 'Votre compte est enregistré, mais l’e-mail de confirmation ne peut pas être envoyé pour le moment. Veuillez réessayer plus tard.'
+            });
+        }
         res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 });
@@ -506,6 +616,12 @@ app.post('/api/login', authLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
+        if (error.code === 'EMAIL_DELIVERY_FAILED') {
+            return res.status(503).json({
+                success: false,
+                message: 'Impossible d’envoyer le code de confirmation pour le moment. Veuillez réessayer plus tard.'
+            });
+        }
         res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 });
@@ -555,6 +671,12 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
 
     } catch (error) {
         console.error(error);
+        if (error.code === 'EMAIL_DELIVERY_FAILED') {
+            return res.status(503).json({
+                success: false,
+                message: 'Impossible d’envoyer le code de confirmation pour le moment. Veuillez réessayer plus tard.'
+            });
+        }
         res.status(400).json({ success: false, message: 'Le jeton Google est invalide.' });
     }
 });
@@ -628,7 +750,6 @@ app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
         );
 
         const mailOptions = {
-            from: '"Competence Academy" <competenceacademy34@gmail.com>',
             to: email,
             subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
             html: `
@@ -646,12 +767,13 @@ app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         return res.json({ success: true, message: 'Un code à 6 chiffres a été envoyé sur votre email !' });
 
     } catch (error) {
         console.error("Erreur d'envoi d'email:", error);
-        return res.status(500).json({ success: false, message: "Erreur lors de l'envoi de l'email." });
+        const status = error.code === 'EMAIL_DELIVERY_FAILED' ? 503 : 500;
+        return res.status(status).json({ success: false, message: "Erreur lors de l'envoi de l'email." });
     }
 });
 
@@ -1116,11 +1238,18 @@ const startServer = async () => {
         JWT_SECRET,
         MONGODB_URI,
         GOOGLE_CLIENT_ID,
-        EMAIL_USER: process.env.EMAIL_USER,
-        EMAIL_PASS: process.env.EMAIL_PASS,
         FRONTEND_URLS: FRONTEND_URLS.join(',')
     };
     const missingEnvironment = Object.keys(requiredEnvironment).filter((key) => !requiredEnvironment[key]);
+    const hasBrevoConfiguration = Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
+    const hasResendConfiguration = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+    const hasSmtpConfiguration = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+    if (!hasBrevoConfiguration && !hasResendConfiguration && !hasSmtpConfiguration) {
+        missingEnvironment.push('BREVO_API_KEY and BREVO_SENDER_EMAIL (or Resend or SMTP credentials)');
+    }
+    if (!process.env.ACCESS_APPROVAL_EMAIL && !process.env.EMAIL_USER) {
+        missingEnvironment.push('ACCESS_APPROVAL_EMAIL');
+    }
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
