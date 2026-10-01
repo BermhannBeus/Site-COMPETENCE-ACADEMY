@@ -5,6 +5,9 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
@@ -12,7 +15,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const webpush = require('web-push');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
@@ -28,9 +31,7 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 const MONGODB_URI = process.env.MONGODB_URI;
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const PUSH_ADMIN_SECRET = process.env.PUSH_ADMIN_SECRET;
+const COURSE_VIDEO_DIR = path.resolve(process.env.COURSE_VIDEO_DIR || path.join(__dirname, 'private-videos'));
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
     .split(',')
     .map((url) => url.trim().replace(/\/$/, ''))
@@ -45,68 +46,55 @@ const isStrongPassword = (password = '') => {
     if (typeof password !== 'string') return false;
     return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
 };
-
-const escapeHtml = (value = '') => String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 const createResetCode = () => crypto.randomInt(100000, 1000000).toString();
 const hashResetCode = (code) => crypto.createHash('sha256').update(code).digest('hex');
-const getCookie = (req, name) => {
-    const cookies = String(req.headers.cookie || '').split(';');
-    const cookie = cookies.find((item) => item.trim().startsWith(`${name}=`));
-    return cookie ? decodeURIComponent(cookie.trim().slice(name.length + 1)) : '';
-};
 const setAuthCookie = (res, token) => {
     const isProduction = process.env.NODE_ENV === 'production';
-    const attributes = [
-        'HttpOnly',
-        'Path=/',
-        'Max-Age=3600',
-        isProduction ? 'Secure' : '',
-        isProduction ? 'SameSite=None' : 'SameSite=Lax'
-    ].filter(Boolean).join('; ');
-    res.setHeader('Set-Cookie', `ca_token=${encodeURIComponent(token)}; ${attributes}`);
+    res.cookie('ca_token', token, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'None' : 'Lax',
+        maxAge: 60 * 60 * 1000,
+        path: '/'
+    });
 };
 const clearAuthCookie = (res) => {
-    res.setHeader('Set-Cookie', 'ca_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
+    res.clearCookie('ca_token', { path: '/' });
 };
-
-const sendResetEmail = async (to, resetCode) => {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-            'api-key': process.env.BREVO_API_KEY,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            sender: {
-                name: 'Competence Academy',
-                email: process.env.BREVO_SENDER_EMAIL
-            },
-            to: [{ email: to }],
-            subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
-            htmlContent: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
-                    <h2 style="color: #0056b3; text-align: center;">Competence Academy</h2>
-                    <p>Bonjour,</p>
-                    <p>Voici votre code de vérification pour réinitialiser votre mot de passe :</p>
-                    <div style="text-align: center; margin: 25px 0;">
-                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0056b3; background: #f0f4f8; padding: 10px 20px; border-radius: 6px;">${resetCode}</span>
-                    </div>
-                    <p style="font-size: 0.9em; color: #666;">Ce code expire dans 10 minutes.</p>
-                </div>
-            `
-        })
+const sendAuthenticatedSession = (res, user) => {
+    const token = jwt.sign(
+        { id: user.id, email: user.email, accessConfirmed: true },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+    setAuthCookie(res, token);
+    const serializedUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        nameOnCertificate: user.nameOnCertificate,
+        phone: user.phone,
+        location: user.location,
+        registeredCourse: user.registeredCourse
+    };
+    return res.json({
+        success: true,
+        authenticated: true,
+        user: serializedUser,
+        profileComplete: Boolean(
+            user.nameOnCertificate && user.phone && user.location && user.registeredCourse
+        )
     });
-
-    if (!response.ok) {
-        const details = await response.text();
-        throw new Error(`Brevo API ${response.status}: ${details}`);
-    }
 };
+
+// Configuration Nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 const allowedOrigins = [
     'http://localhost',
@@ -118,6 +106,7 @@ const allowedOrigins = [
 
 // Middleware
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
@@ -138,7 +127,6 @@ app.use('/api/', rateLimit({
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: 'Trop de tentatives. Veuillez réessayer dans quelques minutes.' }
@@ -150,69 +138,56 @@ const resetLimiter = rateLimit({
     legacyHeaders: false,
     message: { success: false, message: 'Trop de demandes de récupération. Veuillez réessayer plus tard.' }
 });
-const contactLimiter = rateLimit({
+const accessCodeLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, message: 'Trop de messages envoyés. Veuillez réessayer plus tard.' }
+    message: { success: false, message: 'Trop de tentatives de confirmation. Réessayez plus tard.' }
 });
 
-app.post('/api/contact', contactLimiter, async (req, res) => {
-    try {
-        const name = String(req.body?.name || '').trim();
-        const email = sanitizeEmail(req.body?.email);
-        const message = String(req.body?.message || '').trim();
-
-        if (!name || name.length > 100 || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ success: false, message: 'Veuillez vérifier votre nom et votre adresse e-mail.' });
-        }
-        if (!message || message.length > 5000) {
-            return res.status(400).json({ success: false, message: 'Veuillez saisir un message valide.' });
-        }
-
-        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-            method: 'POST',
-            headers: {
-                'api-key': process.env.BREVO_API_KEY,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                sender: {
-                    name: 'Commentaire du site',
-                    email: process.env.BREVO_SENDER_EMAIL
-                },
-                to: [{ email: 'competenceacademy34@gmail.com', name: 'Competence Academy' }],
-                replyTo: { email, name },
-                subject: `Commentaire du site - ${name}`,
-                htmlContent: `
-                    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#17213d">
-                        <h2 style="color:#111e62">Commentaire du site</h2>
-                        <p><strong>Nom :</strong> ${escapeHtml(name)}</p>
-                        <p><strong>E-mail :</strong> ${escapeHtml(email)}</p>
-                        <p><strong>Message :</strong></p>
-                        <div style="padding:16px;background:#f5f7fb;border-left:4px solid #f76b00;white-space:pre-wrap">${escapeHtml(message)}</div>
-                    </div>
-                `
-            })
-        });
-
-        if (!response.ok) {
-            const details = await response.text();
-            throw new Error(`Brevo contact API ${response.status}: ${details}`);
-        }
-        res.json({ success: true, message: 'Votre message a été envoyé avec succès.' });
-    } catch (error) {
-        console.error('Contact form error:', error);
-        res.status(500).json({ success: false, message: 'Impossible d’envoyer votre message pour le moment.' });
-    }
-});
+const COURSE_VIDEO_SEQUENCES = {
+    bureautique: ['bureautique-word'],
+    photographie: ['photographie-manuel'],
+    design: ['design-logo'],
+    videographie: ['videographie-cadrage'],
+    montage: ['montage-rythmique'],
+    quickbooks: ['quickbooks-introduction'],
+    surveillance: ['surveillance-installation']
+};
+const COURSE_VIDEO_FILES = {
+    'bureautique-word': 'bureautique-word.mp4',
+    'photographie-manuel': 'photographie-manuel.mp4',
+    'design-logo': 'design-logo.mp4',
+    'videographie-cadrage': 'videographie-cadrage.mp4',
+    'montage-rythmique': 'montage-rythmique.mp4',
+    'quickbooks-introduction': 'quickbooks-introduction.mp4',
+    'surveillance-installation': 'surveillance-installation.mp4'
+};
+const COURSE_TITLES = {
+    bureautique: 'Informatique Bureautique',
+    photographie: 'Photographie',
+    design: 'Design Graphic',
+    videographie: 'Vidéographie',
+    montage: 'Montage Vidéo',
+    quickbooks: 'QuickBooks',
+    surveillance: 'Surveillance'
+};
+const COURSE_ACCESS_CATEGORIES = Object.keys(COURSE_TITLES);
+const getCourseForVideo = (videoId) => COURSE_ACCESS_CATEGORIES.find(
+    (courseId) => COURSE_VIDEO_SEQUENCES[courseId]?.includes(videoId)
+);
 
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true, maxlength: 100 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     password: { type: String, default: '' },
-    googleId: { type: String, default: '' }
+    googleId: { type: String, default: '' },
+    nameOnCertificate: { type: String, default: '', trim: true, maxlength: 100 },
+    phone: { type: String, default: '', trim: true, maxlength: 30 },
+    location: { type: String, default: '', trim: true, maxlength: 100 },
+    registeredCourse: { type: String, default: '', enum: ['', ...COURSE_ACCESS_CATEGORIES] },
+    accessApprovedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 const resetCodeSchema = new mongoose.Schema({
@@ -220,26 +195,191 @@ const resetCodeSchema = new mongoose.Schema({
     codeHash: { type: String, required: true },
     expiresAt: { type: Date, required: true, index: { expires: 0 } }
 });
-
-const pushSubscriptionSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
-    endpoint: { type: String, required: true, unique: true },
-    subscription: { type: Object, required: true }
+const courseProgressSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
+    unlockedVideoIds: { type: [String], default: [] },
+    completedVideoIds: { type: [String], default: [] }
+}, { timestamps: true });
+const videoWatchSessionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    videoId: { type: String, required: true },
+    courseId: { type: String, required: true },
+    furthestPosition: { type: Number, default: 0 },
+    watchedSeconds: { type: Number, default: 0 },
+    duration: { type: Number, default: 0 },
+    lastPosition: { type: Number, default: 0 },
+    lastReportedAt: { type: Date, default: Date.now },
+    expiresAt: { type: Date, required: true, index: { expires: 0 } }
+}, { timestamps: true });
+const courseAccessCodeSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    courseId: { type: String, required: true },
+    codeHash: { type: String, required: true, unique: true },
+    grantedAt: { type: Date, required: true }
+}, { timestamps: true });
+courseAccessCodeSchema.index({ userId: 1, courseId: 1 }, { unique: true });
+const accessConfirmationSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
+    challengeId: { type: String, required: true, unique: true },
+    codeHash: { type: String, required: true },
+    attempts: { type: Number, default: 0 },
+    expiresAt: { type: Date, required: true, index: { expires: 0 } }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 const ResetCode = mongoose.model('ResetCode', resetCodeSchema);
-const PushSubscription = mongoose.model('PushSubscription', pushSubscriptionSchema);
+const CourseProgress = mongoose.model('CourseProgress', courseProgressSchema);
+const VideoWatchSession = mongoose.model('VideoWatchSession', videoWatchSessionSchema);
+const CourseEnrollmentAccess = mongoose.model('CourseEnrollmentAccess', courseAccessCodeSchema);
+const AccessConfirmation = mongoose.model('AccessConfirmation', accessConfirmationSchema);
+
+const getStudentAccessOtp = (user) => {
+    const digest = crypto.createHmac('sha256', JWT_SECRET)
+        .update(`course-page-access:${user.id}:${user.email}`)
+        .digest();
+    return String(digest.readUInt32BE(0) % 1000000).padStart(6, '0');
+};
+
+const grantCourseAccess = async (user, courseId) => {
+    const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId });
+    if (existingAccess) return false;
+
+    const code = crypto.randomBytes(24).toString('base64url');
+    const grantedAt = new Date();
+    await CourseEnrollmentAccess.create({ userId: user._id, courseId, codeHash: hashResetCode(code), grantedAt });
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: `Votre code d’accès - ${COURSE_TITLES[courseId]} | Competence Academy`,
+            text: `Bonjour ${user.name},\n\nVotre paiement ayant été confirmé, voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} » :\n\n${code}\n\nCe code est réservé à votre compte et à cette formation. Il reste valable tant que votre accès à la formation est actif. Ne le partagez pas.\n\nCompetence Academy`
+        });
+    } catch (error) {
+        await CourseEnrollmentAccess.deleteOne({ userId: user._id, courseId });
+        throw error;
+    }
+    return true;
+};
+
+const createAccessConfirmation = async (user) => {
+    const approvalEmail = sanitizeEmail(process.env.ACCESS_APPROVAL_EMAIL || process.env.EMAIL_USER);
+    if (!/^\S+@\S+\.\S+$/.test(approvalEmail)) {
+        throw new Error('ACCESS_APPROVAL_EMAIL or EMAIL_USER must be configured with a valid email address.');
+    }
+
+    const code = getStudentAccessOtp(user);
+    const challengeId = crypto.randomBytes(24).toString('hex');
+    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+    await AccessConfirmation.findOneAndUpdate(
+        { userId: user._id },
+        { challengeId, codeHash: hashResetCode(code), attempts: 0, expiresAt },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: approvalEmail,
+            subject: 'Demande de confirmation de connexion - Competence Academy',
+            text: `Nouvelle demande de connexion à l’espace de cours.\n\nNom : ${user.name}\nE-mail : ${user.email}\nCode personnel de cet étudiant : ${code}\n\nCe code reste le même pour cette adresse e-mail tant que JWT_SECRET ne change pas. Cette demande expire dans 20 minutes. Après une première confirmation réussie, aucune nouvelle confirmation ne sera demandée pour ce compte.`
+        });
+    } catch (error) {
+        await AccessConfirmation.deleteOne({ userId: user._id, challengeId });
+        throw error;
+    }
+
+    return {
+        challengeId,
+        message: 'Demande envoyée à l’administration. Saisissez le code de confirmation qui vous sera communiqué dans les 20 minutes.'
+    };
+};
+
+const isValidCourseAccessCode = async (userId, courseId, code) => {
+    if (!code || code.length > 128) return false;
+    const entry = await CourseEnrollmentAccess.findOne({ userId, courseId });
+    if (!entry) return false;
+
+    const submittedHash = Buffer.from(hashResetCode(code), 'hex');
+    const expectedHash = Buffer.from(entry.codeHash, 'hex');
+    return submittedHash.length === expectedHash.length && crypto.timingSafeEqual(submittedHash, expectedHash);
+};
+
+const serializeCourseProgress = (progress) => ({
+    unlockedVideoIds: progress.unlockedVideoIds,
+    completedVideoIds: progress.completedVideoIds
+});
+
+const getOrCreateCourseProgress = async (userId) => {
+    let progress = await CourseProgress.findOne({ userId });
+    if (progress) return progress;
+
+    try {
+        progress = await CourseProgress.create({ userId });
+    } catch (error) {
+        if (error.code !== 11000) throw error;
+        progress = await CourseProgress.findOne({ userId });
+        if (!progress) throw error;
+    }
+    return progress;
+};
+
+const recordVideoWatchProgress = async ({ userId, videoId, watchSessionId, currentTime, duration }) => {
+    if (!mongoose.isValidObjectId(watchSessionId)
+        || !Number.isFinite(currentTime)
+        || !Number.isFinite(duration)
+        || currentTime < 0
+        || duration <= 0
+        || duration > 8 * 60 * 60) {
+        return { error: 'Progression vidéo invalide.' };
+    }
+
+    const watchSession = await VideoWatchSession.findOne({
+        _id: watchSessionId,
+        userId,
+        videoId,
+        expiresAt: { $gt: new Date() }
+    });
+    if (!watchSession) return { error: 'Session vidéo expirée. Relancez la vidéo.' };
+
+    if (currentTime > duration + 1
+        || (watchSession.duration > 0
+            && Math.abs(watchSession.duration - duration) > Math.max(3, duration * 0.02))) {
+        return { error: 'Durée de la vidéo incohérente.' };
+    }
+
+    const now = new Date();
+    const elapsedSeconds = Math.max(0, (now.getTime() - watchSession.lastReportedAt.getTime()) / 1000);
+    const safePosition = Math.min(currentTime, duration);
+    const forwardSeconds = safePosition - watchSession.lastPosition;
+    if (forwardSeconds > elapsedSeconds * 1.75 + 2) {
+        return { error: 'La vidéo a été avancée trop rapidement. Reprenez la lecture à partir de votre progression.' };
+    }
+
+    if (watchSession.duration === 0) watchSession.duration = duration;
+    if (forwardSeconds > 0) {
+        watchSession.watchedSeconds = Math.min(
+            duration,
+            watchSession.watchedSeconds + Math.min(forwardSeconds, elapsedSeconds + 1)
+        );
+    }
+    watchSession.furthestPosition = Math.max(watchSession.furthestPosition, safePosition);
+    watchSession.lastPosition = safePosition;
+    watchSession.lastReportedAt = now;
+    await watchSession.save();
+    return { watchSession };
+};
 
 const authenticate = (req, res, next) => {
-    const token = getCookie(req, 'ca_token') || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    const token = req.cookies?.ca_token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
 
     if (!token) {
-        return res.status(401).json({ success: false, message: 'Vous devez être connecté.' });
+        return res.status(401).json({ success: false, message: 'Non authentifié.' });
     }
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded.accessConfirmed !== true) {
+            return res.status(401).json({ success: false, message: 'Confirmation de connexion requise.' });
+        }
         req.user = decoded;
         next();
     } catch (error) {
@@ -247,19 +387,44 @@ const authenticate = (req, res, next) => {
     }
 };
 
-// 1. ROUTE POU SIGNUP (Enskripsyon)
+const requireCourseAdmin = (req, res, next) => {
+    const configuredKey = process.env.COURSE_ADMIN_API_KEY;
+    if (!configuredKey) {
+        return res.status(503).json({ success: false, message: 'L’administration des accès aux cours n’est pas configurée.' });
+    }
+
+    const submittedKey = String(req.get('x-course-admin-key') || '');
+    const submittedBuffer = Buffer.from(submittedKey);
+    const expectedBuffer = Buffer.from(configuredKey);
+    if (submittedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(submittedBuffer, expectedBuffer)) {
+        return res.status(401).json({ success: false, message: 'Accès administrateur refusé.' });
+    }
+    next();
+};
+
+// 1. Route d’inscription
 app.post('/api/signup', authLimiter, async (req, res) => {
     try {
         const name = String(req.body?.name || '').trim();
         const email = sanitizeEmail(req.body?.email);
         const password = String(req.body?.password || '');
+        const phone = String(req.body?.phone || '').trim();
+        const location = String(req.body?.location || '').trim();
+        const registeredCourse = String(req.body?.registeredCourse || '');
 
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !phone || !location || !registeredCourse) {
             return res.status(400).json({ success: false, message: 'Veuillez remplir tous les champs.' });
         }
 
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({ success: false, message: 'Adresse e-mail invalide.' });
+        }
+
+        if (name.length > 100 || phone.length > 30 || !/^[+0-9().\-\s]{7,30}$/.test(phone) || location.length > 100 || location.length < 2) {
+            return res.status(400).json({ success: false, message: 'Vérifiez le nom, le téléphone et la ville/pays saisis.' });
+        }
+        if (!COURSE_ACCESS_CATEGORIES.includes(registeredCourse)) {
+            return res.status(400).json({ success: false, message: 'Veuillez choisir une formation valide.' });
         }
 
         if (!isStrongPassword(password)) {
@@ -268,20 +433,25 @@ app.post('/api/signup', authLimiter, async (req, res) => {
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'Cette adresse e-mail est déjà enregistrée.' });
+            return res.status(400).json({ success: false, message: 'Cette adresse e-mail est déjà utilisée.' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await User.create({ name, email, password: hashedPassword });
-
-        const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-        setAuthCookie(res, token);
+        const newUser = await User.create({
+            name,
+            nameOnCertificate: name,
+            email,
+            password: hashedPassword,
+            phone,
+            location,
+            registeredCourse
+        });
+        const confirmation = await createAccessConfirmation(newUser);
 
         res.status(201).json({
             success: true,
-            message: 'Votre compte a été créé avec succès !',
-            user: { id: newUser.id, name: newUser.name, email: newUser.email }
+            ...confirmation
         });
     } catch (error) {
         console.error('Signup error:', error);
@@ -289,7 +459,7 @@ app.post('/api/signup', authLimiter, async (req, res) => {
     }
 });
 
-// 2. ROUTE POU LOGIN (Koneksyon)
+// 2. Route de connexion
 app.post('/api/login', authLimiter, async (req, res) => {
     try {
         const email = sanitizeEmail(req.body?.email);
@@ -301,28 +471,30 @@ app.post('/api/login', authLimiter, async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ success: false, message: 'L’adresse e-mail ou le mot de passe est incorrect.' });
+            return res.status(400).json({ success: false, message: 'Adresse e-mail ou mot de passe incorrect.' });
         }
 
         if (!user.password) {
             return res.status(400).json({
                 success: false,
-                message: "Ce compte a été créé avec Google. Cliquez sur « Se connecter avec Google »."
+                message: "Ce compte a été créé avec Google. Veuillez cliquer sur « Se connecter avec Google »."
             });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ success: false, message: 'L’adresse e-mail ou le mot de passe est incorrect.' });
+            return res.status(400).json({ success: false, message: 'Adresse e-mail ou mot de passe incorrect.' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-        setAuthCookie(res, token);
+        if (user.accessApprovedAt) {
+            return sendAuthenticatedSession(res, user);
+        }
+
+        const confirmation = await createAccessConfirmation(user);
 
         res.json({
             success: true,
-            message: 'Connexion réussie !',
-            user: { id: user.id, name: user.name, email: user.email }
+            ...confirmation
         });
     } catch (error) {
         console.error('Login error:', error);
@@ -330,13 +502,13 @@ app.post('/api/login', authLimiter, async (req, res) => {
     }
 });
 
-// 3. ROUTE POU GOOGLE LOGIN / SIGNUP OTOMATIK
+// 3. Route de connexion et d’inscription via Google
 app.post('/api/google-login', authLimiter, async (req, res) => {
     try {
         const { token } = req.body;
 
         if (!token) {
-            return res.status(400).json({ success: false, message: 'Le jeton Google est manquant.' });
+            return res.status(400).json({ success: false, message: 'Jeton Google manquant.' });
         }
 
         const ticket = await client.verifyIdToken({
@@ -362,13 +534,15 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
             await user.save();
         }
 
-        const appToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-        setAuthCookie(res, appToken);
+        if (user.accessApprovedAt) {
+            return sendAuthenticatedSession(res, user);
+        }
+
+        const confirmation = await createAccessConfirmation(user);
 
         res.json({
             success: true,
-            message: 'Connexion Google réussie !',
-            user: { id: user.id, name: user.name, email: user.email }
+            ...confirmation
         });
 
     } catch (error) {
@@ -377,7 +551,50 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
     }
 });
 
-// 4. ROUTE POU MANDE KÒD REKIPERASYON (ENVOI DU CODE À 6 CHIFFRES)
+app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
+    try {
+        const challengeId = String(req.body?.challengeId || '');
+        const code = String(req.body?.code || '').trim();
+        if (!/^[a-f0-9]{48}$/.test(challengeId) || !/^\d{6}$/.test(code)) {
+            return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
+        }
+
+        const challenge = await AccessConfirmation.findOne({ challengeId });
+        if (!challenge || challenge.expiresAt <= new Date() || challenge.attempts >= 5) {
+            if (challenge) await AccessConfirmation.deleteOne({ _id: challenge._id });
+            return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
+        }
+
+        const submittedHash = Buffer.from(hashResetCode(code), 'hex');
+        const expectedHash = Buffer.from(challenge.codeHash, 'hex');
+        const isCorrectCode = submittedHash.length === expectedHash.length
+            && crypto.timingSafeEqual(submittedHash, expectedHash);
+        if (!isCorrectCode) {
+            challenge.attempts += 1;
+            if (challenge.attempts >= 5) await challenge.deleteOne();
+            else await challenge.save();
+            return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
+        }
+
+        const user = await User.findById(challenge.userId)
+            .select('_id name email nameOnCertificate phone location registeredCourse accessApprovedAt');
+        await AccessConfirmation.deleteOne({ _id: challenge._id });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Compte utilisateur introuvable.' });
+        }
+
+        if (!user.accessApprovedAt) {
+            user.accessApprovedAt = new Date();
+            await user.save();
+        }
+        sendAuthenticatedSession(res, user);
+    } catch (error) {
+        console.error('Confirm login access error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de confirmer cette connexion.' });
+    }
+});
+
+// 4. Route de demande d’un code de récupération (envoi du code à 6 chiffres)
 app.post('/api/forgot-password', resetLimiter, async (req, res) => {
     const email = sanitizeEmail(req.body?.email);
 
@@ -386,7 +603,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ email });
+        const user = users.find(u => u.email === email);
         if (!user) {
             return res.json({ success: true, message: 'Si votre adresse existe, un code de vérification a été envoyé.' });
         }
@@ -402,7 +619,26 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
             { upsert: true, new: true }
         );
 
-        await sendResetEmail(email, resetCode);
+        const mailOptions = {
+            from: '"Competence Academy" <competenceacademy34@gmail.com>',
+            to: email,
+            subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <h2 style="color: #0056b3; text-align: center;">Competence Academy</h2>
+                    <p>Bonjour,</p>
+                    <p>Voici votre code de vérification pour réinitialiser votre mot de passe :</p>
+                    <div style="text-align: center; margin: 25px 0;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0056b3; background: #f0f4f8; padding: 10px 20px; border-radius: 6px;">${resetCode}</span>
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">Entrez ce code sur le site pour choisir votre nouveau mot de passe.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+                    <p style="font-size: 0.8em; color: #999; text-align: center;">Competence Academy — Formation Pratique & Professionnelle</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
         return res.json({ success: true, message: 'Un code à 6 chiffres a été envoyé sur votre email !' });
 
     } catch (error) {
@@ -411,7 +647,7 @@ app.post('/api/forgot-password', resetLimiter, async (req, res) => {
     }
 });
 
-// 5. ROUTE POU VERIFYE KÒD LA AK CHANJE MODPAS LA
+// 5. Route de vérification du code et de changement du mot de passe
 app.post('/api/reset-password-code', resetLimiter, async (req, res) => {
     try {
         const email = sanitizeEmail(req.body?.email);
@@ -439,18 +675,387 @@ app.post('/api/reset-password-code', resetLimiter, async (req, res) => {
         user.password = await bcrypt.hash(newPassword, 10);
 
         await ResetCode.deleteOne({ email });
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-        setAuthCookie(res, token);
 
-        res.json({
-            success: true,
-            message: 'Votre mot de passe a été modifié avec succès !',
-            user: { id: user.id, name: user.name, email: user.email }
-        });
+        res.json({ success: true, message: 'Votre mot de passe a été modifié avec succès !' });
 
     } catch (error) {
         console.error('Reset password error:', error);
         res.status(500).json({ success: false, message: 'Erreur sur le serveur.' });
+    }
+});
+
+app.get('/api/course-videos/:videoId', authenticate, async (req, res) => {
+    try {
+        const videoId = String(req.params.videoId || '');
+        const courseId = getCourseForVideo(videoId);
+        const filename = COURSE_VIDEO_FILES[videoId];
+        if (!courseId || !filename) {
+            return res.status(404).json({ success: false, message: 'Vidéo de formation introuvable.' });
+        }
+
+        const hasCourseAccess = await CourseEnrollmentAccess.exists({ userId: req.user.id, courseId });
+        const progress = await CourseProgress.findOne({ userId: req.user.id });
+        if (!hasCourseAccess || !progress?.unlockedVideoIds.includes(videoId)) {
+            return res.status(403).json({ success: false, message: 'Cette vidéo est verrouillée ou votre accès est inactif.' });
+        }
+
+        const filePath = path.resolve(COURSE_VIDEO_DIR, filename);
+        const relativePath = path.relative(COURSE_VIDEO_DIR, filePath);
+        if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+            return res.status(400).json({ success: false, message: 'Chemin de vidéo invalide.' });
+        }
+
+        let fileStats;
+        try {
+            fileStats = await fs.promises.stat(filePath);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                return res.status(404).json({ success: false, message: 'Le fichier MP4 de cette formation est introuvable sur le serveur.' });
+            }
+            throw error;
+        }
+        if (!fileStats.isFile()) {
+            return res.status(404).json({ success: false, message: 'Le fichier MP4 de cette formation est introuvable sur le serveur.' });
+        }
+
+        let start = 0;
+        let end = fileStats.size - 1;
+        const rangeHeader = req.headers.range;
+        if (rangeHeader) {
+            const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+            if (!match || (!match[1] && !match[2])) {
+                res.setHeader('Content-Range', `bytes */${fileStats.size}`);
+                return res.status(416).end();
+            }
+            if (!match[1]) {
+                const suffixLength = Number(match[2]);
+                start = Math.max(fileStats.size - suffixLength, 0);
+            } else {
+                start = Number(match[1]);
+                if (match[2]) end = Number(match[2]);
+            }
+            if (start >= fileStats.size || end < start) {
+                res.setHeader('Content-Range', `bytes */${fileStats.size}`);
+                return res.status(416).end();
+            }
+            end = Math.min(end, fileStats.size - 1);
+            res.status(206);
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${fileStats.size}`);
+        }
+
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Length', end - start + 1);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('Cache-Control', 'private, no-store');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        const videoStream = fs.createReadStream(filePath, { start, end });
+        videoStream.on('error', (error) => {
+            console.error('Course video stream failed:', error);
+            if (res.headersSent) res.destroy(error);
+            else res.status(500).json({ success: false, message: 'Impossible de lire le fichier vidéo.' });
+        });
+        videoStream.pipe(res);
+    } catch (error) {
+        console.error('Serve course video error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de charger cette vidéo.' });
+    }
+});
+
+app.get('/api/course-progress', authenticate, async (req, res) => {
+    try {
+        const progress = await getOrCreateCourseProgress(req.user.id);
+        const accesses = await CourseEnrollmentAccess.find({ userId: req.user.id }).select('courseId');
+        const authorizedVideoIds = new Set(
+            accesses.flatMap((access) => COURSE_VIDEO_SEQUENCES[access.courseId] || [])
+        );
+        res.json({
+            success: true,
+            progress: {
+                unlockedVideoIds: progress.unlockedVideoIds.filter((videoId) => authorizedVideoIds.has(videoId)),
+                completedVideoIds: progress.completedVideoIds.filter((videoId) => authorizedVideoIds.has(videoId))
+            }
+        });
+    } catch (error) {
+        console.error('Get course progress error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de charger votre progression.' });
+    }
+});
+
+app.post('/api/course-progress/start', authenticate, async (req, res) => {
+    try {
+        const videoId = String(req.body?.videoId || '');
+        const courseId = getCourseForVideo(videoId);
+        const sequence = courseId ? COURSE_VIDEO_SEQUENCES[courseId] : null;
+        if (!courseId || !sequence) {
+            return res.status(400).json({ success: false, message: 'Vidéo de formation invalide.' });
+        }
+
+        const hasCourseAccess = await CourseEnrollmentAccess.exists({ userId: req.user.id, courseId });
+        const progress = await getOrCreateCourseProgress(req.user.id);
+        const videoIndex = sequence.indexOf(videoId);
+        if (!hasCourseAccess || !progress.unlockedVideoIds.includes(videoId)) {
+            return res.status(403).json({ success: false, message: 'Cette vidéo est verrouillée ou votre accès est inactif.' });
+        }
+        if (videoIndex > 0 && !progress.completedVideoIds.includes(sequence[videoIndex - 1])) {
+            return res.status(403).json({ success: false, message: 'Terminez d’abord la vidéo précédente de cette formation.' });
+        }
+
+        const watchSession = await VideoWatchSession.create({
+            userId: req.user.id,
+            videoId,
+            courseId,
+            expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000)
+        });
+        res.status(201).json({ success: true, watchSessionId: watchSession.id });
+    } catch (error) {
+        console.error('Start course video error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de démarrer le suivi de cette vidéo.' });
+    }
+});
+
+app.post('/api/course-progress/watch', authenticate, async (req, res) => {
+    try {
+        const videoId = String(req.body?.videoId || '');
+        const result = await recordVideoWatchProgress({
+            userId: req.user.id,
+            videoId,
+            watchSessionId: String(req.body?.watchSessionId || ''),
+            currentTime: Number(req.body?.currentTime),
+            duration: Number(req.body?.duration)
+        });
+        if (result.error) return res.status(400).json({ success: false, message: result.error });
+        res.json({
+            success: true,
+            progress: {
+                furthestPosition: result.watchSession.furthestPosition,
+                watchedSeconds: result.watchSession.watchedSeconds,
+                duration: result.watchSession.duration
+            }
+        });
+    } catch (error) {
+        console.error('Record course video watch progress error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’enregistrer votre progression vidéo.' });
+    }
+});
+
+app.get('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.query?.email);
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Veuillez fournir une adresse e-mail valide.' });
+        }
+
+        const user = await User.findOne({ email })
+            .select('_id name email nameOnCertificate phone location registeredCourse');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Aucun compte ne correspond à cette adresse e-mail.' });
+        }
+        const accesses = await CourseEnrollmentAccess.find({ userId: user._id }).select('courseId grantedAt');
+        res.json({
+            success: true,
+            student: {
+                name: user.name,
+                email: user.email,
+                nameOnCertificate: user.nameOnCertificate,
+                phone: user.phone,
+                location: user.location,
+                registeredCourse: user.registeredCourse
+            },
+            courses: accesses.map((access) => ({
+                courseId: access.courseId,
+                courseName: COURSE_TITLES[access.courseId],
+                grantedAt: access.grantedAt
+            }))
+        });
+    } catch (error) {
+        console.error('List course access error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de consulter les accès de cet étudiant.' });
+    }
+});
+
+app.post('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.body?.email);
+        const courseId = String(req.body?.courseId || '');
+        if (!/^\S+@\S+\.\S+$/.test(email) || !COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+            return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail et une formation valides.' });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'L’étudiant doit d’abord créer son compte avec cette adresse e-mail.' });
+        }
+
+        const granted = await grantCourseAccess(user, courseId);
+        res.status(granted ? 201 : 200).json({
+            success: true,
+            message: granted
+                ? `Accès accordé pour ${COURSE_TITLES[courseId]}; le code personnel a été envoyé par e-mail.`
+                : `L’accès à ${COURSE_TITLES[courseId]} et son code existant ont été conservés sans changement.`
+        });
+    } catch (error) {
+        console.error('Grant course access error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’accorder l’accès. Vérifiez le service d’e-mail et réessayez.' });
+    }
+});
+
+app.delete('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.body?.email);
+        const courseId = String(req.body?.courseId || '');
+        if (!/^\S+@\S+\.\S+$/.test(email) || !COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+            return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail et une formation valides.' });
+        }
+
+        const user = await User.findOne({ email }).select('_id');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Aucun compte ne correspond à cette adresse e-mail.' });
+        }
+        const result = await CourseEnrollmentAccess.deleteOne({ userId: user._id, courseId });
+        if (!result.deletedCount) {
+            return res.status(404).json({ success: false, message: 'Cet étudiant n’a pas d’accès actif à cette formation.' });
+        }
+
+        const courseVideoIds = COURSE_VIDEO_SEQUENCES[courseId] || [];
+        await CourseProgress.updateOne(
+            { userId: user._id },
+            { $pull: { unlockedVideoIds: { $in: courseVideoIds }, completedVideoIds: { $in: courseVideoIds } } }
+        );
+        res.json({ success: true, message: `L’accès à ${COURSE_TITLES[courseId]} a été révoqué.` });
+    } catch (error) {
+        console.error('Revoke course access error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de révoquer cet accès.' });
+    }
+});
+
+app.post('/api/course-access/verify', authenticate, async (req, res) => {
+    try {
+        const category = String(req.body?.category || '');
+        const accessCode = String(req.body?.accessCode || '').trim();
+        if (!COURSE_ACCESS_CATEGORIES.includes(category) || !await isValidCourseAccessCode(req.user.id, category, accessCode)) {
+            return res.status(400).json({ success: false, message: 'Code d’accès incorrect ou expiré.' });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Verify course access code error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de vérifier le code d’accès.' });
+    }
+});
+
+app.post('/api/course-progress/unlock', authenticate, async (req, res) => {
+    try {
+        const videoId = String(req.body?.videoId || '');
+        const accessCode = String(req.body?.accessCode || '').trim();
+        const courseId = getCourseForVideo(videoId);
+        const sequence = courseId ? COURSE_VIDEO_SEQUENCES[courseId] : null;
+        if (!courseId || !sequence || !accessCode || accessCode.length > 128) {
+            return res.status(400).json({ success: false, message: 'Code d’accès incorrect.' });
+        }
+
+        if (!await isValidCourseAccessCode(req.user.id, courseId, accessCode)) {
+            return res.status(400).json({ success: false, message: 'Code d’accès incorrect ou expiré.' });
+        }
+
+        const progress = await getOrCreateCourseProgress(req.user.id);
+        const videoIndex = sequence.indexOf(videoId);
+        const previousVideoId = sequence[videoIndex - 1];
+        if (videoIndex > 0 && !progress.completedVideoIds.includes(previousVideoId)) {
+            return res.status(403).json({ success: false, message: 'Terminez d’abord la vidéo précédente de cette formation.' });
+        }
+        progress.unlockedVideoIds.addToSet(videoId);
+        await progress.save();
+        res.json({ success: true, progress: serializeCourseProgress(progress) });
+    } catch (error) {
+        console.error('Unlock course video error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de débloquer cette vidéo.' });
+    }
+});
+
+app.post('/api/course-progress/complete', authenticate, async (req, res) => {
+    try {
+        const videoId = String(req.body?.videoId || '');
+        const courseId = getCourseForVideo(videoId);
+        const sequence = courseId ? COURSE_VIDEO_SEQUENCES[courseId] : null;
+        if (!courseId || !sequence) {
+            return res.status(400).json({ success: false, message: 'Vidéo de formation invalide.' });
+        }
+
+        const progress = await getOrCreateCourseProgress(req.user.id);
+        const hasCourseAccess = await CourseEnrollmentAccess.exists({ userId: req.user.id, courseId });
+        if (!hasCourseAccess) {
+            return res.status(403).json({ success: false, message: 'Vous n’avez pas d’accès actif à cette formation.' });
+        }
+        if (!progress.unlockedVideoIds.includes(videoId)) {
+            return res.status(403).json({ success: false, message: 'Cette vidéo est encore verrouillée.' });
+        }
+
+        const watchResult = await recordVideoWatchProgress({
+            userId: req.user.id,
+            videoId,
+            watchSessionId: String(req.body?.watchSessionId || ''),
+            currentTime: Number(req.body?.currentTime),
+            duration: Number(req.body?.duration)
+        });
+        if (watchResult.error) {
+            return res.status(400).json({ success: false, message: watchResult.error });
+        }
+        const watchSession = watchResult.watchSession;
+        if (watchSession.furthestPosition < watchSession.duration - 1.5
+            || watchSession.watchedSeconds < watchSession.duration * 0.95) {
+            return res.status(403).json({ success: false, message: 'Regardez cette vidéo jusqu’à la fin pour débloquer la suite.' });
+        }
+
+        progress.completedVideoIds.addToSet(videoId);
+        const videoIndex = sequence.indexOf(videoId);
+        const nextVideoId = sequence[videoIndex + 1];
+        if (nextVideoId) progress.unlockedVideoIds.addToSet(nextVideoId);
+        await progress.save();
+        await VideoWatchSession.deleteOne({ _id: watchSession._id });
+        res.json({ success: true, progress: serializeCourseProgress(progress) });
+    } catch (error) {
+        console.error('Complete course video error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’enregistrer la fin de cette vidéo.' });
+    }
+});
+
+app.post('/api/me/certificate-profile', authenticate, async (req, res) => {
+    try {
+        const nameOnCertificate = String(req.body?.nameOnCertificate || '').trim();
+        const phone = String(req.body?.phone || '').trim();
+        const location = String(req.body?.location || '').trim();
+        const registeredCourse = String(req.body?.registeredCourse || '');
+
+        if (!nameOnCertificate || nameOnCertificate.length > 100
+            || !/^[+0-9().\-\s]{7,30}$/.test(phone)
+            || location.length < 2 || location.length > 100
+            || !COURSE_ACCESS_CATEGORIES.includes(registeredCourse)) {
+            return res.status(400).json({ success: false, message: 'Vérifiez les informations demandées pour le certificat.' });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { nameOnCertificate, phone, location, registeredCourse },
+            { new: true, runValidators: true }
+        ).select('_id name email nameOnCertificate phone location registeredCourse');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+        }
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                nameOnCertificate: user.nameOnCertificate,
+                phone: user.phone,
+                location: user.location,
+                registeredCourse: user.registeredCourse
+            }
+        });
+    } catch (error) {
+        console.error('Save certificate profile error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’enregistrer les informations du certificat.' });
     }
 });
 
@@ -463,7 +1068,15 @@ app.get('/api/me', authenticate, async (req, res) => {
 
         res.json({
             success: true,
-            user: { id: user.id, name: user.name, email: user.email }
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                nameOnCertificate: user.nameOnCertificate,
+                phone: user.phone,
+                location: user.location,
+                registeredCourse: user.registeredCourse
+            }
         });
     } catch (error) {
         console.error('Get current user error:', error);
@@ -476,127 +1089,16 @@ app.post('/api/logout', (req, res) => {
     res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
-app.get('/api/push/public-key', (req, res) => {
-    res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
-});
-
-app.post('/api/push/subscribe', async (req, res) => {
-    try {
-        const subscription = req.body?.subscription;
-        if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
-            return res.status(400).json({ success: false, message: 'Abonnement de notification invalide.' });
-        }
-
-        let userId;
-        const token = getCookie(req, 'ca_token');
-        if (token) {
-            try {
-                userId = jwt.verify(token, JWT_SECRET).id;
-            } catch (error) {
-                userId = undefined;
-            }
-        }
-
-        await PushSubscription.findOneAndUpdate(
-            { endpoint: subscription.endpoint },
-            { userId, endpoint: subscription.endpoint, subscription },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-        res.json({ success: true, message: 'Notifications activées avec succès.' });
-    } catch (error) {
-        console.error('Push subscription error:', error);
-        res.status(500).json({ success: false, message: 'Impossible d’activer les notifications.' });
-    }
-});
-
-app.delete('/api/push/subscribe', async (req, res) => {
-    try {
-        const endpoint = String(req.body?.endpoint || '');
-        if (!endpoint) return res.status(400).json({ success: false, message: 'Abonnement introuvable.' });
-        await PushSubscription.deleteOne({ endpoint });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Push unsubscribe error:', error);
-        res.status(500).json({ success: false, message: 'Impossible de désactiver les notifications.' });
-    }
-});
-
-app.post('/api/push/notify', async (req, res) => {
-    if (!PUSH_ADMIN_SECRET || req.headers['x-push-admin-secret'] !== PUSH_ADMIN_SECRET) {
-        return res.status(401).json({ success: false, message: 'Accès non autorisé.' });
-    }
-
-    const title = String(req.body?.title || 'Competence Academy').slice(0, 100);
-    const body = String(req.body?.body || 'Une nouvelle mise à jour est disponible.').slice(0, 300);
-    const subscriptions = await PushSubscription.find().lean();
-    const results = await Promise.allSettled(subscriptions.map(async (item) => {
-        try {
-            await webpush.sendNotification(item.subscription, JSON.stringify({ title, body, url: '/' }));
-        } catch (error) {
-            if (error.statusCode === 404 || error.statusCode === 410) {
-                await PushSubscription.deleteOne({ _id: item._id });
-            }
-            throw error;
-        }
-    }));
-
-    res.json({
-        success: true,
-        sent: results.filter((result) => result.status === 'fulfilled').length,
-        removed: results.filter((result) => result.status === 'rejected').length
-    });
-});
-
-// Gestion des utilisateurs connectés (Socket.io)
-const onlineUsers = new Map();
-
-io.use((socket, next) => {
-    const token = getCookie({ headers: socket.handshake.headers }, 'ca_token');
-    if (!token) return next(new Error('Authentification requise.'));
-
-    try {
-        socket.user = jwt.verify(token, JWT_SECRET);
-        next();
-    } catch (error) {
-        next(new Error('Session expirée ou invalide.'));
-    }
-});
-
-const broadcastOnlineUsers = () => {
-    io.emit('onlineCount', onlineUsers.size);
-};
+// Gestion des utilisateurs en ligne (Socket.io)
+let onlineUsers = 0;
 
 io.on('connection', (socket) => {
-    const userId = String(socket.user.id);
-    const currentUser = onlineUsers.get(userId) || {
-        id: userId,
-        name: socket.user.email,
-        sockets: new Set()
-    };
-    currentUser.sockets.add(socket.id);
-    onlineUsers.set(userId, currentUser);
-    socket.emit('onlineIdentity', { id: userId, name: currentUser.name });
-
-    User.findById(userId).select('name email').lean()
-        .then((user) => {
-            if (!user || !onlineUsers.has(userId)) return;
-            const connectedUser = onlineUsers.get(userId);
-            connectedUser.name = user.name || user.email;
-            socket.emit('onlineIdentity', { id: userId, name: connectedUser.name });
-            broadcastOnlineUsers();
-        })
-        .catch((error) => {
-            console.error('Online user lookup error:', error);
-        });
-    broadcastOnlineUsers();
+    onlineUsers++;
+    io.emit('updateOnlineCount', onlineUsers);
 
     socket.on('disconnect', () => {
-        const connectedUser = onlineUsers.get(userId);
-        if (connectedUser) {
-            connectedUser.sockets.delete(socket.id);
-            if (connectedUser.sockets.size === 0) onlineUsers.delete(userId);
-        }
-        broadcastOnlineUsers();
+        onlineUsers--;
+        io.emit('updateOnlineCount', onlineUsers);
     });
 });
 
@@ -606,23 +1108,14 @@ const startServer = async () => {
         JWT_SECRET,
         MONGODB_URI,
         GOOGLE_CLIENT_ID,
-        BREVO_API_KEY: process.env.BREVO_API_KEY,
-        BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
-        VAPID_PUBLIC_KEY,
-        VAPID_PRIVATE_KEY,
-        PUSH_ADMIN_SECRET,
+        EMAIL_USER: process.env.EMAIL_USER,
+        EMAIL_PASS: process.env.EMAIL_PASS,
         FRONTEND_URLS: FRONTEND_URLS.join(',')
     };
     const missingEnvironment = Object.keys(requiredEnvironment).filter((key) => !requiredEnvironment[key]);
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
-
-    webpush.setVapidDetails(
-        'mailto:competenceacademy34@gmail.com',
-        VAPID_PUBLIC_KEY,
-        VAPID_PRIVATE_KEY
-    );
 
     await mongoose.connect(MONGODB_URI, {
         serverSelectionTimeoutMS: 10000
