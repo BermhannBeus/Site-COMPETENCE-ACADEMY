@@ -239,6 +239,23 @@ body {
     color: var(--accent-orange);
 }
 
+.login-home-link {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.login-home-link a {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.login-home-link a:hover {
+    color: var(--accent-orange);
+}
+
 /* Action Buttons */
 .btn-submit {
     width: 100%;
