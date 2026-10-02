@@ -74,20 +74,6 @@
         .info-box { margin-top: 13px; padding: 15px; border-left: 4px solid var(--academy-orange); border-radius: 7px; background: #fff7ed; }
         .info-box p { margin: 0 0 9px; }
         .info-box p:last-child { margin-bottom: 0; }
-        .upload-progress { width: 100%; height: 14px; margin-top: 12px; accent-color: var(--academy-orange); }
-        .upload-progress[hidden] { display: none; }
-        .upload-progress.indeterminate { appearance: none; border: 0; border-radius: 999px; background: #e2e8f0; }
-        .upload-progress.indeterminate::-webkit-progress-bar { border-radius: 999px; background: #e2e8f0; }
-        .upload-progress.indeterminate::-webkit-progress-value { border-radius: 999px; background: var(--academy-orange); }
-        .upload-progress.indeterminate::-moz-progress-bar { border-radius: 999px; background: var(--academy-orange); }
-        .video-status-list { display: grid; gap: 8px; margin-top: 14px; }
-        .video-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px; }
-        .video-status-details { min-width: 0; overflow-wrap: anywhere; }
-        .video-status-title { display: block; font-weight: 700; }
-        .video-status-filename { display: block; margin-top: 3px; color: var(--muted); font-size: .85rem; }
-        .video-status-row span:last-child { font-size: .9rem; font-weight: 700; }
-        .status-ready { color: #15803d; }
-        .status-missing { color: #b45309; }
         footer { margin: 24px 0 0; color: var(--muted); text-align: center; font-size: .9rem; }
         @media (max-width: 620px) {
             .topbar { min-height: 104px; gap: 12px; padding: 0 14px; }
@@ -99,7 +85,6 @@
             .field-grid { grid-template-columns: 1fr; }
             .intro, .panel { padding: 18px; }
             .access-row { align-items: flex-start; }
-            .video-status-row { align-items: flex-start; flex-direction: column; }
         }
         @media (max-width: 380px) {
             .topbar { min-height: 126px; gap: 0; flex-direction: column; justify-content: center; padding: 4px 12px; text-align: center; }
@@ -125,7 +110,8 @@
             <h1>Gestion des accès et des codes des formations</h1>
             <p>Cette page d’administration sert à rechercher un compte étudiant, vérifier ses accès, créer ou renouveler le code d’une formation et retirer un accès.</p>
             <div class="info-box">
-                <p><strong>Vous pouvez aussi téléverser les vidéos MP4 depuis cette page.</strong> Le fichier est envoyé au backend Render et conservé dans le dossier vidéo configuré. Pour que les vidéos restent après un redéploiement, le backend doit utiliser un disque persistant.</p>
+                <p>Les vidéos se configurent directement dans <code>Cours en Ligne.html</code>. Placez les MP4 dans un dossier public du site, puis ajoutez leur titre et leur chemin dans la liste « Vidéos de formation » correspondante. Pour les étapes suivantes, utilisez un identifiant ordonné, par exemple <code>bureautique-2</code>, puis <code>bureautique-3</code>.</p>
+                <p><strong>Important :</strong> un MP4 placé dans un dossier public peut être ouvert ou téléchargé par toute personne qui connaît son adresse. Les options du lecteur peuvent masquer le bouton de téléchargement, mais ne protègent pas réellement le fichier.</p>
                 <p>La clé d’administration est privée : configurez <code>COURSE_ADMIN_API_KEY</code> dans les variables d’environnement du backend Render et ne la communiquez jamais aux étudiants.</p>
             </div>
         </section>
@@ -135,41 +121,6 @@
             <label for="adminKey">Clé d’administration (COURSE_ADMIN_API_KEY)</label>
             <input id="adminKey" type="password" autocomplete="off" required>
             <p class="muted" style="margin-top: 8px;">La clé reste dans cette page pendant votre session de navigation et n’est jamais envoyée aux étudiants.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="uploadTitle">
-            <div class="section-heading"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i><h2 id="uploadTitle">Téléverser une vidéo de cours</h2></div>
-            <p class="muted">Choisissez une formation puis ajoutez chaque MP4 séparément. Chaque nouvel envoi s’ajoute à la fin de la liste du cours ; les vidéos déjà envoyées ne sont pas remplacées. L’application n’impose pas de limite de taille par fichier, mais le transfert dépend de la connexion, de l’espace disponible sur le disque Render et des règles de l’hébergeur.</p>
-            <div class="field-grid">
-                <div>
-                    <label for="uploadCourseId">Formation</label>
-                    <select id="uploadCourseId">
-                        <option value="bureautique">Informatique Bureautique</option>
-                        <option value="photographie">Photographie</option>
-                        <option value="design">Design Graphic</option>
-                        <option value="videographie">Vidéographie</option>
-                        <option value="montage">Montage Vidéo</option>
-                        <option value="quickbooks">QuickBooks</option>
-                        <option value="surveillance">Surveillance</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="videoFile">Fichier vidéo MP4</label>
-                    <input id="videoFile" type="file" accept=".mp4,video/mp4" required>
-                </div>
-            </div>
-            <div class="actions">
-                <button id="uploadButton" class="primary" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Envoyer la vidéo</button>
-                <button id="refreshVideosButton" class="secondary" type="button"><i class="fa-solid fa-rotate"></i> Actualiser la liste</button>
-            </div>
-            <progress id="uploadProgress" class="upload-progress" max="100" value="0" aria-label="Progression du téléversement" hidden></progress>
-            <div id="videoUploadNotice" class="notice" role="status" aria-live="polite" hidden></div>
-            <h3 style="margin-top: 20px;">État des vidéos sur le backend</h3>
-            <div id="videoStatusList" class="video-status-list" aria-live="polite"></div>
-            <div class="info-box">
-                <p><strong>Configuration indispensable sur Render :</strong> attachez un disque persistant au backend, avec par exemple le point de montage <code>/var/data</code>, puis définissez <code>COURSE_VIDEO_DIR=/var/data/private-videos</code>. Ajoutez aussi l’adresse Netlify exacte de votre site dans <code>FRONTEND_URLS</code> du backend (sans supprimer les autres adresses déjà configurées), puis redéployez le backend.</p>
-                <p>Le formulaire n’impose pas de taille maximale. L’espace de stockage du disque reste limité par la capacité choisie sur Render ; la plateforme, la connexion ou le navigateur peuvent également limiter ou interrompre les transferts très volumineux.</p>
-            </div>
         </section>
 
         <section class="panel">
@@ -231,9 +182,6 @@
         const accessList = document.getElementById('accessList');
         const issuedCode = document.getElementById('issuedCode');
         const issuedCodeValue = document.getElementById('issuedCodeValue');
-        const videoUploadNotice = document.getElementById('videoUploadNotice');
-        const videoStatusList = document.getElementById('videoStatusList');
-        const uploadProgress = document.getElementById('uploadProgress');
         let busy = false;
 
         function showNotice(element, message, isError) {
@@ -266,118 +214,6 @@
             document.querySelectorAll('button').forEach(function(button) {
                 button.disabled = value;
             });
-        }
-
-        function formatFileSize(bytes) {
-            return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-        }
-
-        async function loadVideoStatus() {
-            if (busy) return;
-            setBusy(true);
-            videoStatusList.replaceChildren();
-            try {
-                const data = await adminRequest('/admin/course-videos', { method: 'GET' });
-                data.videos.forEach(function(video) {
-                    const row = document.createElement('div');
-                    row.className = 'video-status-row';
-                    const details = document.createElement('span');
-                    details.className = 'video-status-details';
-                    const title = document.createElement('span');
-                    title.className = 'video-status-title';
-                    title.textContent = `${video.courseName} — vidéo ${video.order} : ${video.title}`;
-                    const filename = document.createElement('span');
-                    filename.className = 'video-status-filename';
-                    filename.textContent = video.filename;
-                    details.append(title, filename);
-                    const state = document.createElement('span');
-                    state.className = video.uploaded ? 'status-ready' : 'status-missing';
-                    state.textContent = video.uploaded
-                        ? `En ligne • ${formatFileSize(video.size)}`
-                        : 'Fichier absent';
-                    row.append(details, state);
-                    videoStatusList.appendChild(row);
-                });
-            } catch (error) {
-                showNotice(videoUploadNotice, error.message, true);
-            } finally {
-                setBusy(false);
-            }
-        }
-
-        function uploadCourseVideo() {
-            if (busy) return;
-            const key = adminKeyInput.value.trim();
-            const file = document.getElementById('videoFile').files[0];
-            const courseId = document.getElementById('uploadCourseId').value;
-            if (!key) {
-                showNotice(videoUploadNotice, 'Veuillez saisir la clé d’administration avant le téléversement.', true);
-                return;
-            }
-            if (!file) {
-                showNotice(videoUploadNotice, 'Veuillez choisir un fichier MP4 depuis votre appareil.', true);
-                return;
-            }
-            if (!file.name.toLowerCase().endsWith('.mp4')) {
-                showNotice(videoUploadNotice, 'Le fichier choisi doit avoir l’extension .mp4.', true);
-                return;
-            }
-            if (file.size === 0) {
-                showNotice(videoUploadNotice, 'Le fichier vidéo est vide.', true);
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('video', file, file.name);
-            const request = new XMLHttpRequest();
-            setBusy(true);
-            videoUploadNotice.hidden = true;
-            uploadProgress.hidden = false;
-            uploadProgress.value = 0;
-            uploadProgress.classList.add('indeterminate');
-            request.open('POST', `${API_BASE_URL}/admin/course-videos/${encodeURIComponent(courseId)}`);
-            request.setRequestHeader('x-course-admin-key', key);
-            request.timeout = 0;
-            request.upload.addEventListener('progress', function(event) {
-                if (!event.lengthComputable) {
-                    uploadProgress.classList.add('indeterminate');
-                    return;
-                }
-                uploadProgress.classList.remove('indeterminate');
-                uploadProgress.value = Math.round((event.loaded / event.total) * 100);
-                uploadProgress.setAttribute('aria-label', `Téléversement : ${uploadProgress.value} %`);
-            });
-            request.addEventListener('load', function() {
-                let data;
-                try {
-                    data = JSON.parse(request.responseText);
-                } catch (error) {
-                    showNotice(videoUploadNotice, 'Le serveur a renvoyé une réponse illisible. Vérifiez la liste des vidéos avant de recommencer.', true);
-                    setBusy(false);
-                    return;
-                }
-                if (request.status < 200 || request.status >= 300 || !data.success) {
-                    showNotice(videoUploadNotice, data.message || 'Le téléversement a échoué.', true);
-                    setBusy(false);
-                    return;
-                }
-
-                showNotice(videoUploadNotice, `${data.message} Taille : ${formatFileSize(data.size)}.`, false);
-                document.getElementById('videoFile').value = '';
-                setBusy(false);
-                loadVideoStatus().catch(function(error) {
-                    console.error('Course video list refresh failed:', error);
-                });
-            });
-            request.addEventListener('error', function() {
-                showNotice(videoUploadNotice, 'Impossible de joindre le backend. Vérifiez son état et la configuration FRONTEND_URLS pour Netlify.', true);
-                setBusy(false);
-            });
-            request.addEventListener('timeout', function() {
-                showNotice(videoUploadNotice, 'Le téléversement a dépassé le délai autorisé. Vérifiez la connexion puis actualisez la liste avant de réessayer.', true);
-                setBusy(false);
-            });
-            request.send(formData);
         }
 
         async function loadStudent() {
@@ -471,8 +307,6 @@
 
         document.getElementById('lookupButton').addEventListener('click', loadStudent);
         document.getElementById('issueButton').addEventListener('click', issueCode);
-        document.getElementById('uploadButton').addEventListener('click', uploadCourseVideo);
-        document.getElementById('refreshVideosButton').addEventListener('click', loadVideoStatus);
         document.getElementById('copyButton').addEventListener('click', async function() {
             try {
                 await navigator.clipboard.writeText(issuedCodeValue.textContent);
