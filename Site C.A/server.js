@@ -10,6 +10,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
+const multer = require('multer');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -33,6 +34,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 const MONGODB_URI = process.env.MONGODB_URI;
 const COURSE_VIDEO_DIR = path.resolve(process.env.COURSE_VIDEO_DIR || path.join(__dirname, 'private-videos'));
+const COURSE_VIDEO_MANIFEST_FILE = path.join(COURSE_VIDEO_DIR, 'course-video-manifest.json');
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
     .split(',')
     .map((url) => url.trim().replace(/\/$/, ''))
@@ -296,6 +298,119 @@ const COURSE_VIDEO_FILES = {
     'quickbooks-introduction': 'quickbooks-introduction.mp4',
     'surveillance-installation': 'surveillance-installation.mp4'
 };
+const COURSE_VIDEO_TITLES = {
+    'bureautique-word': 'Introduction à Microsoft Word Professionnel',
+    'photographie-manuel': 'Maîtriser le Mode Manuel (Ouverture, Vitesse, ISO)',
+    'design-logo': 'Création de Logo Vectoriel sur Adobe Illustrator',
+    'videographie-cadrage': 'Les Règles de Cadrage et Mouvements de Caméra',
+    'montage-rythmique': 'Montage vidéo : rythme et transitions',
+    'quickbooks-introduction': 'Introduction à QuickBooks',
+    'surveillance-installation': 'Installation de caméras de surveillance'
+};
+const uploadedCourseVideos = [];
+let courseVideoManifestQueue = Promise.resolve();
+
+const loadCourseVideoManifest = async () => {
+    await fs.promises.mkdir(COURSE_VIDEO_DIR, { recursive: true });
+    for (const courseId of COURSE_ACCESS_CATEGORIES) {
+        const availableVideoIds = [];
+        for (const videoId of COURSE_VIDEO_SEQUENCES[courseId]) {
+            try {
+                const fileStats = await fs.promises.stat(path.join(COURSE_VIDEO_DIR, COURSE_VIDEO_FILES[videoId]));
+                if (fileStats.isFile()) availableVideoIds.push(videoId);
+            } catch (error) {
+                if (error.code !== 'ENOENT') throw error;
+            }
+        }
+        COURSE_VIDEO_SEQUENCES[courseId] = availableVideoIds;
+    }
+
+    let manifest;
+    try {
+        manifest = JSON.parse(await fs.promises.readFile(COURSE_VIDEO_MANIFEST_FILE, 'utf8'));
+    } catch (error) {
+        if (error.code === 'ENOENT') return;
+        throw new Error(`Unable to load course video manifest: ${error.message}`);
+    }
+    if (!Array.isArray(manifest)) {
+        throw new Error('Course video manifest must contain a list of uploaded videos.');
+    }
+
+    manifest.forEach((video) => {
+        if (!video || !COURSE_ACCESS_CATEGORIES.includes(video.courseId)
+            || typeof video.videoId !== 'string'
+            || !/^uploaded-[a-f0-9-]{36}$/.test(video.videoId)
+            || video.filename !== `${video.videoId}.mp4`
+            || typeof video.title !== 'string' || !video.title.trim()
+            || Object.prototype.hasOwnProperty.call(COURSE_VIDEO_FILES, video.videoId)) {
+            throw new Error('Course video manifest contains an invalid video entry.');
+        }
+        COURSE_VIDEO_SEQUENCES[video.courseId].push(video.videoId);
+        COURSE_VIDEO_FILES[video.videoId] = video.filename;
+        COURSE_VIDEO_TITLES[video.videoId] = video.title;
+        uploadedCourseVideos.push({
+            videoId: video.videoId,
+            courseId: video.courseId,
+            filename: video.filename,
+            title: video.title
+        });
+    });
+};
+
+const registerUploadedCourseVideo = (video) => {
+    const operation = courseVideoManifestQueue.catch(() => {}).then(async () => {
+        const nextManifest = [...uploadedCourseVideos, video];
+        const temporaryManifest = `${COURSE_VIDEO_MANIFEST_FILE}.${crypto.randomUUID()}.tmp`;
+        try {
+            await fs.promises.writeFile(temporaryManifest, JSON.stringify(nextManifest, null, 2), { flag: 'wx' });
+            await fs.promises.rename(temporaryManifest, COURSE_VIDEO_MANIFEST_FILE);
+        } catch (error) {
+            try {
+                await fs.promises.unlink(temporaryManifest);
+            } catch (cleanupError) {
+                if (cleanupError.code !== 'ENOENT') console.error('Clean course video manifest temp error:', cleanupError);
+            }
+            throw error;
+        }
+
+        uploadedCourseVideos.push(video);
+        COURSE_VIDEO_SEQUENCES[video.courseId].push(video.videoId);
+        COURSE_VIDEO_FILES[video.videoId] = video.filename;
+        COURSE_VIDEO_TITLES[video.videoId] = video.title;
+    });
+    courseVideoManifestQueue = operation;
+    return operation;
+};
+
+const courseVideoUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, callback) => {
+            fs.promises.mkdir(COURSE_VIDEO_DIR, { recursive: true })
+                .then(() => callback(null, COURSE_VIDEO_DIR))
+                .catch(callback);
+        },
+        filename: (req, file, callback) => {
+            callback(null, `.course-upload-${crypto.randomUUID()}.tmp`);
+        }
+    }),
+    limits: {
+        files: 1,
+        fields: 0,
+        parts: 1
+    },
+    fileFilter: (req, file, callback) => {
+        const courseId = String(req.params.courseId || '');
+        if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+            callback(new Error('Formation vidéo invalide.'));
+            return;
+        }
+        if (path.extname(file.originalname).toLowerCase() !== '.mp4') {
+            callback(new Error('Veuillez sélectionner un fichier au format MP4.'));
+            return;
+        }
+        callback(null, true);
+    }
+});
 const COURSE_TITLES = {
     bureautique: 'Informatique Bureautique',
     photographie: 'Photographie',
@@ -372,13 +487,27 @@ const getStudentAccessOtp = (user) => {
     return String(digest.readUInt32BE(0) % 1000000).padStart(6, '0');
 };
 
-const grantCourseAccess = async (user, courseId) => {
-    const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId });
-    if (existingAccess) return false;
+const generateCourseAccessCode = (courseId = '') => {
+    const prefix = String(courseId || 'CA').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'CA';
+    const randomPart = crypto.randomBytes(8).toString('hex').toUpperCase();
+    return `${prefix}-${randomPart}`;
+};
 
-    const code = crypto.randomBytes(24).toString('base64url');
+const issueCourseAccessCode = async (user, courseId) => {
+    const code = generateCourseAccessCode(courseId);
     const grantedAt = new Date();
-    await CourseEnrollmentAccess.create({ userId: user._id, courseId, codeHash: hashResetCode(code), grantedAt });
+    const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId });
+    const previousCodeHash = existingAccess?.codeHash;
+    const previousGrantedAt = existingAccess?.grantedAt;
+
+    if (existingAccess) {
+        existingAccess.codeHash = hashResetCode(code);
+        existingAccess.grantedAt = grantedAt;
+        await existingAccess.save();
+    } else {
+        await CourseEnrollmentAccess.create({ userId: user._id, courseId, codeHash: hashResetCode(code), grantedAt });
+    }
+
     try {
         await sendEmail({
             to: user.email,
@@ -386,9 +515,23 @@ const grantCourseAccess = async (user, courseId) => {
             text: `Bonjour ${user.name},\n\nVotre paiement ayant été confirmé, voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} » :\n\n${code}\n\nCe code est réservé à votre compte et à cette formation. Il reste valable tant que votre accès à la formation est actif. Ne le partagez pas.\n\nCompetence Academy`
         });
     } catch (error) {
-        await CourseEnrollmentAccess.deleteOne({ userId: user._id, courseId });
+        if (existingAccess) {
+            existingAccess.codeHash = previousCodeHash;
+            existingAccess.grantedAt = previousGrantedAt;
+            await existingAccess.save();
+        } else {
+            await CourseEnrollmentAccess.deleteOne({ userId: user._id, courseId });
+        }
         throw error;
     }
+
+    return code;
+};
+
+const grantCourseAccess = async (user, courseId) => {
+    const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId });
+    if (existingAccess) return false;
+    await issueCourseAccessCode(user, courseId);
     return true;
 };
 
@@ -930,6 +1073,21 @@ app.get('/api/course-progress', authenticate, async (req, res) => {
     }
 });
 
+app.get('/api/course-catalog', authenticate, (req, res) => {
+    res.json({
+        success: true,
+        courses: COURSE_ACCESS_CATEGORIES.map((courseId) => ({
+            courseId,
+            courseName: COURSE_TITLES[courseId],
+            videos: COURSE_VIDEO_SEQUENCES[courseId].map((videoId, index) => ({
+                videoId,
+                order: index + 1,
+                title: COURSE_VIDEO_TITLES[videoId]
+            }))
+        }))
+    });
+});
+
 app.post('/api/course-progress/start', authenticate, async (req, res) => {
     try {
         const videoId = String(req.body?.videoId || '');
@@ -985,6 +1143,115 @@ app.post('/api/course-progress/watch', authenticate, async (req, res) => {
         console.error('Record course video watch progress error:', error);
         res.status(500).json({ success: false, message: 'Impossible d’enregistrer votre progression vidéo.' });
     }
+});
+
+app.get('/api/admin/course-videos', requireCourseAdmin, async (req, res) => {
+    try {
+        const videos = await Promise.all(COURSE_ACCESS_CATEGORIES.flatMap((courseId) =>
+            COURSE_VIDEO_SEQUENCES[courseId].map(async (videoId, index) => {
+                const filename = COURSE_VIDEO_FILES[videoId];
+                try {
+                    const fileStats = await fs.promises.stat(path.join(COURSE_VIDEO_DIR, filename));
+                    return {
+                        videoId,
+                        title: COURSE_VIDEO_TITLES[videoId],
+                        filename,
+                        courseId,
+                        courseName: COURSE_TITLES[courseId],
+                        order: index + 1,
+                        uploaded: fileStats.isFile(),
+                        size: fileStats.isFile() ? fileStats.size : 0
+                    };
+                } catch (error) {
+                    if (error.code !== 'ENOENT') throw error;
+                    return {
+                        videoId,
+                        title: COURSE_VIDEO_TITLES[videoId],
+                        filename,
+                        courseId,
+                        courseName: COURSE_TITLES[courseId],
+                        order: index + 1,
+                        uploaded: false,
+                        size: 0
+                    };
+                }
+            })
+        ));
+        res.json({ success: true, videos });
+    } catch (error) {
+        console.error('List course video files error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de consulter les vidéos du stockage.' });
+    }
+});
+
+app.post('/api/admin/course-videos/:courseId', requireCourseAdmin, (req, res) => {
+    const courseId = String(req.params.courseId || '');
+    if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+        return res.status(400).json({ success: false, message: 'Formation vidéo invalide.' });
+    }
+
+    courseVideoUpload.single('video')(req, res, async (uploadError) => {
+        if (uploadError) {
+            return res.status(400).json({
+                success: false,
+                message: uploadError.message || 'Impossible de recevoir cette vidéo.'
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Sélectionnez un fichier vidéo MP4.' });
+        }
+
+        try {
+            const fileHandle = await fs.promises.open(req.file.path, 'r');
+            const header = Buffer.alloc(12);
+            const { bytesRead } = await fileHandle.read(header, 0, header.length, 0);
+            await fileHandle.close();
+            if (bytesRead < header.length || header.toString('ascii', 4, 8) !== 'ftyp') {
+                await fs.promises.unlink(req.file.path);
+                return res.status(400).json({ success: false, message: 'Le fichier sélectionné n’est pas une vidéo MP4 valide.' });
+            }
+
+            const videoId = `uploaded-${crypto.randomUUID()}`;
+            const filename = `${videoId}.mp4`;
+            const title = path.basename(req.file.originalname, path.extname(req.file.originalname))
+                .replace(/[_-]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 120) || `Vidéo ${COURSE_VIDEO_SEQUENCES[courseId].length + 1}`;
+            const destination = path.join(COURSE_VIDEO_DIR, filename);
+            await fs.promises.rename(req.file.path, destination);
+            try {
+                await registerUploadedCourseVideo({ videoId, courseId, filename, title });
+            } catch (error) {
+                await fs.promises.unlink(destination);
+                throw error;
+            }
+
+            res.json({
+                success: true,
+                courseId,
+                videoId,
+                title,
+                filename,
+                size: req.file.size,
+                order: COURSE_VIDEO_SEQUENCES[courseId].length,
+                message: `La vidéo « ${title} » a été ajoutée à la suite des vidéos existantes de ${COURSE_TITLES[courseId]}.`
+            });
+        } catch (error) {
+            if (req.file?.path) {
+                try {
+                    await fs.promises.unlink(req.file.path);
+                } catch (cleanupError) {
+                    if (cleanupError.code !== 'ENOENT') {
+                        console.error('Remove failed course video upload error:', cleanupError);
+                    }
+                }
+            }
+            console.error('Upload course video error:', error);
+            res.status(500).json({ success: false, message: 'Impossible d’enregistrer la vidéo dans le stockage configuré.' });
+        }
+    });
 });
 
 app.get('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
@@ -1045,6 +1312,31 @@ app.post('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
     } catch (error) {
         console.error('Grant course access error:', error);
         res.status(500).json({ success: false, message: 'Impossible d’accorder l’accès. Vérifiez le service d’e-mail et réessayez.' });
+    }
+});
+
+app.post('/api/admin/course-access/code', requireCourseAdmin, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.body?.email);
+        const courseId = String(req.body?.courseId || '');
+        if (!/^\S+@\S+\.\S+$/.test(email) || !COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+            return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail et une formation valides.' });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'L’étudiant doit d’abord créer son compte avec cette adresse e-mail.' });
+        }
+
+        const code = await issueCourseAccessCode(user, courseId);
+        res.json({
+            success: true,
+            code,
+            message: `Le code de ${COURSE_TITLES[courseId]} a été créé et envoyé à ${user.email}. L’ancien code, s’il existait, ne fonctionne plus.`
+        });
+    } catch (error) {
+        console.error('Issue course access code error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de créer ou d’envoyer le code. Le code précédent reste actif si l’envoi a échoué.' });
     }
 });
 
@@ -1283,6 +1575,9 @@ const startServer = async () => {
         serverSelectionTimeoutMS: 10000
     });
     console.log('MongoDB connected');
+
+    await loadCourseVideoManifest();
+    console.log(`Loaded ${uploadedCourseVideos.length} additional course videos`);
 
     server.listen(PORT, () => {
         console.log(`Server Competence Academy Run ${PORT}`);
