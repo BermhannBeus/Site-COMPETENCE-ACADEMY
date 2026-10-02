@@ -747,10 +747,23 @@
     function syncCourseProgress() {
         document.querySelectorAll('.course-video-item').forEach(function(item) {
             const videoId = item.dataset.videoId;
-            const wrapper = item.closest('.course-card-wrapper');
             const unlocked = isVideoUnlocked(videoId);
             const completed = courseProgress.completedVideoIds.includes(videoId);
             const status = item.querySelector('.course-video-status');
+
+            item.classList.toggle('is-active', videoId === activeVideoId);
+            status.innerHTML = completed
+                ? "<i class='fa-solid fa-circle-check'></i> Terminé"
+                : unlocked
+                    ? "<i class='fa-solid fa-unlock'></i> Disponible"
+                    : "<i class='fa-solid fa-lock'></i>";
+        });
+
+        document.querySelectorAll('.course-card-wrapper').forEach(function(wrapper) {
+            const items = Array.from(wrapper.querySelectorAll('.course-video-item'));
+            const anyUnlocked = items.some((item) => isVideoUnlocked(item.dataset.videoId));
+            const activeItem = items.find((item) => item.dataset.videoId === activeVideoId) || items[0];
+            const activeUnlocked = Boolean(activeItem && isVideoUnlocked(activeItem.dataset.videoId));
             const video = wrapper.querySelector('video');
             const lockScreen = wrapper.querySelector('.overlay-lock');
             const tag = wrapper.querySelector('.badge-status');
@@ -759,46 +772,39 @@
             const documentIcon = wrapper.querySelector('.document-item > i');
             const downloadLabel = wrapper.querySelector('.doc-download-label');
             const quiz = wrapper.querySelector('.course-quiz-button');
-            const sizeText = documentStatus.dataset.size;
+            const sizeText = documentStatus?.dataset.size;
 
-            item.classList.toggle('is-active', videoId === activeVideoId);
-            status.innerHTML = completed
-                ? "<i class='fa-solid fa-circle-check'></i> Terminé"
-                : unlocked
-                    ? "<i class='fa-solid fa-unlock'></i> Disponible"
-                    : "<i class='fa-solid fa-lock'></i>";
-
-            video.controls = unlocked;
-            lockScreen.style.display = unlocked ? 'none' : 'flex';
+            video.controls = activeUnlocked;
+            lockScreen.style.display = activeUnlocked ? 'none' : 'flex';
             if (tag) {
-                tag.innerHTML = unlocked
+                tag.innerHTML = anyUnlocked
                     ? "Débloqué <i class='fa-solid fa-unlock'></i>"
                     : "Premium <i class='fa-solid fa-lock'></i>";
-                tag.style.backgroundColor = unlocked ? '#22c55e' : '';
+                tag.style.backgroundColor = anyUnlocked ? '#22c55e' : '';
             }
             if (documentItem) {
-                documentItem.style.opacity = unlocked ? '1' : '0.5';
-                documentItem.style.pointerEvents = unlocked ? 'auto' : 'none';
-                documentItem.setAttribute('aria-disabled', String(!unlocked));
-                documentItem.tabIndex = unlocked ? 0 : -1;
+                documentItem.style.opacity = anyUnlocked ? '1' : '0.5';
+                documentItem.style.pointerEvents = anyUnlocked ? 'auto' : 'none';
+                documentItem.setAttribute('aria-disabled', String(!anyUnlocked));
+                documentItem.tabIndex = anyUnlocked ? 0 : -1;
             }
             if (documentStatus && sizeText) {
-                documentStatus.textContent = unlocked ? `PDF • ${sizeText}` : `Bloqué • ${sizeText}`;
+                documentStatus.textContent = anyUnlocked ? `PDF • ${sizeText}` : `Bloqué • ${sizeText}`;
             }
             if (documentIcon) {
-                documentIcon.className = unlocked ? 'fa-solid fa-download download-icon' : 'fa-solid fa-lock';
-                documentIcon.style.color = unlocked ? '#22c55e' : '';
+                documentIcon.className = anyUnlocked ? 'fa-solid fa-download download-icon' : 'fa-solid fa-lock';
+                documentIcon.style.color = anyUnlocked ? '#22c55e' : '';
             }
             if (downloadLabel) {
-                downloadLabel.innerHTML = unlocked
+                downloadLabel.innerHTML = anyUnlocked
                     ? "<i class='fa-solid fa-download' aria-hidden='true'></i> Télécharger le PDF"
                     : "<i class='fa-solid fa-lock' aria-hidden='true'></i> Débloquer pour télécharger";
-                downloadLabel.style.backgroundColor = unlocked ? '#22c55e' : '#e2e8f0';
-                downloadLabel.style.color = unlocked ? '#fff' : '#475569';
+                downloadLabel.style.backgroundColor = anyUnlocked ? '#22c55e' : '#e2e8f0';
+                downloadLabel.style.color = anyUnlocked ? '#fff' : '#475569';
             }
             if (quiz) {
-                quiz.classList.toggle('is-locked', !unlocked);
-                quiz.setAttribute('aria-disabled', String(!unlocked));
+                quiz.classList.toggle('is-locked', !anyUnlocked);
+                quiz.setAttribute('aria-disabled', String(!anyUnlocked));
             }
         });
     }
@@ -841,9 +847,15 @@
         const item = document.querySelector(`.course-video-item[data-video-id="${videoId}"]`);
         if (!item) return;
 
-        activeVideoId = videoId;
         const wrapper = item.closest('.course-card-wrapper');
         const video = wrapper.querySelector('video');
+        if (activeVideoId !== videoId) {
+            document.querySelectorAll('.course-card-wrapper video').forEach(function(player) {
+                player.pause();
+            });
+            if (activeVideoId) watchSessionByVideo.delete(activeVideoId);
+        }
+        activeVideoId = videoId;
         showCourseError(wrapper, '');
 
         syncCourseProgress();
@@ -941,6 +953,8 @@
 
     function initializeCourseVideos() {
         document.querySelectorAll('.course-video-item').forEach(function(item) {
+            if (item.dataset.watchInitialized === 'true') return;
+            item.dataset.watchInitialized = 'true';
             const videoId = item.dataset.videoId;
             const wrapper = item.closest('.course-card-wrapper');
             const video = wrapper.querySelector('video');
@@ -952,6 +966,7 @@
             }
 
             video.addEventListener('timeupdate', function() {
+                if (!watchSessionByVideo.has(videoId)) return;
                 furthestWatchedByVideo.set(videoId, Math.max(furthestWatchedByVideo.get(videoId), video.currentTime));
                 const lastReportedAt = lastWatchReportByVideo.get(videoId) || 0;
                 if (!video.paused && watchSessionByVideo.has(videoId)
@@ -964,10 +979,12 @@
                 }
             });
             video.addEventListener('seeking', function() {
+                if (activeVideoId !== videoId) return;
                 const furthestWatched = furthestWatchedByVideo.get(videoId) || 0;
                 if (video.currentTime > furthestWatched + 1) video.currentTime = furthestWatched;
             });
             video.addEventListener('ended', function() {
+                if (!watchSessionByVideo.has(videoId)) return;
                 if (!Number.isFinite(video.duration) || video.currentTime < video.duration - 1) return;
                 reportVideoWatchProgress(videoId, video).then(function() {
                     return courseApiRequest('/course-progress/complete', {
@@ -989,27 +1006,55 @@
                 });
             });
             video.addEventListener('error', function() {
-                if (isVideoUnlocked(videoId)) {
+                if (activeVideoId === videoId && isVideoUnlocked(videoId)) {
                     showCourseError(wrapper, 'La vidéo est indisponible. Vérifiez que le fichier de formation est présent.');
                 }
             });
         });
+    }
 
-        const firstVideo = document.querySelector('.course-video-item');
-        if (firstVideo) activeVideoId = firstVideo.dataset.videoId;
-
-        courseApiRequest('/course-progress', { method: 'GET' }).then(function(result) {
-            courseProgress.unlockedVideoIds = result.progress.unlockedVideoIds;
-            courseProgress.completedVideoIds = result.progress.completedVideoIds;
-            syncCourseProgress();
-        }).catch(function(error) {
-            console.error('Course progress could not be loaded:', error);
-            document.querySelectorAll('.course-video-item').forEach(function(item) {
-                item.disabled = true;
+    async function initializeCourseCatalog() {
+        const catalogResult = await courseApiRequest('/course-catalog', { method: 'GET' });
+        catalogResult.courses.forEach(function(course) {
+            const wrapper = document.querySelector(`.course-card-wrapper[data-category="${course.courseId}"]`);
+            if (!wrapper) return;
+            const videoList = wrapper.querySelector('.course-video-list');
+            const existingItems = new Map(
+                Array.from(videoList.querySelectorAll('.course-video-item'))
+                    .map((item) => [item.dataset.videoId, item])
+            );
+            videoList.replaceChildren();
+            course.videos.forEach(function(courseVideo, index) {
+                const videoOrder = Number.isInteger(courseVideo.order) ? courseVideo.order : index + 1;
+                let item = existingItems.get(courseVideo.videoId);
+                if (!item) {
+                    item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'course-video-item';
+                    item.dataset.videoId = courseVideo.videoId;
+                    item.dataset.videoSrc = `/course-videos/${encodeURIComponent(courseVideo.videoId)}`;
+                    const title = document.createElement('span');
+                    const status = document.createElement('span');
+                    status.className = 'course-video-status';
+                    status.innerHTML = "<i class='fa-solid fa-lock'></i>";
+                    item.append(title, status);
+                    item.addEventListener('click', function() {
+                        selectionnerVideo(courseVideo.videoId);
+                    });
+                }
+                item.firstElementChild.textContent = `Étape ${videoOrder} — ${courseVideo.title}`;
+                item.setAttribute('aria-label', `Étape ${videoOrder} : ${courseVideo.title}`);
+                videoList.appendChild(item);
             });
-            const wrapper = document.querySelector('.course-card-wrapper[data-category="bureautique"]');
-            if (wrapper) showCourseError(wrapper, error.message);
         });
+
+        initializeCourseVideos();
+        const firstVideo = document.querySelector('.course-video-item');
+        if (firstVideo && !activeVideoId) activeVideoId = firstVideo.dataset.videoId;
+        const progressResult = await courseApiRequest('/course-progress', { method: 'GET' });
+        courseProgress.unlockedVideoIds = progressResult.progress.unlockedVideoIds;
+        courseProgress.completedVideoIds = progressResult.progress.completedVideoIds;
+        syncCourseProgress();
     }
 
     // Pèmèt elèv yo peze Enter pou debloke rapid
@@ -1031,7 +1076,14 @@
         });
     });
 
-    initializeCourseVideos();
+    initializeCourseCatalog().catch(function(error) {
+        console.error('Course catalog could not be loaded:', error);
+        document.querySelectorAll('.course-video-item').forEach(function(item) {
+            item.disabled = true;
+        });
+        const wrapper = document.querySelector('.course-card-wrapper[data-category="bureautique"]');
+        if (wrapper) showCourseError(wrapper, error.message);
+    });
 
 
 
