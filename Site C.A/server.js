@@ -5,12 +5,9 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
-const multer = require('multer');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -33,8 +30,6 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 const MONGODB_URI = process.env.MONGODB_URI;
-const COURSE_VIDEO_DIR = path.resolve(process.env.COURSE_VIDEO_DIR || path.join(__dirname, 'private-videos'));
-const COURSE_VIDEO_MANIFEST_FILE = path.join(COURSE_VIDEO_DIR, 'course-video-manifest.json');
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
     .split(',')
     .map((url) => url.trim().replace(/\/$/, ''))
@@ -289,128 +284,6 @@ const COURSE_VIDEO_SEQUENCES = {
     quickbooks: ['quickbooks-introduction'],
     surveillance: ['surveillance-installation']
 };
-const COURSE_VIDEO_FILES = {
-    'bureautique-word': 'bureautique-word.mp4',
-    'photographie-manuel': 'photographie-manuel.mp4',
-    'design-logo': 'design-logo.mp4',
-    'videographie-cadrage': 'videographie-cadrage.mp4',
-    'montage-rythmique': 'montage-rythmique.mp4',
-    'quickbooks-introduction': 'quickbooks-introduction.mp4',
-    'surveillance-installation': 'surveillance-installation.mp4'
-};
-const COURSE_VIDEO_TITLES = {
-    'bureautique-word': 'Introduction à Microsoft Word Professionnel',
-    'photographie-manuel': 'Maîtriser le Mode Manuel (Ouverture, Vitesse, ISO)',
-    'design-logo': 'Création de Logo Vectoriel sur Adobe Illustrator',
-    'videographie-cadrage': 'Les Règles de Cadrage et Mouvements de Caméra',
-    'montage-rythmique': 'Montage vidéo : rythme et transitions',
-    'quickbooks-introduction': 'Introduction à QuickBooks',
-    'surveillance-installation': 'Installation de caméras de surveillance'
-};
-const uploadedCourseVideos = [];
-let courseVideoManifestQueue = Promise.resolve();
-
-const loadCourseVideoManifest = async () => {
-    await fs.promises.mkdir(COURSE_VIDEO_DIR, { recursive: true });
-    for (const courseId of COURSE_ACCESS_CATEGORIES) {
-        const availableVideoIds = [];
-        for (const videoId of COURSE_VIDEO_SEQUENCES[courseId]) {
-            try {
-                const fileStats = await fs.promises.stat(path.join(COURSE_VIDEO_DIR, COURSE_VIDEO_FILES[videoId]));
-                if (fileStats.isFile()) availableVideoIds.push(videoId);
-            } catch (error) {
-                if (error.code !== 'ENOENT') throw error;
-            }
-        }
-        COURSE_VIDEO_SEQUENCES[courseId] = availableVideoIds;
-    }
-
-    let manifest;
-    try {
-        manifest = JSON.parse(await fs.promises.readFile(COURSE_VIDEO_MANIFEST_FILE, 'utf8'));
-    } catch (error) {
-        if (error.code === 'ENOENT') return;
-        throw new Error(`Unable to load course video manifest: ${error.message}`);
-    }
-    if (!Array.isArray(manifest)) {
-        throw new Error('Course video manifest must contain a list of uploaded videos.');
-    }
-
-    manifest.forEach((video) => {
-        if (!video || !COURSE_ACCESS_CATEGORIES.includes(video.courseId)
-            || typeof video.videoId !== 'string'
-            || !/^uploaded-[a-f0-9-]{36}$/.test(video.videoId)
-            || video.filename !== `${video.videoId}.mp4`
-            || typeof video.title !== 'string' || !video.title.trim()
-            || Object.prototype.hasOwnProperty.call(COURSE_VIDEO_FILES, video.videoId)) {
-            throw new Error('Course video manifest contains an invalid video entry.');
-        }
-        COURSE_VIDEO_SEQUENCES[video.courseId].push(video.videoId);
-        COURSE_VIDEO_FILES[video.videoId] = video.filename;
-        COURSE_VIDEO_TITLES[video.videoId] = video.title;
-        uploadedCourseVideos.push({
-            videoId: video.videoId,
-            courseId: video.courseId,
-            filename: video.filename,
-            title: video.title
-        });
-    });
-};
-
-const registerUploadedCourseVideo = (video) => {
-    const operation = courseVideoManifestQueue.catch(() => {}).then(async () => {
-        const nextManifest = [...uploadedCourseVideos, video];
-        const temporaryManifest = `${COURSE_VIDEO_MANIFEST_FILE}.${crypto.randomUUID()}.tmp`;
-        try {
-            await fs.promises.writeFile(temporaryManifest, JSON.stringify(nextManifest, null, 2), { flag: 'wx' });
-            await fs.promises.rename(temporaryManifest, COURSE_VIDEO_MANIFEST_FILE);
-        } catch (error) {
-            try {
-                await fs.promises.unlink(temporaryManifest);
-            } catch (cleanupError) {
-                if (cleanupError.code !== 'ENOENT') console.error('Clean course video manifest temp error:', cleanupError);
-            }
-            throw error;
-        }
-
-        uploadedCourseVideos.push(video);
-        COURSE_VIDEO_SEQUENCES[video.courseId].push(video.videoId);
-        COURSE_VIDEO_FILES[video.videoId] = video.filename;
-        COURSE_VIDEO_TITLES[video.videoId] = video.title;
-    });
-    courseVideoManifestQueue = operation;
-    return operation;
-};
-
-const courseVideoUpload = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, callback) => {
-            fs.promises.mkdir(COURSE_VIDEO_DIR, { recursive: true })
-                .then(() => callback(null, COURSE_VIDEO_DIR))
-                .catch(callback);
-        },
-        filename: (req, file, callback) => {
-            callback(null, `.course-upload-${crypto.randomUUID()}.tmp`);
-        }
-    }),
-    limits: {
-        files: 1,
-        fields: 0,
-        parts: 1
-    },
-    fileFilter: (req, file, callback) => {
-        const courseId = String(req.params.courseId || '');
-        if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
-            callback(new Error('Formation vidéo invalide.'));
-            return;
-        }
-        if (path.extname(file.originalname).toLowerCase() !== '.mp4') {
-            callback(new Error('Veuillez sélectionner un fichier au format MP4.'));
-            return;
-        }
-        callback(null, true);
-    }
-});
 const COURSE_TITLES = {
     bureautique: 'Informatique Bureautique',
     photographie: 'Photographie',
@@ -421,9 +294,28 @@ const COURSE_TITLES = {
     surveillance: 'Surveillance'
 };
 const COURSE_ACCESS_CATEGORIES = Object.keys(COURSE_TITLES);
-const getCourseForVideo = (videoId) => COURSE_ACCESS_CATEGORIES.find(
-    (courseId) => COURSE_VIDEO_SEQUENCES[courseId]?.includes(videoId)
-);
+const getCourseForVideo = (videoId) => {
+    const existingCourse = COURSE_ACCESS_CATEGORIES.find(
+        (courseId) => COURSE_VIDEO_SEQUENCES[courseId].includes(videoId)
+    );
+    if (existingCourse) return existingCourse;
+
+    return COURSE_ACCESS_CATEGORIES.find((courseId) => {
+        const match = new RegExp(`^${courseId}-([2-9]|[1-9]\\d+)$`).exec(videoId);
+        return Boolean(match && Number.isSafeInteger(Number(match[1])));
+    });
+};
+const getCourseVideoIndex = (courseId, videoId) => {
+    const knownIndex = COURSE_VIDEO_SEQUENCES[courseId]?.indexOf(videoId) ?? -1;
+    if (knownIndex >= 0) return knownIndex;
+
+    const match = new RegExp(`^${courseId}-([2-9]|[1-9]\\d+)$`).exec(videoId);
+    if (!match) return -1;
+    const stepNumber = Number(match[1]);
+    return Number.isSafeInteger(stepNumber) ? stepNumber - 1 : -1;
+};
+const getCourseVideoId = (courseId, videoIndex) => COURSE_VIDEO_SEQUENCES[courseId]?.[videoIndex]
+    || (videoIndex > 0 ? `${courseId}-${videoIndex + 1}` : null);
 
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true, maxlength: 100 },
@@ -975,117 +867,26 @@ app.post('/api/reset-password-code', resetVerificationLimiter, async (req, res) 
     }
 });
 
-app.get('/api/course-videos/:videoId', authenticate, async (req, res) => {
-    try {
-        const videoId = String(req.params.videoId || '');
-        const courseId = getCourseForVideo(videoId);
-        const filename = COURSE_VIDEO_FILES[videoId];
-        if (!courseId || !filename) {
-            return res.status(404).json({ success: false, message: 'Vidéo de formation introuvable.' });
-        }
-
-        const hasCourseAccess = await CourseEnrollmentAccess.exists({ userId: req.user.id, courseId });
-        const progress = await CourseProgress.findOne({ userId: req.user.id });
-        if (!hasCourseAccess || !progress?.unlockedVideoIds.includes(videoId)) {
-            return res.status(403).json({ success: false, message: 'Cette vidéo est verrouillée ou votre accès est inactif.' });
-        }
-
-        const filePath = path.resolve(COURSE_VIDEO_DIR, filename);
-        const relativePath = path.relative(COURSE_VIDEO_DIR, filePath);
-        if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-            return res.status(400).json({ success: false, message: 'Chemin de vidéo invalide.' });
-        }
-
-        let fileStats;
-        try {
-            fileStats = await fs.promises.stat(filePath);
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                return res.status(404).json({ success: false, message: 'Le fichier MP4 de cette formation est introuvable sur le serveur.' });
-            }
-            throw error;
-        }
-        if (!fileStats.isFile()) {
-            return res.status(404).json({ success: false, message: 'Le fichier MP4 de cette formation est introuvable sur le serveur.' });
-        }
-
-        let start = 0;
-        let end = fileStats.size - 1;
-        const rangeHeader = req.headers.range;
-        if (rangeHeader) {
-            const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
-            if (!match || (!match[1] && !match[2])) {
-                res.setHeader('Content-Range', `bytes */${fileStats.size}`);
-                return res.status(416).end();
-            }
-            if (!match[1]) {
-                const suffixLength = Number(match[2]);
-                start = Math.max(fileStats.size - suffixLength, 0);
-            } else {
-                start = Number(match[1]);
-                if (match[2]) end = Number(match[2]);
-            }
-            if (start >= fileStats.size || end < start) {
-                res.setHeader('Content-Range', `bytes */${fileStats.size}`);
-                return res.status(416).end();
-            }
-            end = Math.min(end, fileStats.size - 1);
-            res.status(206);
-            res.setHeader('Content-Range', `bytes ${start}-${end}/${fileStats.size}`);
-        }
-
-        res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Content-Length', end - start + 1);
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Content-Disposition', 'inline');
-        res.setHeader('Cache-Control', 'private, no-store');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        const videoStream = fs.createReadStream(filePath, { start, end });
-        videoStream.on('error', (error) => {
-            console.error('Course video stream failed:', error);
-            if (res.headersSent) res.destroy(error);
-            else res.status(500).json({ success: false, message: 'Impossible de lire le fichier vidéo.' });
-        });
-        videoStream.pipe(res);
-    } catch (error) {
-        console.error('Serve course video error:', error);
-        res.status(500).json({ success: false, message: 'Impossible de charger cette vidéo.' });
-    }
-});
-
 app.get('/api/course-progress', authenticate, async (req, res) => {
     try {
         const progress = await getOrCreateCourseProgress(req.user.id);
         const accesses = await CourseEnrollmentAccess.find({ userId: req.user.id }).select('courseId');
-        const authorizedVideoIds = new Set(
-            accesses.flatMap((access) => COURSE_VIDEO_SEQUENCES[access.courseId] || [])
-        );
+        const authorizedCourseIds = new Set(accesses.map((access) => access.courseId));
+        const isAuthorizedVideo = (videoId) => {
+            const courseId = getCourseForVideo(videoId);
+            return courseId && authorizedCourseIds.has(courseId);
+        };
         res.json({
             success: true,
             progress: {
-                unlockedVideoIds: progress.unlockedVideoIds.filter((videoId) => authorizedVideoIds.has(videoId)),
-                completedVideoIds: progress.completedVideoIds.filter((videoId) => authorizedVideoIds.has(videoId))
+                unlockedVideoIds: progress.unlockedVideoIds.filter(isAuthorizedVideo),
+                completedVideoIds: progress.completedVideoIds.filter(isAuthorizedVideo)
             }
         });
     } catch (error) {
         console.error('Get course progress error:', error);
         res.status(500).json({ success: false, message: 'Impossible de charger votre progression.' });
     }
-});
-
-app.get('/api/course-catalog', authenticate, (req, res) => {
-    res.json({
-        success: true,
-        courses: COURSE_ACCESS_CATEGORIES.map((courseId) => ({
-            courseId,
-            courseName: COURSE_TITLES[courseId],
-            videos: COURSE_VIDEO_SEQUENCES[courseId].map((videoId, index) => ({
-                videoId,
-                order: index + 1,
-                title: COURSE_VIDEO_TITLES[videoId]
-            }))
-        }))
-    });
 });
 
 app.post('/api/course-progress/start', authenticate, async (req, res) => {
@@ -1099,11 +900,15 @@ app.post('/api/course-progress/start', authenticate, async (req, res) => {
 
         const hasCourseAccess = await CourseEnrollmentAccess.exists({ userId: req.user.id, courseId });
         const progress = await getOrCreateCourseProgress(req.user.id);
-        const videoIndex = sequence.indexOf(videoId);
+        const videoIndex = getCourseVideoIndex(courseId, videoId);
+        if (videoIndex < 0) {
+            return res.status(400).json({ success: false, message: 'Vidéo de formation invalide.' });
+        }
+        const previousVideoId = videoIndex > 0 ? getCourseVideoId(courseId, videoIndex - 1) : null;
         if (!hasCourseAccess || !progress.unlockedVideoIds.includes(videoId)) {
             return res.status(403).json({ success: false, message: 'Cette vidéo est verrouillée ou votre accès est inactif.' });
         }
-        if (videoIndex > 0 && !progress.completedVideoIds.includes(sequence[videoIndex - 1])) {
+        if (previousVideoId && !progress.completedVideoIds.includes(previousVideoId)) {
             return res.status(403).json({ success: false, message: 'Terminez d’abord la vidéo précédente de cette formation.' });
         }
 
@@ -1143,115 +948,6 @@ app.post('/api/course-progress/watch', authenticate, async (req, res) => {
         console.error('Record course video watch progress error:', error);
         res.status(500).json({ success: false, message: 'Impossible d’enregistrer votre progression vidéo.' });
     }
-});
-
-app.get('/api/admin/course-videos', requireCourseAdmin, async (req, res) => {
-    try {
-        const videos = await Promise.all(COURSE_ACCESS_CATEGORIES.flatMap((courseId) =>
-            COURSE_VIDEO_SEQUENCES[courseId].map(async (videoId, index) => {
-                const filename = COURSE_VIDEO_FILES[videoId];
-                try {
-                    const fileStats = await fs.promises.stat(path.join(COURSE_VIDEO_DIR, filename));
-                    return {
-                        videoId,
-                        title: COURSE_VIDEO_TITLES[videoId],
-                        filename,
-                        courseId,
-                        courseName: COURSE_TITLES[courseId],
-                        order: index + 1,
-                        uploaded: fileStats.isFile(),
-                        size: fileStats.isFile() ? fileStats.size : 0
-                    };
-                } catch (error) {
-                    if (error.code !== 'ENOENT') throw error;
-                    return {
-                        videoId,
-                        title: COURSE_VIDEO_TITLES[videoId],
-                        filename,
-                        courseId,
-                        courseName: COURSE_TITLES[courseId],
-                        order: index + 1,
-                        uploaded: false,
-                        size: 0
-                    };
-                }
-            })
-        ));
-        res.json({ success: true, videos });
-    } catch (error) {
-        console.error('List course video files error:', error);
-        res.status(500).json({ success: false, message: 'Impossible de consulter les vidéos du stockage.' });
-    }
-});
-
-app.post('/api/admin/course-videos/:courseId', requireCourseAdmin, (req, res) => {
-    const courseId = String(req.params.courseId || '');
-    if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
-        return res.status(400).json({ success: false, message: 'Formation vidéo invalide.' });
-    }
-
-    courseVideoUpload.single('video')(req, res, async (uploadError) => {
-        if (uploadError) {
-            return res.status(400).json({
-                success: false,
-                message: uploadError.message || 'Impossible de recevoir cette vidéo.'
-            });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'Sélectionnez un fichier vidéo MP4.' });
-        }
-
-        try {
-            const fileHandle = await fs.promises.open(req.file.path, 'r');
-            const header = Buffer.alloc(12);
-            const { bytesRead } = await fileHandle.read(header, 0, header.length, 0);
-            await fileHandle.close();
-            if (bytesRead < header.length || header.toString('ascii', 4, 8) !== 'ftyp') {
-                await fs.promises.unlink(req.file.path);
-                return res.status(400).json({ success: false, message: 'Le fichier sélectionné n’est pas une vidéo MP4 valide.' });
-            }
-
-            const videoId = `uploaded-${crypto.randomUUID()}`;
-            const filename = `${videoId}.mp4`;
-            const title = path.basename(req.file.originalname, path.extname(req.file.originalname))
-                .replace(/[_-]+/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .slice(0, 120) || `Vidéo ${COURSE_VIDEO_SEQUENCES[courseId].length + 1}`;
-            const destination = path.join(COURSE_VIDEO_DIR, filename);
-            await fs.promises.rename(req.file.path, destination);
-            try {
-                await registerUploadedCourseVideo({ videoId, courseId, filename, title });
-            } catch (error) {
-                await fs.promises.unlink(destination);
-                throw error;
-            }
-
-            res.json({
-                success: true,
-                courseId,
-                videoId,
-                title,
-                filename,
-                size: req.file.size,
-                order: COURSE_VIDEO_SEQUENCES[courseId].length,
-                message: `La vidéo « ${title} » a été ajoutée à la suite des vidéos existantes de ${COURSE_TITLES[courseId]}.`
-            });
-        } catch (error) {
-            if (req.file?.path) {
-                try {
-                    await fs.promises.unlink(req.file.path);
-                } catch (cleanupError) {
-                    if (cleanupError.code !== 'ENOENT') {
-                        console.error('Remove failed course video upload error:', cleanupError);
-                    }
-                }
-            }
-            console.error('Upload course video error:', error);
-            res.status(500).json({ success: false, message: 'Impossible d’enregistrer la vidéo dans le stockage configuré.' });
-        }
-    });
 });
 
 app.get('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
@@ -1357,7 +1053,10 @@ app.delete('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Cet étudiant n’a pas d’accès actif à cette formation.' });
         }
 
-        const courseVideoIds = COURSE_VIDEO_SEQUENCES[courseId] || [];
+        const courseVideoIds = [
+            ...(COURSE_VIDEO_SEQUENCES[courseId] || []),
+            new RegExp(`^${courseId}-([2-9]|[1-9]\\d+)$`)
+        ];
         await CourseProgress.updateOne(
             { userId: user._id },
             { $pull: { unlockedVideoIds: { $in: courseVideoIds }, completedVideoIds: { $in: courseVideoIds } } }
@@ -1398,8 +1097,11 @@ app.post('/api/course-progress/unlock', authenticate, async (req, res) => {
         }
 
         const progress = await getOrCreateCourseProgress(req.user.id);
-        const videoIndex = sequence.indexOf(videoId);
-        const previousVideoId = sequence[videoIndex - 1];
+        const videoIndex = getCourseVideoIndex(courseId, videoId);
+        if (videoIndex < 0) {
+            return res.status(400).json({ success: false, message: 'Vidéo de formation invalide.' });
+        }
+        const previousVideoId = videoIndex > 0 ? getCourseVideoId(courseId, videoIndex - 1) : null;
         if (videoIndex > 0 && !progress.completedVideoIds.includes(previousVideoId)) {
             return res.status(403).json({ success: false, message: 'Terminez d’abord la vidéo précédente de cette formation.' });
         }
@@ -1447,8 +1149,8 @@ app.post('/api/course-progress/complete', authenticate, async (req, res) => {
         }
 
         progress.completedVideoIds.addToSet(videoId);
-        const videoIndex = sequence.indexOf(videoId);
-        const nextVideoId = sequence[videoIndex + 1];
+        const videoIndex = getCourseVideoIndex(courseId, videoId);
+        const nextVideoId = getCourseVideoId(courseId, videoIndex + 1);
         if (nextVideoId) progress.unlockedVideoIds.addToSet(nextVideoId);
         await progress.save();
         await VideoWatchSession.deleteOne({ _id: watchSession._id });
@@ -1575,9 +1277,6 @@ const startServer = async () => {
         serverSelectionTimeoutMS: 10000
     });
     console.log('MongoDB connected');
-
-    await loadCourseVideoManifest();
-    console.log(`Loaded ${uploadedCourseVideos.length} additional course videos`);
 
     server.listen(PORT, () => {
         console.log(`Server Competence Academy Run ${PORT}`);
