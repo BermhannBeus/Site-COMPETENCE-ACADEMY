@@ -686,7 +686,7 @@ const authenticate = (req, res, next) => {
 };
 
 const requireCourseAdmin = (req, res, next) => {
-    const configuredKey = process.env.COURSE_ADMIN_API_KEY;
+    const configuredKey = String(process.env.COURSE_ADMIN_API_KEY || '').trim();
     if (!configuredKey) {
         return res.status(503).json({ success: false, message: 'L’administration des accès aux cours n’est pas configurée.' });
     }
@@ -700,6 +700,7 @@ const requireCourseAdmin = (req, res, next) => {
         }
         submittedKey = Buffer.from(encodedKey, 'base64url').toString('utf8');
     }
+    submittedKey = submittedKey.trim();
     const submittedBuffer = Buffer.from(submittedKey);
     const expectedBuffer = Buffer.from(configuredKey);
     if (submittedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(submittedBuffer, expectedBuffer)) {
