@@ -202,6 +202,7 @@
         }
 
         function encodeAdminKeyHeader(key) {
+            if (/^[\x20-\x7E]+$/.test(key)) return key;
             const bytes = new TextEncoder().encode(key);
             let binary = '';
             bytes.forEach(function(byte) {
