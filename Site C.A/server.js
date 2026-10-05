@@ -237,6 +237,53 @@ const sendEmail = async (mailOptions) => {
     }
 };
 
+const getFrontendUrl = (path, fragmentValues = {}) => {
+    const configuredOrigin = FRONTEND_URLS[0] || 'https://competenceacademy.netlify.app';
+    const url = new URL(path, `${configuredOrigin.replace(/\/+$/, '')}/`);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new Error('The configured frontend URL must use HTTP or HTTPS.');
+    }
+    const fragment = new URLSearchParams(fragmentValues).toString();
+    if (fragment) url.hash = fragment;
+    return url.toString();
+};
+
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+})[character]);
+
+const createCodeEmail = ({ greeting, message, code, buttonLabel, buttonUrl, note }) => ({
+    text: `${greeting}\n\n${message}\n\n${code}\n\n${note}\n\nOuvrir la page : ${buttonUrl}\n\nCompetence Academy`,
+    html: `
+        <div style="margin:0;background:#f3f6fb;padding:28px 12px;font-family:Arial,sans-serif;color:#1e293b;">
+            <div style="max-width:520px;margin:0 auto;border:1px solid #dbe3ee;border-radius:14px;background:#ffffff;overflow:hidden;">
+                <div style="padding:22px 24px;background:#111e62;color:#ffffff;text-align:center;">
+                    <div style="font-size:20px;font-weight:800;letter-spacing:1px;">COMPETENCE ACADEMY</div>
+                </div>
+                <div style="padding:24px;">
+                    <p style="margin:0 0 14px;">${escapeHtml(greeting)}</p>
+                    <p style="margin:0 0 20px;line-height:1.6;">${escapeHtml(message)}</p>
+                    <div style="margin:0 0 22px;padding:16px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;text-align:center;">
+                        <div style="margin-bottom:7px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Votre code</div>
+                        <div style="color:#111e62;font-size:24px;font-weight:800;letter-spacing:2px;overflow-wrap:anywhere;">${escapeHtml(code)}</div>
+                    </div>
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+                        <tr><td align="center" bgcolor="#f76b00" style="border-radius:8px;">
+                            <a href="${escapeHtml(buttonUrl)}" style="display:inline-block;padding:13px 22px;border:1px solid #f76b00;border-radius:8px;color:#ffffff;font-weight:700;text-decoration:none;">${escapeHtml(buttonLabel)}</a>
+                        </td></tr>
+                    </table>
+                    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">${escapeHtml(note)}</p>
+                </div>
+                <div style="padding:14px 20px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;text-align:center;">Competence Academy — Formation pratique et professionnelle</div>
+            </div>
+        </div>
+    `
+});
+
 const allowedOrigins = [
     'http://localhost',
     'http://localhost:5000',
@@ -458,11 +505,23 @@ const issueCourseAccessCode = async (user, courseId) => {
 
     try {
         const adminCopyEmails = getAdminNotificationEmails().filter((email) => email !== user.email);
+        const courseUrl = getFrontendUrl('/Cours%20en%20Ligne.html', {
+            'access-code': code,
+            course: courseId
+        });
+        const emailContent = createCodeEmail({
+            greeting: `Bonjour ${user.name},`,
+            message: `Voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} ». Appuyez sur le bouton pour ouvrir le cours avec le code déjà préparé.`,
+            code,
+            buttonLabel: 'Ouvrir le cours',
+            buttonUrl: courseUrl,
+            note: 'Le code est personnel et reste valable tant que votre accès à la formation est actif. Si vous n’êtes pas déjà connecté(e), connectez-vous : le code restera prêt dans le cours.'
+        });
         await sendEmail({
             to: user.email,
             ...(adminCopyEmails.length ? { bcc: adminCopyEmails } : {}),
             subject: `Votre code d’accès - ${COURSE_TITLES[courseId]} | Competence Academy`,
-            text: `Bonjour ${user.name},\n\nVotre paiement ayant été confirmé, voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} » :\n\n${code}\n\nCe code est réservé à votre compte et à cette formation. Il reste valable tant que votre accès à la formation est actif. Ne le partagez pas.\n\nCompetence Academy`
+            ...emailContent
         });
     } catch (error) {
         if (existingAccess) {
@@ -492,6 +551,7 @@ const createAccessConfirmation = async (user) => {
     const code = getStudentAccessOtp(user);
     const challengeId = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+    const confirmationUrl = getFrontendUrl('/Login.html');
     await AccessConfirmation.findOneAndUpdate(
         { userId: user._id },
         { challengeId, codeHash: hashResetCode(code), attempts: 0, expiresAt },
@@ -501,7 +561,14 @@ const createAccessConfirmation = async (user) => {
         await sendEmail({
             to: approvalEmails,
             subject: 'Demande de confirmation de connexion - Competence Academy',
-            text: `Nouvelle demande de connexion à l’espace de cours.\n\nNom : ${user.name}\nE-mail : ${user.email}\nCode personnel de cet étudiant : ${code}\n\nCe code reste le même pour cette adresse e-mail tant que JWT_SECRET ne change pas. Cette demande expire dans 20 minutes. Après une première confirmation réussie, aucune nouvelle confirmation ne sera demandée pour ce compte.`
+            ...createCodeEmail({
+                greeting: 'Bonjour,',
+                message: `Nouvelle demande de confirmation de connexion pour ${user.name} (${user.email}). Transmettez ce code à l’étudiant pour qu’il le saisisse dans sa session de connexion.`,
+                code,
+                buttonLabel: 'Ouvrir la page de connexion',
+                buttonUrl: confirmationUrl,
+                note: 'Ne saisissez pas ce code sur votre propre session : il confirme la connexion de l’étudiant. Le code expire dans 20 minutes.'
+            })
         });
     } catch (error) {
         await AccessConfirmation.deleteOne({ userId: user._id, challengeId });
@@ -869,19 +936,17 @@ app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
         const mailOptions = {
             to: email,
             subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
-                    <h2 style="color: #0056b3; text-align: center;">Competence Academy</h2>
-                    <p>Bonjour,</p>
-                    <p>Voici votre code de vérification pour réinitialiser votre mot de passe :</p>
-                    <div style="text-align: center; margin: 25px 0;">
-                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0056b3; background: #f0f4f8; padding: 10px 20px; border-radius: 6px;">${resetCode}</span>
-                    </div>
-                    <p style="font-size: 0.9em; color: #666;">Entrez ce code sur le site pour choisir votre nouveau mot de passe.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
-                    <p style="font-size: 0.8em; color: #999; text-align: center;">Competence Academy — Formation Pratique & Professionnelle</p>
-                </div>
-            `
+            ...createCodeEmail({
+                greeting: 'Bonjour,',
+                message: 'Voici votre code de vérification pour réinitialiser votre mot de passe. Appuyez sur le bouton pour ouvrir le formulaire avec votre adresse e-mail et le code déjà renseignés.',
+                code: resetCode,
+                buttonLabel: 'Réinitialiser mon mot de passe',
+                buttonUrl: getFrontendUrl('/Login.html', {
+                    'reset-code': resetCode,
+                    email
+                }),
+                note: 'Le code expire dans 10 minutes. Vous devrez encore choisir un nouveau mot de passe pour terminer la réinitialisation.'
+            })
         };
 
         await sendEmail(mailOptions);
