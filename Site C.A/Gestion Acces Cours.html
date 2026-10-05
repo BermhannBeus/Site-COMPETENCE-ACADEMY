@@ -117,10 +117,7 @@
             <h1>Gestion des accès et des codes des formations</h1>
             <p>Cette page d’administration sert à rechercher un compte étudiant, vérifier ses accès, créer ou renouveler le code d’une formation et retirer un accès.</p>
             <div class="info-box">
-                <p>Les vidéos se configurent directement dans <code>Cours en Ligne.html</code>. Placez les MP4 dans un dossier public du site, puis ajoutez leur titre et leur chemin dans la liste « Vidéos de formation » correspondante. Pour les étapes suivantes, utilisez un identifiant ordonné, par exemple <code>bureautique-2</code>, puis <code>bureautique-3</code>.</p>
-                <p><strong>Important :</strong> un MP4 placé dans un dossier public peut être ouvert ou téléchargé par toute personne qui connaît son adresse. Les options du lecteur peuvent masquer le bouton de téléchargement, mais ne protègent pas réellement le fichier.</p>
-                <p>La clé d’administration est privée : configurez <code>COURSE_ADMIN_API_KEY</code> dans les variables d’environnement du backend Render et ne la communiquez jamais aux étudiants.</p>
-                <p>Les nouveaux codes d’accès sont enregistrés de manière chiffrée pour pouvoir être consultés ici sans les renouveler. Les codes créés avant cette fonction ne peuvent pas être récupérés et devront être renouvelés une seule fois si l’étudiant les a oubliés.</p>
+             <p>Les nouveaux codes d’accès sont enregistrés de manière chiffrée pour pouvoir être consultés ici sans les renouveler. Les codes créés avant cette fonction ne peuvent pas être récupérés et devront être renouvelés une seule fois si l’étudiant les a oubliés.</p>
             </div>
         </section>
 
@@ -131,6 +128,8 @@
                 <input id="adminKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" required>
                 <button id="toggleAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé d’administration" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
             </div>
+            <p class="muted" style="margin-top: 8px;">La clé reste dans cette page pendant votre session de navigation et n’est jamais envoyée aux étudiants.</p>
+            <p class="muted" style="margin-top: 8px;">Backend utilisé : <code id="apiEndpoint"></code></p>
         </section>
 
         <section class="panel">
@@ -181,9 +180,7 @@
     </main>
 
     <script>
-        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://localhost:5000/api'
-            : 'https://site-competence-academy-backend.onrender.com/api';
+        const API_BASE_URL = 'https://site-competence-academy-backend.onrender.com/api';
         document.getElementById('apiEndpoint').textContent = API_BASE_URL;
         const adminKeyInput = document.getElementById('adminKey');
         const emailInput = document.getElementById('studentEmail');
@@ -225,7 +222,7 @@
             });
             const data = await response.json();
             if (response.status === 401) {
-                throw new Error('La clé saisie ne correspond pas à COURSE_ADMIN_API_KEY sur le backend Render connecté.');
+                throw new Error('La clé saisie ne correspond pas à COURSE_ADMIN_API_KEY sur le backend Render connecté. Vérifiez que vous utilisez la même clé que dans ce service Render, sans espace en trop, puis redéployez le backend après toute modification.');
             }
             if (!response.ok || !data.success) {
                 throw new Error(data.message || 'La demande a échoué.');
