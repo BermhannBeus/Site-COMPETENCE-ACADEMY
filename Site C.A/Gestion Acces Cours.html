@@ -224,6 +224,9 @@
                 }
             });
             const data = await response.json();
+            if (response.status === 401) {
+                throw new Error('La clé saisie ne correspond pas à COURSE_ADMIN_API_KEY sur le backend Render connecté. Vérifiez que vous utilisez la même clé que dans ce service Render, sans espace en trop, puis redéployez le backend après toute modification.');
+            }
             if (!response.ok || !data.success) {
                 throw new Error(data.message || 'La demande a échoué.');
             }
