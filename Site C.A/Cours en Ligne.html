@@ -26,6 +26,18 @@
         ? 'http://localhost:5000/api'
         : 'https://site-competence-academy-backend.onrender.com/api';
 
+    const emailCourseAccess = new URLSearchParams(window.location.hash.slice(1));
+    const emailAccessCode = emailCourseAccess.get('access-code');
+    const emailAccessCourse = emailCourseAccess.get('course');
+    const validEmailAccessCourses = ['bureautique', 'photographie', 'design', 'videographie', 'montage', 'quickbooks', 'surveillance'];
+    if (emailAccessCode && emailAccessCode.length <= 128 && validEmailAccessCourses.includes(emailAccessCourse)) {
+        sessionStorage.setItem('ca_pending_course_access', JSON.stringify({
+            code: emailAccessCode,
+            course: emailAccessCourse
+        }));
+        history.replaceState(history.state, '', `${window.location.pathname}${window.location.search}`);
+    }
+
     const showOnlineIdentity = (user) => {
         const identityElement = document.getElementById('onlineIdentity');
         if (identityElement && user && user.name) {
@@ -1064,6 +1076,19 @@
         const firstVideo = document.querySelector('.course-video-item');
         if (firstVideo && !activeVideoId) activeVideoId = firstVideo.dataset.videoId;
         syncCourseProgress();
+
+        const pendingAccess = JSON.parse(sessionStorage.getItem('ca_pending_course_access') || 'null');
+        if (pendingAccess && typeof pendingAccess.code === 'string'
+            && validEmailAccessCourses.includes(pendingAccess.course)) {
+            const wrapper = document.querySelector(`.course-card-wrapper[data-category="${pendingAccess.course}"]`);
+            const codeInput = wrapper && wrapper.querySelector('.lock-form-container input');
+            if (codeInput) {
+                codeInput.value = pendingAccess.code;
+                wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                codeInput.focus({ preventScroll: true });
+                sessionStorage.removeItem('ca_pending_course_access');
+            }
+        }
     }
 
     // Pèmèt elèv yo peze Enter pou debloke rapid
