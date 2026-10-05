@@ -298,7 +298,33 @@
          : 'https://site-competence-academy-backend.onrender.com/api';
         let activeAccessChallengeId = sessionStorage.getItem('ca_access_challenge_id') || '';
 
-        function showAccessConfirmation(challengeId, message) {
+       function getPendingCourseAccess() {
+           try {
+               const pending = JSON.parse(sessionStorage.getItem('ca_pending_course_access') || 'null');
+               const validCourses = ['bureautique', 'photographie', 'design', 'videographie', 'montage', 'quickbooks', 'surveillance'];
+               if (pending && validCourses.includes(pending.course) && typeof pending.code === 'string'
+                   && pending.code.length > 0 && pending.code.length <= 128) {
+                   return pending;
+               }
+           } catch (error) {
+               console.error('Could not read the pending course access link:', error);
+           }
+           return null;
+       }
+
+       function getCourseAccessUrl() {
+           const pending = getPendingCourseAccess();
+           if (!pending) return 'Cours en Ligne.html';
+           sessionStorage.removeItem('ca_pending_course_access');
+           const url = new URL('Cours en Ligne.html', window.location.href);
+           url.hash = new URLSearchParams({
+               'access-code': pending.code,
+               course: pending.course
+           }).toString();
+           return url.href;
+       }
+
+       function showAccessConfirmation(challengeId, message) {
             activeAccessChallengeId = challengeId;
             sessionStorage.setItem('ca_access_challenge_id', challengeId);
             localStorage.removeItem('ca_token');
@@ -315,10 +341,26 @@
             localStorage.removeItem('ca_token');
             localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
             if (data.profileComplete) {
-                window.location.href = 'Cours en Ligne.html';
+                window.location.href = getCourseAccessUrl();
             } else {
                 showCertificateProfile(data.user);
             }
+        }
+
+        function applyEmailCodeLink() {
+            const fragment = new URLSearchParams(window.location.hash.slice(1));
+            const resetCode = fragment.get('reset-code');
+            const resetEmail = fragment.get('email');
+            if (!resetCode || !resetEmail || !/^\d{6}$/.test(resetCode)
+                || !/^\S+@\S+\.\S+$/.test(resetEmail)) {
+                return;
+            }
+
+            document.getElementById('forgotEmail').value = resetEmail;
+            document.getElementById('resetCode').value = resetCode;
+            switchView('resetCode');
+            history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+            document.getElementById('newPassword').focus();
         }
 
         function switchView(viewType) {
@@ -476,7 +518,7 @@
                     return;
                 }
                 localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
-                window.location.href = 'Cours en Ligne.html';
+                window.location.href = getCourseAccessUrl();
             } catch (error) {
                 console.error('Certificate profile save failed:', error);
                 errorMessage.textContent = 'Impossible d’enregistrer les informations pour le moment. Veuillez réessayer.';
@@ -611,6 +653,8 @@
             if (document.getElementById('loginPassword')) document.getElementById('loginPassword').value = '';
             switchView('login');
         }
+
+        applyEmailCodeLink();
     </script>
 </body>
 </html>
