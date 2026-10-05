@@ -128,10 +128,11 @@
             <div class="section-heading"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><h2 id="adminKeyTitle">Connexion administrateur</h2></div>
             <label for="adminKey">Clé d’administration (COURSE_ADMIN_API_KEY)</label>
             <div class="password-field">
-                <input id="adminKey" type="password" autocomplete="off" required>
+                <input id="adminKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" required>
                 <button id="toggleAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé d’administration" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
             </div>
             <p class="muted" style="margin-top: 8px;">La clé reste dans cette page pendant votre session de navigation et n’est jamais envoyée aux étudiants.</p>
+            <p class="muted" style="margin-top: 8px;">Backend utilisé : <code id="apiEndpoint"></code></p>
         </section>
 
         <section class="panel">
@@ -185,6 +186,7 @@
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://localhost:5000/api'
             : 'https://site-competence-academy-backend.onrender.com/api';
+        document.getElementById('apiEndpoint').textContent = API_BASE_URL;
         const adminKeyInput = document.getElementById('adminKey');
         const emailInput = document.getElementById('studentEmail');
         const lookupNotice = document.getElementById('lookupNotice');
