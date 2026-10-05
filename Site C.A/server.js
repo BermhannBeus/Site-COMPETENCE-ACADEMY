@@ -354,6 +354,7 @@ const courseAccessCodeSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     courseId: { type: String, required: true },
     codeHash: { type: String, required: true, unique: true },
+    encryptedCode: { type: String, default: '', select: false },
     grantedAt: { type: Date, required: true }
 }, { timestamps: true });
 courseAccessCodeSchema.index({ userId: 1, courseId: 1 }, { unique: true });
@@ -385,19 +386,55 @@ const generateCourseAccessCode = (courseId = '') => {
     return `${prefix}-${randomPart}`;
 };
 
+const getCourseAccessCodeEncryptionKey = () => crypto.createHash('sha256')
+    .update(`course-access-code:${JWT_SECRET}`)
+    .digest();
+const encryptCourseAccessCode = (code) => {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', getCourseAccessCodeEncryptionKey(), iv);
+    const encrypted = Buffer.concat([cipher.update(code, 'utf8'), cipher.final()]);
+    return [iv, cipher.getAuthTag(), encrypted].map((part) => part.toString('base64url')).join('.');
+};
+const decryptCourseAccessCode = (encryptedCode) => {
+    const [ivValue, authTagValue, encryptedValue, ...extra] = String(encryptedCode || '').split('.');
+    if (!ivValue || !authTagValue || !encryptedValue || extra.length) {
+        throw new Error('Stored course access code has an invalid encrypted format.');
+    }
+    const decipher = crypto.createDecipheriv(
+        'aes-256-gcm',
+        getCourseAccessCodeEncryptionKey(),
+        Buffer.from(ivValue, 'base64url')
+    );
+    decipher.setAuthTag(Buffer.from(authTagValue, 'base64url'));
+    return Buffer.concat([
+        decipher.update(Buffer.from(encryptedValue, 'base64url')),
+        decipher.final()
+    ]).toString('utf8');
+};
+
 const issueCourseAccessCode = async (user, courseId) => {
     const code = generateCourseAccessCode(courseId);
     const grantedAt = new Date();
-    const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId });
+    const encryptedCode = encryptCourseAccessCode(code);
+    const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId })
+        .select('+encryptedCode');
     const previousCodeHash = existingAccess?.codeHash;
+    const previousEncryptedCode = existingAccess?.encryptedCode;
     const previousGrantedAt = existingAccess?.grantedAt;
 
     if (existingAccess) {
         existingAccess.codeHash = hashResetCode(code);
+        existingAccess.encryptedCode = encryptedCode;
         existingAccess.grantedAt = grantedAt;
         await existingAccess.save();
     } else {
-        await CourseEnrollmentAccess.create({ userId: user._id, courseId, codeHash: hashResetCode(code), grantedAt });
+        await CourseEnrollmentAccess.create({
+            userId: user._id,
+            courseId,
+            codeHash: hashResetCode(code),
+            encryptedCode,
+            grantedAt
+        });
     }
 
     try {
@@ -409,6 +446,7 @@ const issueCourseAccessCode = async (user, courseId) => {
     } catch (error) {
         if (existingAccess) {
             existingAccess.codeHash = previousCodeHash;
+            existingAccess.encryptedCode = previousEncryptedCode || '';
             existingAccess.grantedAt = previousGrantedAt;
             await existingAccess.save();
         } else {
@@ -982,6 +1020,37 @@ app.get('/api/admin/course-access', requireCourseAdmin, async (req, res) => {
     } catch (error) {
         console.error('List course access error:', error);
         res.status(500).json({ success: false, message: 'Impossible de consulter les accès de cet étudiant.' });
+    }
+});
+
+app.get('/api/admin/course-access/code', requireCourseAdmin, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.query?.email);
+        const courseId = String(req.query?.courseId || '');
+        if (!/^\S+@\S+\.\S+$/.test(email) || !COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+            return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail et une formation valides.' });
+        }
+
+        const user = await User.findOne({ email }).select('_id');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Aucun compte ne correspond à cette adresse e-mail.' });
+        }
+        const access = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId })
+            .select('+encryptedCode');
+        if (!access) {
+            return res.status(404).json({ success: false, message: 'Cet étudiant n’a pas d’accès actif à cette formation.' });
+        }
+        if (!access.encryptedCode) {
+            return res.status(409).json({
+                success: false,
+                message: 'Ce code a été créé avant l’activation de sa sauvegarde chiffrée et ne peut pas être récupéré. Il faut le renouveler une seule fois.'
+            });
+        }
+
+        res.json({ success: true, code: decryptCourseAccessCode(access.encryptedCode) });
+    } catch (error) {
+        console.error('Read course access code error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de consulter le code de cette formation.' });
     }
 });
 
