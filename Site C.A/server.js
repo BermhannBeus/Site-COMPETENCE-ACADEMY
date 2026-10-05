@@ -238,11 +238,21 @@ const sendEmail = async (mailOptions) => {
 };
 
 const getFrontendUrl = (path, fragmentValues = {}) => {
-    const configuredOrigin = FRONTEND_URLS[0] || 'https://competenceacademy.netlify.app';
+    const configuredOrigin = FRONTEND_URLS
+        .map((candidate) => {
+            try {
+                return new URL(candidate);
+            } catch (error) {
+                return null;
+            }
+        })
+        .find((candidate) => candidate
+            && candidate.protocol === 'https:'
+            && /\.[a-z]{2,}$/i.test(candidate.hostname)
+            && !candidate.hostname.endsWith('.local')
+            && !/^(localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i.test(candidate.hostname))
+        ?.origin || 'https://competenceacademy.netlify.app';
     const url = new URL(path, `${configuredOrigin.replace(/\/+$/, '')}/`);
-    if (!['http:', 'https:'].includes(url.protocol)) {
-        throw new Error('The configured frontend URL must use HTTP or HTTPS.');
-    }
     const fragment = new URLSearchParams(fragmentValues).toString();
     if (fragment) url.hash = fragment;
     return url.toString();
