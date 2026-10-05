@@ -53,6 +53,10 @@
         label { display: block; margin-bottom: 7px; font-weight: 700; }
         input, select { width: 100%; min-height: 46px; padding: 11px 12px; border: 1px solid #bcc9d9; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
         input:focus, select:focus { outline: 3px solid #2563eb33; border-color: #2563eb; }
+        .password-field { position: relative; }
+        .password-field input { padding-right: 48px; }
+        .password-toggle { position: absolute; top: 50%; right: 5px; display: grid; place-items: center; width: 38px; min-height: 38px; padding: 0; color: var(--academy-blue); background: transparent; transform: translateY(-50%); }
+        .password-toggle:hover:not(:disabled) { background: #e2e8f0; transform: translateY(-50%); }
         .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 17px; }
         button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; color: #fff; background: var(--academy-blue); font: inherit; font-weight: 700; cursor: pointer; transition: filter .18s ease, transform .18s ease; }
         button:hover:not(:disabled) { filter: brightness(1.14); transform: translateY(-1px); }
@@ -119,7 +123,10 @@
         <section class="panel" aria-labelledby="adminKeyTitle">
             <div class="section-heading"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><h2 id="adminKeyTitle">Connexion administrateur</h2></div>
             <label for="adminKey">Clé d’administration (COURSE_ADMIN_API_KEY)</label>
-            <input id="adminKey" type="password" autocomplete="off" required>
+            <div class="password-field">
+                <input id="adminKey" type="password" autocomplete="off" required>
+                <button id="toggleAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé d’administration" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+            </div>
             <p class="muted" style="margin-top: 8px;">La clé reste dans cette page pendant votre session de navigation et n’est jamais envoyée aux étudiants.</p>
         </section>
 
@@ -307,6 +314,16 @@
 
         document.getElementById('lookupButton').addEventListener('click', loadStudent);
         document.getElementById('issueButton').addEventListener('click', issueCode);
+        document.getElementById('toggleAdminKey').addEventListener('click', function() {
+            const isVisible = adminKeyInput.type === 'text';
+            adminKeyInput.type = isVisible ? 'password' : 'text';
+            this.setAttribute('aria-label', isVisible ? 'Afficher la clé d’administration' : 'Masquer la clé d’administration');
+            this.setAttribute('aria-pressed', String(!isVisible));
+            this.innerHTML = isVisible
+                ? '<i class="fa-solid fa-eye" aria-hidden="true"></i>'
+                : '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i>';
+            adminKeyInput.focus();
+        });
         document.getElementById('copyButton').addEventListener('click', async function() {
             try {
                 await navigator.clipboard.writeText(issuedCodeValue.textContent);
