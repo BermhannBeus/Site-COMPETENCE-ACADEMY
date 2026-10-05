@@ -58,6 +58,18 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const sanitizeEmail = (value = '') => String(value).trim().toLowerCase();
+const getAdminNotificationEmails = () => {
+    const recipients = [...new Set([
+        process.env.ACCESS_APPROVAL_EMAIL,
+        process.env.EMAIL_USER
+    ].map(sanitizeEmail).filter(Boolean))];
+    if (!recipients.length || recipients.some((email) => !/^\S+@\S+\.\S+$/.test(email))) {
+        const error = new Error('Configure a valid ACCESS_APPROVAL_EMAIL or EMAIL_USER for admin code notifications.');
+        error.code = 'EMAIL_DELIVERY_FAILED';
+        throw error;
+    }
+    return recipients;
+};
 const isStrongPassword = (password = '') => {
     if (typeof password !== 'string') return false;
     return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
@@ -142,6 +154,12 @@ const sendEmail = async (mailOptions) => {
                         .map((recipient) => typeof recipient === 'string'
                             ? { email: recipient }
                             : recipient),
+                    ...(mailOptions.bcc ? {
+                        bcc: (Array.isArray(mailOptions.bcc) ? mailOptions.bcc : [mailOptions.bcc])
+                            .map((recipient) => typeof recipient === 'string'
+                                ? { email: recipient }
+                                : recipient)
+                    } : {}),
                     subject: mailOptions.subject,
                     ...(mailOptions.text ? { textContent: mailOptions.text } : {}),
                     ...(mailOptions.html ? { htmlContent: mailOptions.html } : {})
@@ -183,6 +201,7 @@ const sendEmail = async (mailOptions) => {
                 body: JSON.stringify({
                     from,
                     to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
+                    ...(mailOptions.bcc ? { bcc: mailOptions.bcc } : {}),
                     subject: mailOptions.subject,
                     ...(mailOptions.text ? { text: mailOptions.text } : {}),
                     ...(mailOptions.html ? { html: mailOptions.html } : {})
@@ -438,8 +457,10 @@ const issueCourseAccessCode = async (user, courseId) => {
     }
 
     try {
+        const adminCopyEmails = getAdminNotificationEmails().filter((email) => email !== user.email);
         await sendEmail({
             to: user.email,
+            ...(adminCopyEmails.length ? { bcc: adminCopyEmails } : {}),
             subject: `Votre code d’accès - ${COURSE_TITLES[courseId]} | Competence Academy`,
             text: `Bonjour ${user.name},\n\nVotre paiement ayant été confirmé, voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} » :\n\n${code}\n\nCe code est réservé à votre compte et à cette formation. Il reste valable tant que votre accès à la formation est actif. Ne le partagez pas.\n\nCompetence Academy`
         });
@@ -466,10 +487,7 @@ const grantCourseAccess = async (user, courseId) => {
 };
 
 const createAccessConfirmation = async (user) => {
-    const approvalEmail = sanitizeEmail(process.env.ACCESS_APPROVAL_EMAIL || process.env.EMAIL_USER);
-    if (!/^\S+@\S+\.\S+$/.test(approvalEmail)) {
-        throw new Error('ACCESS_APPROVAL_EMAIL or EMAIL_USER must be configured with a valid email address.');
-    }
+    const approvalEmails = getAdminNotificationEmails();
 
     const code = getStudentAccessOtp(user);
     const challengeId = crypto.randomBytes(24).toString('hex');
@@ -481,7 +499,7 @@ const createAccessConfirmation = async (user) => {
     );
     try {
         await sendEmail({
-            to: approvalEmail,
+            to: approvalEmails,
             subject: 'Demande de confirmation de connexion - Competence Academy',
             text: `Nouvelle demande de connexion à l’espace de cours.\n\nNom : ${user.name}\nE-mail : ${user.email}\nCode personnel de cet étudiant : ${code}\n\nCe code reste le même pour cette adresse e-mail tant que JWT_SECRET ne change pas. Cette demande expire dans 20 minutes. Après une première confirmation réussie, aucune nouvelle confirmation ne sera demandée pour ce compte.`
         });
@@ -596,7 +614,15 @@ const requireCourseAdmin = (req, res, next) => {
         return res.status(503).json({ success: false, message: 'L’administration des accès aux cours n’est pas configurée.' });
     }
 
-    const submittedKey = String(req.get('x-course-admin-key') || '');
+    const keyHeader = String(req.get('x-course-admin-key') || '');
+    let submittedKey = keyHeader;
+    if (keyHeader.startsWith('utf8:')) {
+        const encodedKey = keyHeader.slice(5);
+        if (!/^[A-Za-z0-9_-]+$/.test(encodedKey)) {
+            return res.status(401).json({ success: false, message: 'Accès administrateur refusé.' });
+        }
+        submittedKey = Buffer.from(encodedKey, 'base64url').toString('utf8');
+    }
     const submittedBuffer = Buffer.from(submittedKey);
     const expectedBuffer = Buffer.from(configuredKey);
     if (submittedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(submittedBuffer, expectedBuffer)) {
