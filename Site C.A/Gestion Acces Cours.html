@@ -73,7 +73,10 @@
         .student-summary { margin: 18px 0 8px; font-weight: 700; }
         .access-list { display: grid; gap: 10px; margin-top: 12px; }
         .access-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: #fbfdff; }
+        .access-actions { display: flex; flex-wrap: wrap; gap: 8px; }
         .access-row button { min-height: 38px; padding: 8px 12px; font-size: .9rem; }
+        .access-code { flex-basis: 100%; padding: 10px; border-radius: 7px; background: #f0fdf4; color: #14532d; font-weight: 700; overflow-wrap: anywhere; }
+        .access-code[hidden] { display: none; }
         .muted { color: var(--muted); }
         .info-box { margin-top: 13px; padding: 15px; border-left: 4px solid var(--academy-orange); border-radius: 7px; background: #fff7ed; }
         .info-box p { margin: 0 0 9px; }
@@ -117,6 +120,7 @@
                 <p>Les vidéos se configurent directement dans <code>Cours en Ligne.html</code>. Placez les MP4 dans un dossier public du site, puis ajoutez leur titre et leur chemin dans la liste « Vidéos de formation » correspondante. Pour les étapes suivantes, utilisez un identifiant ordonné, par exemple <code>bureautique-2</code>, puis <code>bureautique-3</code>.</p>
                 <p><strong>Important :</strong> un MP4 placé dans un dossier public peut être ouvert ou téléchargé par toute personne qui connaît son adresse. Les options du lecteur peuvent masquer le bouton de téléchargement, mais ne protègent pas réellement le fichier.</p>
                 <p>La clé d’administration est privée : configurez <code>COURSE_ADMIN_API_KEY</code> dans les variables d’environnement du backend Render et ne la communiquez jamais aux étudiants.</p>
+                <p>Les nouveaux codes d’accès sont enregistrés de manière chiffrée pour pouvoir être consultés ici sans les renouveler. Les codes créés avant cette fonction ne peuvent pas être récupérés et devront être renouvelés une seule fois si l’étudiant les a oubliés.</p>
             </div>
         </section>
 
@@ -256,7 +260,20 @@
                     revokeButton.addEventListener('click', function() {
                         revokeAccess(course.courseId);
                     });
-                    row.append(details, revokeButton);
+                    const codeButton = document.createElement('button');
+                    codeButton.type = 'button';
+                    codeButton.className = 'secondary';
+                    codeButton.textContent = 'Voir le code';
+                    const codeValue = document.createElement('code');
+                    codeValue.className = 'access-code';
+                    codeValue.hidden = true;
+                    codeButton.addEventListener('click', function() {
+                        toggleAccessCode(course.courseId, codeButton, codeValue);
+                    });
+                    const actions = document.createElement('div');
+                    actions.className = 'access-actions';
+                    actions.append(codeButton, revokeButton);
+                    row.append(details, actions, codeValue);
                     accessList.appendChild(row);
                 });
             } catch (error) {
@@ -308,6 +325,36 @@
                 await loadStudent();
             } catch (error) {
                 showNotice(lookupNotice, error.message, true);
+                setBusy(false);
+            }
+        }
+
+        async function toggleAccessCode(courseId, button, codeValue) {
+            if (busy) return;
+            if (!codeValue.hidden) {
+                codeValue.hidden = true;
+                button.textContent = 'Voir le code';
+                return;
+            }
+            if (codeValue.textContent) {
+                codeValue.hidden = false;
+                button.textContent = 'Masquer le code';
+                return;
+            }
+
+            setBusy(true);
+            try {
+                const email = encodeURIComponent(emailInput.value.trim());
+                const data = await adminRequest(
+                    `/admin/course-access/code?email=${email}&courseId=${encodeURIComponent(courseId)}`,
+                    { method: 'GET' }
+                );
+                codeValue.textContent = data.code;
+                codeValue.hidden = false;
+                button.textContent = 'Masquer le code';
+            } catch (error) {
+                showNotice(lookupNotice, error.message, true);
+            } finally {
                 setBusy(false);
             }
         }
