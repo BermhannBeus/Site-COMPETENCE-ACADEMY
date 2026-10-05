@@ -152,7 +152,7 @@
 
         <section class="panel">
             <div class="section-heading"><i class="fa-solid fa-key" aria-hidden="true"></i><h2>Créer ou renouveler le code d’une formation</h2></div>
-            <p class="muted">Le code est envoyé à l’adresse de l’étudiant et affiché ici après sa création. Si un code existait déjà, il est remplacé et l’ancien ne fonctionne plus.</p>
+            <p class="muted">Le code est envoyé à l’adresse de l’étudiant et aux adresses d’administration configurées, puis affiché ici après sa création. Si un code existait déjà, il est remplacé et l’ancien ne fonctionne plus.</p>
             <div class="field-grid">
                 <div>
                     <label for="courseId">Formation</label>
@@ -201,6 +201,15 @@
             element.hidden = false;
         }
 
+        function encodeAdminKeyHeader(key) {
+            const bytes = new TextEncoder().encode(key);
+            let binary = '';
+            bytes.forEach(function(byte) {
+                binary += String.fromCharCode(byte);
+            });
+            return `utf8:${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+        }
+
         async function adminRequest(path, options) {
             const key = adminKeyInput.value.trim();
             if (!key) throw new Error('Veuillez saisir la clé d’administration configurée dans COURSE_ADMIN_API_KEY.');
@@ -209,7 +218,7 @@
                 cache: 'no-store',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-course-admin-key': key,
+                    'x-course-admin-key': encodeAdminKeyHeader(key),
                     ...(options && options.headers)
                 }
             });
