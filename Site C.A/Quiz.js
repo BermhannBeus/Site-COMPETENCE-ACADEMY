@@ -4,7 +4,20 @@
   const QUIZ_BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5100'
     : 'https://site-competence-academy-quiz.onrender.com';
-  const state = { questions: [], index: 0, score: 0, answers: [], selected: false };
+  const PASSING_PERCENTAGE = 75;
+  const QUESTION_SECONDS = 25;
+  const state = {
+    quizId: '',
+    question: null,
+    index: 0,
+    total: 0,
+    score: 0,
+    answers: [],
+    selected: false,
+    pendingAnswer: undefined,
+    timerId: null,
+    remainingSeconds: QUESTION_SECONDS
+  };
   const $ = (id) => document.getElementById(id);
   const screens = [$('startScreen'), $('quizScreen'), $('resultScreen')];
   const requestedFormation = new URLSearchParams(window.location.search).get('formation');
@@ -13,43 +26,68 @@
     screens.forEach((screen) => { screen.hidden = screen !== active; });
   }
 
-  function shuffle(items) {
-    const result = [...items];
-    for (let index = result.length - 1; index > 0; index -= 1) {
-      const randomIndex = Math.floor(Math.random() * (index + 1));
-      [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  function stopQuestionTimer() {
+    if (state.timerId !== null) {
+      window.clearInterval(state.timerId);
+      state.timerId = null;
     }
-    return result;
   }
 
-  async function loadQuestions() {
-    const formation = $('formationSelect').value;
-    const response = await fetch(`${QUIZ_BACKEND_URL}/api/questions?formation=${encodeURIComponent(formation)}`, {
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw new Error('Le serveur du quiz est indisponible.');
-    const data = await response.json();
-    if (!data.success || !Array.isArray(data.questions) || data.questions.length === 0) {
-      throw new Error('Aucune question active n’est disponible.');
-    }
-    state.questions = shuffle(data.questions).map((question) => ({
-      ...question,
-      options: shuffle(question.options.map((text, index) => ({
-        text,
-        correct: index === question.correctAnswer
-      })))
-    }));
+  function updateTimerDisplay() {
+    const timer = $('questionTimer');
+    $('timerValue').textContent = state.remainingSeconds;
+    timer.style.setProperty('--timer-progress', `${(state.remainingSeconds / QUESTION_SECONDS) * 100}%`);
+    timer.classList.toggle('is-low', state.remainingSeconds <= 5);
+    timer.setAttribute('aria-label', `${state.remainingSeconds} secondes restantes`);
   }
 
-  function renderQuestion() {
-    const question = state.questions[state.index];
+  function startQuestionTimer(seconds = QUESTION_SECONDS) {
+    stopQuestionTimer();
+    state.remainingSeconds = seconds;
+    updateTimerDisplay();
+    state.timerId = window.setInterval(() => {
+      state.remainingSeconds -= 1;
+      updateTimerDisplay();
+      if (state.remainingSeconds <= 0) expireQuestion();
+    }, 1000);
+  }
+
+  async function quizApiRequest(path, body) {
+    let response;
+    try {
+      response = await fetch(`${QUIZ_BACKEND_URL}${path}`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      throw new Error(`Impossible de joindre le serveur de quiz (${QUIZ_BACKEND_URL}). Vérifiez que le service Quiz Backend est actif sur Render et que son Root Directory est « Site C.A/Quiz Backend ».`);
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Le serveur ${QUIZ_BACKEND_URL} ne trouve pas l’API du quiz (404). Sur Render, réglez le Root Directory du service sur « Site C.A/Quiz Backend », la commande de démarrage sur « npm start », puis redéployez ce service.`);
+      }
+      throw new Error(data.message || `Le serveur du quiz a répondu avec l’erreur HTTP ${response.status}.`);
+    }
+    if (!data.success) throw new Error(data.message || 'Le serveur du quiz n’a pas pu traiter la demande.');
+    return data;
+  }
+
+  function renderQuestion(question) {
+    stopQuestionTimer();
+    state.question = question;
+    state.index = question.index;
+    state.total = question.total;
     state.selected = false;
-    $('questionCounter').textContent = `Question ${state.index + 1} / ${state.questions.length}`;
+    state.pendingAnswer = undefined;
+    $('questionCounter').textContent = `Question ${String(state.index + 1).padStart(2, '0')} / ${String(state.total).padStart(2, '0')}`;
     $('scoreLabel').textContent = `Score : ${state.score}`;
     $('categoryLabel').textContent = question.category || 'Compétences numériques';
     $('questionText').textContent = question.question;
-    $('progressBar').style.width = `${((state.index + 1) / state.questions.length) * 100}%`;
+    $('progressBar').style.width = `${((state.index + 1) / state.total) * 100}%`;
     $('nextButton').disabled = true;
+    $('nextButton').textContent = state.index === state.total - 1 ? 'Voir les résultats' : 'Question suivante';
     $('feedback').textContent = '';
     $('feedback').style.color = '';
 
@@ -59,40 +97,97 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'option-button';
-      button.textContent = option.text;
-      button.addEventListener('click', () => selectOption(option, index));
+      button.textContent = option;
+      button.addEventListener('click', () => selectOption(index));
       list.appendChild(button);
     });
+    startQuestionTimer();
   }
 
-  function selectOption(option, index) {
+  function selectOption(index) {
     if (state.selected) return;
-    state.selected = true;
-    const question = state.questions[state.index];
-    const buttons = [...$('optionsList').children];
-    buttons.forEach((button, buttonIndex) => {
-      button.disabled = true;
-      if (buttonIndex === index) button.classList.add(option.correct ? 'correct' : 'incorrect', 'selected');
-      if (!option.correct && question.options[buttonIndex].correct) button.classList.add('correct');
-    });
+    submitAnswer(index);
+  }
 
-    state.answers.push({ question: question.question, chosen: option.text, correct: option.correct });
-    if (option.correct) {
-      state.score += 1;
-      $('feedback').textContent = 'Bonne réponse !';
-      $('feedback').style.color = 'var(--academy-blue)';
-    } else {
-      $('feedback').textContent = `Réponse incorrecte. ${question.explanation || ''}`;
+  async function submitAnswer(selectedOption) {
+    if (state.selected && state.pendingAnswer === undefined) return;
+    state.selected = true;
+    state.pendingAnswer = selectedOption;
+    stopQuestionTimer();
+    const buttons = [...$('optionsList').children];
+    buttons.forEach((button) => { button.disabled = true; });
+    $('nextButton').disabled = true;
+    $('feedback').textContent = 'Enregistrement de votre réponse…';
+
+    try {
+      const result = await quizApiRequest('/api/quiz/answer', {
+        quizId: state.quizId,
+        questionIndex: state.index,
+        selectedOption
+      });
+      const correct = result.correct;
+      state.answers.push({
+        question: state.question.question,
+        chosen: result.chosen,
+        correct,
+        timedOut: result.timedOut
+      });
+      state.score = result.score;
+      buttons.forEach((button, buttonIndex) => {
+        if (buttonIndex === selectedOption) button.classList.add(correct ? 'correct' : 'incorrect', 'selected');
+        if (buttonIndex === state.question.options.indexOf(result.correctOption)) button.classList.add('correct');
+      });
+      $('feedback').textContent = result.timedOut
+        ? `Temps écoulé. La bonne réponse est : ${result.correctOption}. ${result.explanation || ''}`
+        : correct
+          ? `Bonne réponse ! ${result.explanation || ''}`
+          : `Réponse incorrecte. La bonne réponse est : ${result.correctOption}. ${result.explanation || ''}`;
+      $('feedback').style.color = correct ? 'var(--academy-blue)' : 'var(--academy-orange)';
+      $('scoreLabel').textContent = `Score : ${state.score}`;
+      state.pendingAnswer = undefined;
+      $('nextButton').disabled = false;
+    } catch (error) {
+      console.error('Quiz answer could not be saved:', error);
+      $('feedback').textContent = `${error.message} Réessayez.`;
       $('feedback').style.color = 'var(--academy-orange)';
+      $('nextButton').textContent = 'Réessayer';
+      $('nextButton').disabled = false;
     }
-    $('scoreLabel').textContent = `Score : ${state.score}`;
-    $('nextButton').disabled = false;
+  }
+
+  async function continueQuiz() {
+    if (state.pendingAnswer !== undefined) {
+      await submitAnswer(state.pendingAnswer);
+      return;
+    }
+    if (state.index === state.total - 1) {
+      finish();
+      return;
+    }
+    $('nextButton').disabled = true;
+    try {
+      const result = await quizApiRequest('/api/quiz/next', { quizId: state.quizId });
+      state.score = result.score;
+      renderQuestion(result.question);
+    } catch (error) {
+      console.error('Next quiz question could not be loaded:', error);
+      $('errorMessage').textContent = error.message;
+      $('errorMessage').hidden = false;
+      $('nextButton').disabled = false;
+    }
+  }
+
+  async function expireQuestion() {
+    if (state.selected) return;
+    await submitAnswer(null);
   }
 
   function finish() {
-    const percent = Math.round((state.score / state.questions.length) * 100);
-    $('resultTitle').textContent = percent >= 70 ? 'Excellent travail !' : 'Continuez vos efforts !';
-    $('resultScore').textContent = `${state.score} / ${state.questions.length} — ${percent}%`;
+    stopQuestionTimer();
+    const percent = Math.round((state.score / state.total) * 100);
+    const passed = percent >= PASSING_PERCENTAGE;
+    $('resultTitle').textContent = passed ? 'Quiz réussi !' : 'Quiz non réussi — réessayez';
+    $('resultScore').textContent = `${state.score} / ${state.total} — ${percent}% — ${passed ? 'Réussi' : 'À reprendre'}`;
     const details = $('resultDetails');
     details.replaceChildren();
     state.answers.forEach((answer, index) => {
@@ -116,11 +211,15 @@
     $('errorMessage').hidden = true;
     $('startButton').disabled = true;
     try {
-      await loadQuestions();
-      state.index = 0; state.score = 0; state.answers = [];
+      const result = await quizApiRequest('/api/quiz/start', { formation: $('formationSelect').value });
+      state.quizId = result.quizId;
+      state.score = 0;
+      state.answers = [];
       showScreen($('quizScreen'));
-      renderQuestion();
+      $('errorMessage').hidden = true;
+      renderQuestion(result.question);
     } catch (error) {
+      console.error('Quiz could not start:', error);
       $('errorMessage').textContent = error.message;
       $('errorMessage').hidden = false;
     } finally {
@@ -128,11 +227,13 @@
     }
   });
 
-  $('nextButton').addEventListener('click', () => {
-    if (state.index === state.questions.length - 1) finish();
-    else { state.index += 1; renderQuestion(); }
+  $('nextButton').addEventListener('click', continueQuiz);
+  $('restartButton').addEventListener('click', () => {
+    stopQuestionTimer();
+    state.quizId = '';
+    state.question = null;
+    showScreen($('startScreen'));
   });
-  $('restartButton').addEventListener('click', () => showScreen($('startScreen')));
   $('themeToggle').addEventListener('click', () => {
     setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   });
@@ -160,7 +261,7 @@
     pdf.save('resultat-quiz-competence-academy.pdf');
   });
 
-  setTheme(localStorage.getItem('competence_academy_quiz_theme') || 'light');
+  setTheme(localStorage.getItem('competence_academy_quiz_theme') || 'dark');
   if (['informatique', 'infographie', 'photographie', 'videographie', 'montage', 'quickbooks', 'surveillance'].includes(requestedFormation)) {
     $('formationSelect').value = requestedFormation;
   }
