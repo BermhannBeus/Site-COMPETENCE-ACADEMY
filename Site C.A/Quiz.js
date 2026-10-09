@@ -4,6 +4,9 @@
   const QUIZ_BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5100'
     : 'https://site-competence-academy-quiz.onrender.com';
+  const ACCOUNT_API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : 'https://site-competence-academy-backend.onrender.com/api';
   const PASSING_PERCENTAGE = 75;
   const QUESTION_SECONDS = 25;
   const state = {
@@ -17,6 +20,16 @@
     pendingAnswer: undefined,
     timerId: null,
     remainingSeconds: QUESTION_SECONDS
+  };
+  let certificateNameEdited = false;
+  const formationNames = {
+    informatique: 'Informatique Bureautique',
+    infographie: 'Infographie créative',
+    photographie: 'Photographie',
+    videographie: 'Vidéographie',
+    montage: 'Montage Vidéo',
+    quickbooks: 'QuickBooks',
+    surveillance: 'Surveillance'
   };
   const $ = (id) => document.getElementById(id);
   const screens = [$('startScreen'), $('quizScreen'), $('resultScreen')];
@@ -128,6 +141,7 @@
       const correct = result.correct;
       state.answers.push({
         question: state.question.question,
+        category: result.category || state.question.category || '',
         chosen: result.chosen,
         correct,
         timedOut: result.timedOut
@@ -185,17 +199,84 @@
   function finish() {
     stopQuestionTimer();
     const percent = Math.round((state.score / state.total) * 100);
+    const average = (state.score / state.total) * 10;
     const passed = percent >= PASSING_PERCENTAGE;
-    $('resultTitle').textContent = passed ? 'Quiz réussi !' : 'Quiz non réussi — réessayez';
-    $('resultScore').textContent = `${state.score} / ${state.total} — ${percent}% — ${passed ? 'Réussi' : 'À reprendre'}`;
-    const details = $('resultDetails');
-    details.replaceChildren();
-    state.answers.forEach((answer, index) => {
-      const item = document.createElement('div');
-      item.textContent = `${index + 1}. ${answer.correct ? '✓ Correct' : '✗ Incorrect'} — ${answer.question}`;
-      details.appendChild(item);
+    $('certificateStudentName').textContent = $('certificateNameInput').value.trim() || 'Étudiant';
+    $('certificateFormation').textContent = formationNames[$('formationSelect').value] || $('formationSelect').value;
+    $('certificateStatus').textContent = `STATUT : ${passed ? 'VALIDÉ' : 'NON VALIDÉ'}`;
+    $('certificateStatus').classList.toggle('is-validated', passed);
+    $('certificateProgressBar').style.width = `${(state.answers.length / state.total) * 100}%`;
+    $('certificateProgressText').textContent = `${Math.round((state.answers.length / state.total) * 100)}% Complété`;
+    $('certificateAverage').textContent = average.toFixed(2);
+    $('certificateMention').textContent = `Mention : ${average >= 8 ? 'Excellent' : average >= 7.5 ? 'Très bien' : average >= 7 ? 'Bien' : 'À renforcer'}`;
+    const modules = new Map();
+    state.answers.forEach((answer) => {
+      const moduleName = answer.category.trim() || 'Module général';
+      const module = modules.get(moduleName) || { correct: 0, total: 0 };
+      module.total += 1;
+      if (answer.correct) module.correct += 1;
+      modules.set(moduleName, module);
     });
+    const moduleRows = $('certificateModules');
+    moduleRows.replaceChildren();
+    [...modules.entries()].sort(([first], [second]) => first.localeCompare(second, 'fr')).forEach(([name, module]) => {
+      const grade = (module.correct / module.total) * 10;
+      const row = document.createElement('tr');
+      const title = document.createElement('td');
+      title.textContent = name;
+      const scoreCell = document.createElement('td');
+      scoreCell.textContent = `${grade.toFixed(1)}/10`;
+      scoreCell.className = 'certificate-module-score';
+      const status = document.createElement('td');
+      status.textContent = grade >= 7 ? 'Validé' : 'À renforcer';
+      status.className = grade >= 7 ? 'certificate-module-passed' : 'certificate-module-needs-work';
+      row.append(title, scoreCell, status);
+      moduleRows.appendChild(row);
+    });
+    $('certificateNameError').hidden = true;
     showScreen($('resultScreen'));
+  }
+
+  function applyStudentProfile(user) {
+    if (!user || typeof user !== 'object') return;
+    const displayName = (user.nameOnCertificate || user.name || '').trim();
+    if (displayName && !certificateNameEdited) {
+      $('certificateNameInput').value = displayName;
+      $('certificateStudentName').textContent = displayName;
+      $('certificateNameHint').textContent = 'Nom de votre compte — modifiable avant le téléchargement.';
+    }
+    const registeredCourse = user.registeredCourse === 'bureautique' ? 'informatique'
+      : user.registeredCourse === 'design' ? 'infographie'
+        : user.registeredCourse;
+    if (!requestedFormation && formationNames[registeredCourse]) {
+      $('formationSelect').value = registeredCourse;
+    }
+  }
+
+  async function loadStudentProfile() {
+    try {
+      const cachedProfile = localStorage.getItem('competence_academy_user');
+      if (cachedProfile) applyStudentProfile(JSON.parse(cachedProfile));
+    } catch (error) {
+      console.error('Could not load the saved student profile:', error);
+    }
+    try {
+      const response = await fetch(`${ACCOUNT_API_URL}/me`, { credentials: 'include' });
+      if (!response.ok) {
+        if (response.status !== 401) throw new Error(`Le profil étudiant a répondu avec l’erreur HTTP ${response.status}.`);
+        return;
+      }
+      const data = await response.json();
+      if (!data.success || !data.user) throw new Error('Le serveur n’a pas retourné le profil étudiant.');
+      applyStudentProfile(data.user);
+      try {
+        localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+      } catch (error) {
+        console.error('Could not save the refreshed student profile:', error);
+      }
+    } catch (error) {
+      console.error('Could not refresh the student profile for the quiz bulletin:', error);
+    }
   }
 
   function setTheme(theme) {
@@ -238,29 +319,53 @@
     setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   });
   $('downloadButton').addEventListener('click', () => {
-    const JsPDF = window.jspdf && window.jspdf.jsPDF;
-    if (!JsPDF) {
-      $('errorMessage').textContent = 'Le téléchargement PDF est temporairement indisponible.';
+    const studentName = $('certificateNameInput').value.trim();
+    if (!studentName) {
+      $('certificateNameError').hidden = false;
+      $('certificateNameInput').focus();
+      return;
+    }
+    if (typeof window.html2pdf !== 'function') {
+      $('errorMessage').textContent = 'Le générateur du bulletin PDF est indisponible. Vérifiez votre connexion et réessayez.';
       $('errorMessage').hidden = false;
       return;
     }
-    const pdf = new JsPDF();
-    let y = 20;
-    pdf.setFontSize(18);
-    pdf.text('Competence Academy - Résultat du quiz', 20, y);
-    y += 14;
-    pdf.setFontSize(13);
-    pdf.text($('resultScore').textContent, 20, y);
-    y += 14;
-    state.answers.forEach((answer, index) => {
-      const lines = pdf.splitTextToSize(`${index + 1}. ${answer.correct ? 'Correct' : 'Incorrect'} - ${answer.question}`, 170);
-      if (y + lines.length * 7 > 280) { pdf.addPage(); y = 20; }
-      pdf.text(lines, 20, y);
-      y += lines.length * 7 + 3;
-    });
-    pdf.save('resultat-quiz-competence-academy.pdf');
+    $('certificateStudentName').textContent = studentName;
+    $('certificateNameError').hidden = true;
+    $('downloadButton').disabled = true;
+    try {
+      const pdfGeneration = window.html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: `Bulletin_${studentName.replace(/[^\p{L}\p{N}]+/gu, '_')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, scrollX: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css'] }
+        })
+        .from($('certificateReport'))
+        .save();
+      Promise.resolve(pdfGeneration)
+        .catch((error) => {
+          console.error('Quiz bulletin PDF generation failed:', error);
+          $('errorMessage').textContent = 'Le bulletin PDF n’a pas pu être généré. Réessayez ou utilisez la fonction Imprimer du navigateur.';
+          $('errorMessage').hidden = false;
+        })
+        .finally(() => { $('downloadButton').disabled = false; });
+    } catch (error) {
+      console.error('Quiz bulletin PDF generation failed:', error);
+      $('errorMessage').textContent = 'Le bulletin PDF n’a pas pu être généré. Réessayez ou utilisez la fonction Imprimer du navigateur.';
+      $('errorMessage').hidden = false;
+      $('downloadButton').disabled = false;
+    }
   });
 
+  $('certificateNameInput').addEventListener('input', () => {
+    certificateNameEdited = true;
+    $('certificateStudentName').textContent = $('certificateNameInput').value.trim() || 'Étudiant';
+    $('certificateNameError').hidden = true;
+  });
+  loadStudentProfile();
   setTheme(localStorage.getItem('competence_academy_quiz_theme') || 'dark');
   if (['informatique', 'infographie', 'photographie', 'videographie', 'montage', 'quickbooks', 'surveillance'].includes(requestedFormation)) {
     $('formationSelect').value = requestedFormation;
