@@ -59,12 +59,66 @@
     </section>
 
     <section id="resultScreen" class="screen card" hidden>
-      <p class="eyebrow">Résultat final</p>
-      <h2 id="resultTitle"></h2>
-      <p id="resultScore" class="result-score"></p>
-      <div id="resultDetails" class="result-details"></div>
+      <div id="certificateNameEditor" class="certificate-name-editor">
+        <label for="certificateNameInput">Nom de l’étudiant sur le bulletin</label>
+        <div class="certificate-name-edit-row">
+          <input id="certificateNameInput" type="text" maxlength="100" autocomplete="name" placeholder="Votre nom et prénom" aria-describedby="certificateNameError">
+          <span id="certificateNameHint">Prérempli avec votre nom de compte.</span>
+        </div>
+        <p id="certificateNameError" class="certificate-name-error" role="alert" hidden>Entrez votre nom pour préparer le bulletin.</p>
+      </div>
+      <article id="certificateReport" class="certificate-report" aria-label="Bulletin de résultats du quiz">
+        <header class="certificate-letterhead">
+          <img class="certificate-logo" src="Logo copie.webp" alt="Logo Competence Academy">
+          <div class="certificate-institution">
+            <h2>COMPETENCE ACADEMY</h2>
+            <p>Arcahaie, Bas-Cortade, Ouest / Haïti <span>•</span> (509) 4883-6113 / 4914-1084</p>
+            <p>competenceacademy34@gmail.com</p>
+          </div>
+        </header>
+        <div class="certificate-divider" aria-hidden="true"></div>
+        <div class="certificate-student">
+          <div class="certificate-avatar" aria-hidden="true"><i class="fa fa-user"></i></div>
+          <div class="certificate-student-info">
+            <h3 id="certificateStudentName">Étudiant</h3>
+            <p>Filière : <span id="certificateFormation">Photographie</span></p>
+          </div>
+          <span id="certificateStatus" class="certificate-status"></span>
+        </div>
+        <section class="certificate-summary" aria-label="Résumé des résultats">
+          <div class="certificate-summary-card">
+            <h4>PROGRESSION GLOBALE</h4>
+            <div class="certificate-progress"><span id="certificateProgressBar"></span></div>
+            <strong id="certificateProgressText">100% Complété</strong>
+          </div>
+          <div class="certificate-summary-card certificate-average-card">
+            <h4>MOYENNE GÉNÉRALE</h4>
+            <div class="certificate-average"><strong id="certificateAverage">0.0</strong><span>/10</span></div>
+            <strong id="certificateMention" class="certificate-mention"></strong>
+          </div>
+        </section>
+        <section class="certificate-modules">
+          <h4>Détails des Modules</h4>
+          <table>
+            <thead>
+              <tr><th>MODULE</th><th>NOTE</th><th>ÉVOLUTION / STATUT</th></tr>
+            </thead>
+            <tbody id="certificateModules"></tbody>
+          </table>
+        </section>
+        <footer class="certificate-footer">
+          <p class="certificate-legal">Ce bulletin présente uniquement les résultats de ce quiz. Il ne constitue pas un diplôme ni un certificat de fin de formation. La validation d’une formation dépend des exigences pédagogiques et administratives de Competence Academy.</p>
+          <div class="certificate-signature">
+            <div>
+              <strong>LA DIRECTION COMPETENCE ACADEMY</strong>
+              <span class="signature-line"></span>
+            </div>
+            <div class="certificate-stamp" aria-label="Emplacement du cachet officiel">CA STAMP</div>
+          </div>
+        </footer>
+      </article>
       <div class="result-actions">
-        <button id="downloadButton" class="secondary-button" type="button">Télécharger le résultat PDF</button>
+        <button id="downloadButton" class="secondary-button" type="button">Télécharger le bulletin PDF</button>
         <button id="restartButton" class="primary-button" type="button">Recommencer</button>
       </div>
     </section>
@@ -76,7 +130,7 @@
     </a>
   </main>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
   <script src="Quiz.js" defer></script>
 </body>
 </html>
