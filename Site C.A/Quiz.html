@@ -23,7 +23,7 @@
     <section id="startScreen" class="screen card">
       <p class="eyebrow">Évaluation interactive</p>
       <h1>Quiz de compétences numériques</h1>
-      <p>Répondez aux questions et découvrez votre résultat à la fin.</p>
+      <p>Répondez à 12 questions tirées au hasard de la banque. Chaque réponse doit être donnée en 25 secondes. Il faut obtenir au moins 75 % pour réussir.</p>
       <label class="formation-label" for="formationSelect">Choisissez votre formation</label>
       <select id="formationSelect" class="formation-select">
         <option value="informatique">Informatique bureautique</option>
@@ -39,12 +39,18 @@
 
     <section id="quizScreen" class="screen card" hidden>
       <div class="quiz-progress">
-        <span id="questionCounter">Question 1</span>
+        <span id="questionCounter">Question 01 / 12</span>
         <span id="scoreLabel">Score : 0</span>
       </div>
       <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
-      <p id="categoryLabel" class="eyebrow"></p>
-      <h2 id="questionText"></h2>
+      <div class="question-timer" id="questionTimer" role="timer" aria-live="off" aria-label="25 secondes restantes">
+        <span id="timerValue">25</span>
+      </div>
+      <div class="question-panel">
+        <img class="question-brand-logo" src="Logo.png" alt="Competence Academy">
+        <p id="categoryLabel" class="eyebrow"></p>
+        <h2 id="questionText"></h2>
+      </div>
       <div id="optionsList" class="options-grid" role="radiogroup" aria-label="Choix de réponse"></div>
       <div class="quiz-actions">
         <button id="nextButton" class="primary-button" type="button" disabled>Question suivante</button>
