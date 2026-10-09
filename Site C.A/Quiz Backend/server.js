@@ -73,6 +73,7 @@ const quizSessionSchema = new mongoose.Schema({
   answers: {
     type: [{
       question: { type: String, required: true },
+      category: { type: String, default: '' },
       chosen: { type: String, default: '' },
       correct: { type: Boolean, required: true },
       timedOut: { type: Boolean, default: false }
@@ -194,6 +195,7 @@ app.post('/api/quiz/answer', async (req, res) => {
       const correct = chosenIndex !== null && chosenIndex === question.correctAnswer;
       session.answers[session.questionIndex] = {
         question: question.question,
+        category: question.category || '',
         chosen: chosenIndex === null ? '' : question.options[chosenIndex],
         correct,
         timedOut
@@ -206,6 +208,7 @@ app.post('/api/quiz/answer', async (req, res) => {
       success: true,
       correct: answer.correct,
       timedOut: answer.timedOut,
+      category: answer.category || question.category || '',
       chosen: answer.chosen,
       correctOption: question.options[question.correctAnswer],
       explanation: question.explanation,
