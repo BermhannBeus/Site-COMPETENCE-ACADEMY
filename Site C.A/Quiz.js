@@ -3,7 +3,7 @@
 
   const QUIZ_BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5100'
-    : 'https://site-competence-academy-quiz.onrender.com';
+    : 'https://competence-academy-quiz.onrender.com';
   const ACCOUNT_API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000/api'
     : 'https://site-competence-academy-backend.onrender.com/api';
