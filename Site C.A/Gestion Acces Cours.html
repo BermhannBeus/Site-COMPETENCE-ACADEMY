@@ -81,6 +81,26 @@
         .info-box { margin-top: 13px; padding: 15px; border-left: 4px solid var(--academy-orange); border-radius: 7px; background: #fff7ed; }
         .info-box p { margin: 0 0 9px; }
         .info-box p:last-child { margin-bottom: 0; }
+        .quiz-admin-help { margin: 0 0 16px; color: var(--muted); line-height: 1.6; }
+        .quiz-admin-help code { color: var(--academy-blue); font-weight: 700; }
+        .quiz-bank-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+        .quiz-bank-status { margin: 12px 0 0; color: var(--muted); font-weight: 700; }
+        .quiz-bank-status.is-ready { color: #15803d; }
+        .quiz-bank-status.is-error { color: #991b1b; }
+        .quiz-question-form { margin-top: 20px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
+        .quiz-answer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .quiz-correct-answer { border-color: #86efac; background: #f0fdf4; }
+        .quiz-question-list { display: grid; gap: 12px; margin-top: 18px; }
+        .quiz-question-card { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+        .quiz-question-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .quiz-question-title { margin: 0; color: var(--academy-blue); font-weight: 800; overflow-wrap: anywhere; }
+        .quiz-question-category { flex: 0 0 auto; padding: 4px 8px; border-radius: 999px; background: #eff6ff; color: #1e40af; font-size: .78rem; }
+        .quiz-answer-list { display: grid; gap: 6px; margin: 12px 0; padding: 0; list-style: none; }
+        .quiz-answer-list li { padding: 8px 10px; border-radius: 6px; background: #f1f5f9; color: #475569; overflow-wrap: anywhere; }
+        .quiz-answer-list li.is-correct { background: #dcfce7; color: #166534; font-weight: 700; }
+        .quiz-question-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .quiz-question-actions button { min-height: 38px; padding: 8px 12px; font-size: .9rem; }
+        .quiz-empty { margin: 18px 0 0; padding: 18px; border: 1px dashed #cbd5e1; border-radius: 9px; color: var(--muted); text-align: center; }
         footer { margin: 24px 0 0; color: var(--muted); text-align: center; font-size: .9rem; }
         @media (max-width: 620px) {
             .topbar { min-height: 104px; gap: 12px; padding: 0 14px; }
@@ -90,8 +110,12 @@
             .brand-caption { max-width: 220px; font-size: .78rem; }
             main { width: min(100% - 20px, 980px); margin: 25px auto 36px; }
             .field-grid { grid-template-columns: 1fr; }
+            .quiz-bank-controls { grid-template-columns: 1fr; }
+            .quiz-bank-controls button { width: 100%; }
+            .quiz-answer-grid { grid-template-columns: 1fr; }
             .intro, .panel { padding: 18px; }
             .access-row { align-items: flex-start; }
+            .quiz-question-heading { flex-direction: column; }
         }
         @media (max-width: 380px) {
             .topbar { min-height: 126px; gap: 0; flex-direction: column; justify-content: center; padding: 4px 12px; text-align: center; }
@@ -115,7 +139,7 @@
     <main>
         <section class="intro">
             <h1>Gestion des accès et des codes des formations</h1>
-            <p>Cette page d’administration sert à rechercher un compte étudiant, vérifier ses accès, créer ou renouveler le code d’une formation et retirer un accès.</p>
+            <p>Cette page d’administration sert à gérer les accès des étudiants et à ajouter, modifier ou supprimer les questions du quiz par formation.</p>
             <div class="info-box">
                 <p>Les vidéos se configurent directement dans <code>Cours en Ligne.html</code>. Placez les MP4 dans un dossier public du site, puis ajoutez leur titre et leur chemin dans la liste « Vidéos de formation » correspondante. Pour les étapes suivantes, utilisez un identifiant ordonné, par exemple <code>bureautique-2</code>, puis <code>bureautique-3</code>.</p>
                 <p><strong>Important :</strong> un MP4 placé dans un dossier public peut être ouvert ou téléchargé par toute personne qui connaît son adresse. Les options du lecteur peuvent masquer le bouton de téléchargement, mais ne protègent pas réellement le fichier.</p>
@@ -179,7 +203,76 @@
             </div>
         </section>
 
-        <footer>Competence Academy — Administration réservée à la gestion des accès aux formations.</footer>
+        <section class="panel" aria-labelledby="quizBankTitle">
+            <div class="section-heading"><i class="fa-solid fa-list-check" aria-hidden="true"></i><h2 id="quizBankTitle">Banque de questions du quiz</h2></div>
+            <p class="quiz-admin-help">Choisissez une filière, puis ajoutez ou gérez ses questions directement ici. La banque accepte jusqu’à 80 questions par formation. Configurez <code>QUIZ_ADMIN_API_KEY</code> dans les variables d’environnement Render du Quiz Backend.</p>
+            <div>
+                <label for="quizAdminKey">Clé d’administration du Quiz Backend (QUIZ_ADMIN_API_KEY)</label>
+                <div class="password-field">
+                    <input id="quizAdminKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
+                    <button id="toggleQuizAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé du Quiz Backend" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="quiz-bank-controls" style="margin-top: 16px;">
+                <div>
+                    <label for="quizFormation">Formation à administrer</label>
+                    <select id="quizFormation">
+                        <option value="informatique">Informatique Bureautique</option>
+                        <option value="photographie">Photographie</option>
+                        <option value="infographie">Design Graphique</option>
+                        <option value="videographie">Vidéographie</option>
+                        <option value="montage">Montage Vidéo</option>
+                        <option value="quickbooks">QuickBooks</option>
+                        <option value="surveillance">Surveillance</option>
+                    </select>
+                </div>
+                <button id="quizBankStatusButton" class="secondary" type="button"><i class="fa-solid fa-rotate"></i> Vérifier la banque</button>
+            </div>
+            <p id="quizBankStatus" class="quiz-bank-status" role="status">Saisissez la clé du Quiz Backend pour consulter le nombre de questions enregistrées.</p>
+            <form id="quizQuestionForm" class="quiz-question-form">
+                <h3 id="quizQuestionFormTitle">Ajouter une question</h3>
+                <div>
+                    <label for="quizQuestionText">Texte de la question</label>
+                    <textarea id="quizQuestionText" rows="3" maxlength="500" required style="width:100%;padding:11px 12px;border:1px solid #bcc9d9;border-radius:8px;font:inherit;resize:vertical;"></textarea>
+                </div>
+                <div class="quiz-answer-grid" style="margin-top:14px;">
+                    <div>
+                        <label for="quizCorrectAnswer">Bonne réponse</label>
+                        <input id="quizCorrectAnswer" class="quiz-correct-answer" type="text" maxlength="300" required>
+                    </div>
+                    <div>
+                        <label for="quizWrongAnswer1">Mauvaise réponse 1</label>
+                        <input id="quizWrongAnswer1" type="text" maxlength="300" required>
+                    </div>
+                    <div>
+                        <label for="quizWrongAnswer2">Mauvaise réponse 2</label>
+                        <input id="quizWrongAnswer2" type="text" maxlength="300" required>
+                    </div>
+                    <div>
+                        <label for="quizWrongAnswer3">Mauvaise réponse 3</label>
+                        <input id="quizWrongAnswer3" type="text" maxlength="300" required>
+                    </div>
+                </div>
+                <div class="field-grid" style="margin-top:14px;">
+                    <div>
+                        <label for="quizQuestionCategory">Module (facultatif)</label>
+                        <input id="quizQuestionCategory" type="text" maxlength="100" placeholder="Ex. : Introduction à la photographie">
+                    </div>
+                    <div>
+                        <label for="quizQuestionExplanation">Explication (facultatif)</label>
+                        <input id="quizQuestionExplanation" type="text" maxlength="500">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="quizQuestionSaveButton" class="primary" type="submit"><i class="fa-solid fa-plus"></i> Ajouter la question</button>
+                    <button id="quizQuestionCancelButton" class="secondary" type="button" hidden>Annuler la modification</button>
+                </div>
+            </form>
+            <div id="quizBankNotice" class="notice quiz-bank-notice" role="status" hidden></div>
+            <div id="quizQuestionList" class="quiz-question-list" aria-live="polite"></div>
+        </section>
+
+        <footer>Competence Academy — Administration réservée à la gestion des formations et de leurs quiz.</footer>
     </main>
 
     <script>
@@ -193,7 +286,17 @@
         const accessList = document.getElementById('accessList');
         const issuedCode = document.getElementById('issuedCode');
         const issuedCodeValue = document.getElementById('issuedCodeValue');
+        const quizAdminKeyInput = document.getElementById('quizAdminKey');
+        const quizFormationInput = document.getElementById('quizFormation');
+        const quizBankStatus = document.getElementById('quizBankStatus');
+        const quizBankNotice = document.getElementById('quizBankNotice');
+        const quizQuestionForm = document.getElementById('quizQuestionForm');
+        const quizQuestionList = document.getElementById('quizQuestionList');
+        const quizQuestionSaveButton = document.getElementById('quizQuestionSaveButton');
+        const QUIZ_API_BASE_URL = 'https://competence-academy-quiz.onrender.com';
         let busy = false;
+        let editingQuizQuestionId = '';
+        let quizBankCount = 0;
 
         function showNotice(element, message, isError) {
             element.textContent = message;
@@ -233,11 +336,195 @@
             return data;
         }
 
+        async function quizAdminRequest(path, options) {
+            const key = quizAdminKeyInput.value.trim();
+            if (!key) throw new Error('Saisissez la clé QUIZ_ADMIN_API_KEY configurée dans le Quiz Backend sur Render.');
+            const response = await fetch(`${QUIZ_API_BASE_URL}${path}`, {
+                ...options,
+                cache: 'no-store',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-quiz-admin-key': encodeAdminKeyHeader(key),
+                    ...(options && options.headers)
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) throw new Error('La clé ne correspond pas à QUIZ_ADMIN_API_KEY sur le Quiz Backend Render.');
+            if (!response.ok || !data.success) {
+                const details = Array.isArray(data.errors) ? `\n${data.errors.join('\n')}` : '';
+                throw new Error(`${data.message || `Erreur HTTP ${response.status}.`}${details}`);
+            }
+            return data;
+        }
+
+        async function refreshQuizBankStatus() {
+            if (busy) return;
+            await loadQuizQuestions();
+        }
+
+        async function loadQuizQuestions() {
+            quizBankStatus.textContent = 'Chargement des questions…';
+            quizBankStatus.classList.remove('is-ready', 'is-error');
+            quizQuestionList.replaceChildren();
+            try {
+                const data = await quizAdminRequest(`/api/admin/questions?formation=${encodeURIComponent(quizFormationInput.value)}`, { method: 'GET' });
+                const formationName = quizFormationInput.options[quizFormationInput.selectedIndex].textContent;
+                quizBankCount = data.count;
+                quizQuestionSaveButton.disabled = quizBankCount >= data.required && !editingQuizQuestionId;
+                quizBankStatus.textContent = `${formationName} : ${data.count} / ${data.required} questions enregistrées${data.count === data.required ? ' — banque complète' : data.count < data.required ? ` — ${data.required - data.count} à ajouter` : ' — limite dépassée'}.`;
+                quizBankStatus.classList.toggle('is-ready', data.count === data.required);
+                if (!data.questions.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'quiz-empty';
+                    empty.textContent = 'Aucune question n’est encore enregistrée pour cette formation.';
+                    quizQuestionList.appendChild(empty);
+                    return;
+                }
+                data.questions.forEach((question, index) => renderQuizQuestion(question, index));
+            } catch (error) {
+                quizBankStatus.textContent = error.message;
+                quizBankStatus.classList.add('is-error');
+                const empty = document.createElement('p');
+                empty.className = 'quiz-empty';
+                empty.textContent = 'Connectez-vous avec la clé du Quiz Backend pour afficher les questions.';
+                quizQuestionList.appendChild(empty);
+            }
+        }
+
+        function renderQuizQuestion(question, index) {
+            const card = document.createElement('article');
+            card.className = 'quiz-question-card';
+            const heading = document.createElement('div');
+            heading.className = 'quiz-question-heading';
+            const title = document.createElement('h3');
+            title.className = 'quiz-question-title';
+            title.textContent = `${index + 1}. ${question.question}`;
+            heading.appendChild(title);
+            if (question.category) {
+                const category = document.createElement('span');
+                category.className = 'quiz-question-category';
+                category.textContent = question.category;
+                heading.appendChild(category);
+            }
+
+            const answers = document.createElement('ul');
+            answers.className = 'quiz-answer-list';
+            question.options.forEach((answer, answerIndex) => {
+                const item = document.createElement('li');
+                item.textContent = `${String.fromCharCode(65 + answerIndex)}. ${answer}${answerIndex === question.correctAnswer ? ' — Bonne réponse' : ''}`;
+                if (answerIndex === question.correctAnswer) item.classList.add('is-correct');
+                answers.appendChild(item);
+            });
+            if (question.explanation) {
+                const explanation = document.createElement('p');
+                explanation.className = 'muted';
+                explanation.textContent = `Explication : ${question.explanation}`;
+                card.append(heading, answers, explanation);
+            } else {
+                card.append(heading, answers);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'quiz-question-actions';
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'secondary';
+            editButton.innerHTML = '<i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Modifier';
+            editButton.addEventListener('click', () => beginEditQuizQuestion(question));
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'danger';
+            deleteButton.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i> Supprimer';
+            deleteButton.addEventListener('click', () => deleteQuizQuestion(question));
+            actions.append(editButton, deleteButton);
+            card.appendChild(actions);
+            quizQuestionList.appendChild(card);
+        }
+
+        function beginEditQuizQuestion(question) {
+            editingQuizQuestionId = question._id;
+            quizQuestionSaveButton.disabled = false;
+            document.getElementById('quizQuestionFormTitle').textContent = 'Modifier une question';
+            document.getElementById('quizQuestionText').value = question.question;
+            document.getElementById('quizCorrectAnswer').value = question.options[question.correctAnswer] || '';
+            const wrongAnswers = question.options.filter((answer, index) => index !== question.correctAnswer);
+            ['quizWrongAnswer1', 'quizWrongAnswer2', 'quizWrongAnswer3'].forEach((id, index) => {
+                document.getElementById(id).value = wrongAnswers[index] || '';
+            });
+            document.getElementById('quizQuestionCategory').value = question.category || '';
+            document.getElementById('quizQuestionExplanation').value = question.explanation || '';
+            quizQuestionSaveButton.innerHTML = '<i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer les modifications';
+            document.getElementById('quizQuestionCancelButton').hidden = false;
+            quizQuestionForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('quizQuestionText').focus();
+        }
+
+        function resetQuizQuestionForm() {
+            editingQuizQuestionId = '';
+            quizQuestionForm.reset();
+            quizQuestionSaveButton.disabled = quizBankCount >= 80;
+            document.getElementById('quizQuestionFormTitle').textContent = 'Ajouter une question';
+            quizQuestionSaveButton.innerHTML = '<i class="fa-solid fa-plus" aria-hidden="true"></i> Ajouter la question';
+            document.getElementById('quizQuestionCancelButton').hidden = true;
+        }
+
+        async function saveQuizQuestion(event) {
+            event.preventDefault();
+            if (busy) return;
+            const payload = {
+                formation: quizFormationInput.value,
+                question: document.getElementById('quizQuestionText').value.trim(),
+                correctAnswer: document.getElementById('quizCorrectAnswer').value.trim(),
+                incorrectAnswers: ['quizWrongAnswer1', 'quizWrongAnswer2', 'quizWrongAnswer3']
+                    .map((id) => document.getElementById(id).value.trim()),
+                category: document.getElementById('quizQuestionCategory').value.trim(),
+                explanation: document.getElementById('quizQuestionExplanation').value.trim()
+            };
+            const isEditing = Boolean(editingQuizQuestionId);
+            setBusy(true);
+            quizBankNotice.hidden = true;
+            try {
+                const path = isEditing
+                    ? `/api/admin/questions/${encodeURIComponent(editingQuizQuestionId)}`
+                    : '/api/admin/questions';
+                const data = await quizAdminRequest(path, {
+                    method: isEditing ? 'PUT' : 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showNotice(quizBankNotice, data.message, false);
+                resetQuizQuestionForm();
+            } catch (error) {
+                showNotice(quizBankNotice, error.message, true);
+            } finally {
+                setBusy(false);
+            }
+            await loadQuizQuestions();
+        }
+
+        async function deleteQuizQuestion(question) {
+            if (busy || !window.confirm(`Supprimer cette question ?\n\n${question.question}`)) return;
+            setBusy(true);
+            quizBankNotice.hidden = true;
+            try {
+                const data = await quizAdminRequest(
+                    `/api/admin/questions/${encodeURIComponent(question._id)}?formation=${encodeURIComponent(quizFormationInput.value)}`,
+                    { method: 'DELETE' }
+                );
+                showNotice(quizBankNotice, data.message, false);
+            } catch (error) {
+                showNotice(quizBankNotice, error.message, true);
+            } finally {
+                setBusy(false);
+            }
+            await loadQuizQuestions();
+        }
+
         function setBusy(value) {
             busy = value;
             document.querySelectorAll('button').forEach(function(button) {
                 button.disabled = value;
             });
+            if (!value) quizQuestionSaveButton.disabled = quizBankCount >= 80 && !editingQuizQuestionId;
         }
 
         async function loadStudent() {
@@ -374,6 +661,26 @@
 
         document.getElementById('lookupButton').addEventListener('click', loadStudent);
         document.getElementById('issueButton').addEventListener('click', issueCode);
+        document.getElementById('quizBankStatusButton').addEventListener('click', refreshQuizBankStatus);
+        quizQuestionForm.addEventListener('submit', saveQuizQuestion);
+        document.getElementById('quizQuestionCancelButton').addEventListener('click', resetQuizQuestionForm);
+        quizFormationInput.addEventListener('change', function() {
+            resetQuizQuestionForm();
+            loadQuizQuestions();
+        });
+        quizQuestionForm.addEventListener('input', function() {
+            quizBankNotice.hidden = true;
+        });
+        document.getElementById('toggleQuizAdminKey').addEventListener('click', function() {
+            const isVisible = quizAdminKeyInput.type === 'text';
+            quizAdminKeyInput.type = isVisible ? 'password' : 'text';
+            this.setAttribute('aria-label', isVisible ? 'Afficher la clé du Quiz Backend' : 'Masquer la clé du Quiz Backend');
+            this.setAttribute('aria-pressed', String(!isVisible));
+            this.innerHTML = isVisible
+                ? '<i class="fa-solid fa-eye" aria-hidden="true"></i>'
+                : '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i>';
+            quizAdminKeyInput.focus();
+        });
         document.getElementById('toggleAdminKey').addEventListener('click', function() {
             const isVisible = adminKeyInput.type === 'text';
             adminKeyInput.type = isVisible ? 'password' : 'text';
