@@ -296,7 +296,22 @@
        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
          ? 'http://localhost:5000/api'
          : 'https://site-competence-academy-backend.onrender.com/api';
-        let activeAccessChallengeId = sessionStorage.getItem('ca_access_challenge_id') || '';
+       const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil.';
+       let singleSessionRedirectStarted = false;
+       let activeAccessChallengeId = sessionStorage.getItem('ca_access_challenge_id') || '';
+
+       function handleSingleSessionConflict(data) {
+           if (data?.message !== SINGLE_SESSION_MESSAGE || singleSessionRedirectStarted) return false;
+           singleSessionRedirectStarted = true;
+           localStorage.removeItem('ca_token');
+           localStorage.removeItem('competence_academy_user');
+           sessionStorage.removeItem('ca_token');
+           sessionStorage.removeItem('competence_academy_user');
+           sessionStorage.removeItem('ca_access_challenge_id');
+           alert(SINGLE_SESSION_MESSAGE);
+           window.location.replace(new URL('Login.html', window.location.href).href);
+           return true;
+       }
 
        function getPendingCourseAccess() {
            try {
@@ -410,6 +425,7 @@
                 });
 
                 const data = await response.json();
+                if (response.status === 401 && handleSingleSessionConflict(data)) return;
 
                 if (response.ok && data.success && data.authenticated) {
                     continueAfterAuthentication(data);
@@ -436,6 +452,7 @@
                 });
 
                 const data = await res.json();
+                if (res.status === 401 && handleSingleSessionConflict(data)) return;
 
                 if (res.ok && data.success && data.authenticated) {
                     continueAfterAuthentication(data);
@@ -471,6 +488,7 @@
                     })
                 });
                 const data = await response.json();
+                if (response.status === 401 && handleSingleSessionConflict(data)) return;
                 if (!response.ok || !data.success) {
                     errorMessage.textContent = data.message || 'Le code est incorrect ou a expiré.';
                     errorMessage.hidden = false;
@@ -512,6 +530,7 @@
                     })
                 });
                 const data = await response.json();
+                if (response.status === 401 && handleSingleSessionConflict(data)) return;
                 if (!response.ok || !data.success) {
                     errorMessage.textContent = data.message || 'Vérifiez les informations saisies et réessayez.';
                     errorMessage.hidden = false;
