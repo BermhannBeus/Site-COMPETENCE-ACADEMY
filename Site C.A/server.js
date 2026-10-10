@@ -152,7 +152,7 @@ const sendAuthenticatedSession = async (res, user) => {
             activeSessionId: sessionId,
             activeSessionExpiresAt: new Date(now.getTime() + 60 * 60 * 1000)
         }
-    }, { new: true }).select('_id name email nameOnCertificate phone location registeredCourse tokenVersion');
+    }, { new: true }).select('_id name email avatarUrl nameOnCertificate phone location registeredCourse tokenVersion');
     if (!activeUser) {
         return res.status(401).json({
             success: false,
@@ -176,6 +176,7 @@ const sendAuthenticatedSession = async (res, user) => {
         id: activeUser.id,
         name: activeUser.name,
         email: activeUser.email,
+        avatarUrl: activeUser.avatarUrl,
         nameOnCertificate: activeUser.nameOnCertificate,
         phone: activeUser.phone,
         location: activeUser.location,
@@ -465,6 +466,7 @@ const getCourseVideoId = (courseId, videoIndex) => COURSE_VIDEO_SEQUENCES[course
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true, maxlength: 100 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    avatarUrl: { type: String, default: '', trim: true, maxlength: 2048 },
     password: { type: String, default: '' },
     googleId: { type: String, default: '' },
     tokenVersion: { type: Number, default: 0 },
@@ -1219,11 +1221,22 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
 
         let user = await User.findOne({ email });
 
+        const googleAvatarUrl = /^https:\/\//i.test(String(payload?.picture || ''))
+            ? String(payload.picture).slice(0, 2048)
+            : '';
         if (!user) {
-            user = await User.create({ name, email, googleId });
-        } else if (!user.googleId) {
-            user.googleId = googleId;
-            await user.save();
+            user = await User.create({ name, email, googleId, avatarUrl: googleAvatarUrl });
+        } else {
+            let profileChanged = false;
+            if (!user.googleId) {
+                user.googleId = googleId;
+                profileChanged = true;
+            }
+            if (googleAvatarUrl && user.avatarUrl !== googleAvatarUrl) {
+                user.avatarUrl = googleAvatarUrl;
+                profileChanged = true;
+            }
+            if (profileChanged) await user.save();
         }
 
         if (await hasActiveSession(user._id)) {
@@ -1731,7 +1744,7 @@ app.post('/api/me/certificate-profile', authenticate, async (req, res) => {
             req.user.id,
             { nameOnCertificate, phone, location, registeredCourse },
             { new: true, runValidators: true }
-        ).select('_id name email nameOnCertificate phone location registeredCourse');
+        ).select('_id name email avatarUrl nameOnCertificate phone location registeredCourse');
         if (!user) {
             return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
         }
@@ -1741,6 +1754,7 @@ app.post('/api/me/certificate-profile', authenticate, async (req, res) => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                avatarUrl: user.avatarUrl,
                 nameOnCertificate: user.nameOnCertificate,
                 phone: user.phone,
                 location: user.location,
@@ -1766,6 +1780,7 @@ app.get('/api/me', authenticate, async (req, res) => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                avatarUrl: user.avatarUrl,
                 nameOnCertificate: user.nameOnCertificate,
                 phone: user.phone,
                 location: user.location,
