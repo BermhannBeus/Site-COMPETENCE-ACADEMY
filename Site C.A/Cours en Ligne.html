@@ -39,8 +39,10 @@
     function clearLocalStudentSession() {
         localStorage.removeItem('ca_token');
         localStorage.removeItem('competence_academy_user');
+        localStorage.removeItem('user');
         sessionStorage.removeItem('ca_token');
         sessionStorage.removeItem('competence_academy_user');
+        sessionStorage.removeItem('user');
         sessionStorage.removeItem('ca_access_challenge_id');
         sessionStorage.removeItem('ca_pending_course_access');
     }
@@ -80,11 +82,48 @@
     }
 
     const showOnlineIdentity = (user) => {
-        const identityElement = document.getElementById('onlineIdentity');
-        if (identityElement && user && user.name) {
-            identityElement.textContent = `Vous êtes connecté(e) en tant que ${user.name}`;
+        const nameElement = document.getElementById('onlineIdentity');
+        const emailElement = document.getElementById('onlineEmail');
+        const avatarImage = document.getElementById('onlineAvatarImage');
+        const avatarFallback = document.getElementById('onlineAvatarFallback');
+        if (!nameElement || !user) return;
+
+        const displayName = String(
+            user.fullName || user.username || user.nameOnCertificate || user.name || user.email || 'Étudiant'
+        ).trim();
+        nameElement.textContent = displayName;
+        if (emailElement) emailElement.textContent = user.email || '';
+
+        const avatarValue = user.avatarUrl || user.profileImage || user.profilePicture || user.picture || user.avatar || '';
+        let avatarUrl = '';
+        try {
+            const parsedAvatarUrl = new URL(avatarValue, window.location.href);
+            if (parsedAvatarUrl.protocol === 'https:') avatarUrl = parsedAvatarUrl.href;
+        } catch (error) {
+            if (avatarValue) console.warn('L’URL de la photo de profil est invalide.');
+        }
+
+        if (avatarImage && avatarFallback) {
+            avatarImage.hidden = !avatarUrl;
+            avatarFallback.hidden = Boolean(avatarUrl);
+            avatarFallback.textContent = Array.from(displayName)[0]?.toLocaleUpperCase() || 'É';
+            avatarImage.onerror = () => {
+                avatarImage.hidden = true;
+                avatarFallback.hidden = false;
+            };
+            if (avatarUrl) avatarImage.src = avatarUrl;
+            else avatarImage.removeAttribute('src');
         }
     };
+
+    const cachedUser = localStorage.getItem('competence_academy_user') || localStorage.getItem('user');
+    if (cachedUser) {
+        try {
+            showOnlineIdentity(JSON.parse(cachedUser));
+        } catch (error) {
+            console.warn('Les informations locales du profil sont invalides.');
+        }
+    }
 
     document.documentElement.classList.add('auth-pending');
 
@@ -104,6 +143,7 @@
         .then(data => {
             if (!data) return;
             localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
+            localStorage.setItem('user', JSON.stringify(data.user));
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => showOnlineIdentity(data.user), { once: true });
             } else {
@@ -117,6 +157,16 @@
                 window.location.replace(new URL('Login.html', window.location.href).href);
             }
         });
+
+    window.addEventListener('storage', (event) => {
+        if (event.key !== 'competence_academy_user' && event.key !== 'user') return;
+        if (!event.newValue) return;
+        try {
+            showOnlineIdentity(JSON.parse(event.newValue));
+        } catch (error) {
+            console.warn('La mise à jour locale du profil est invalide.');
+        }
+    });
 </script>
 
 
@@ -146,13 +196,13 @@
     <section class="online-panel" aria-label="Étudiants actuellement en ligne">
         <div class="online-panel-header">
             <div class="online-panel-title">
-                <span class="online-status-icon" aria-hidden="true">
-                    <i class="fa-solid fa-signal"></i>
+                <span class="profile-avatar" aria-hidden="true">
+                    <img id="onlineAvatarImage" alt="" hidden>
+                    <span id="onlineAvatarFallback">É</span>
                 </span>
-                <div>
-                    <h2>Présence en direct</h2>
-                    <p>Nombre d'étudiants connectés actuellement</p>
-                    <span id="onlineIdentity" class="online-identity"></span>
+                <div class="profile-identity">
+                    <h2 id="onlineIdentity">Étudiant</h2>
+                    <p id="onlineEmail"></p>
                 </div>
             </div>
             <div class="online-count" aria-live="polite">
