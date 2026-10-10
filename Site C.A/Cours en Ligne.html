@@ -608,14 +608,14 @@
     let activeVideoId = null;
 
     async function deconnecterEtudiant() {
-        const token = localStorage.getItem('ca_token');
+        const token = localStorage.getItem('ca_token') || sessionStorage.getItem('ca_token');
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 4000);
-            const headers = {};
+            const headers = { 'Content-Type': 'application/json' };
             if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
             try {
-                await fetch(`${COURSE_API_BASE_URL}/logout`, {
+                await fetch(`${COURSE_API_BASE_URL}/auth/logout`, {
                     method: 'POST',
                     credentials: 'include',
                     headers,
@@ -628,12 +628,8 @@
         } catch (error) {
             console.error('La fermeture de session côté serveur a échoué:', error);
         } finally {
-            localStorage.removeItem('ca_token');
-            localStorage.removeItem('competence_academy_user');
-            sessionStorage.removeItem('ca_token');
-            sessionStorage.removeItem('competence_academy_user');
-            sessionStorage.removeItem('ca_access_challenge_id');
-            sessionStorage.removeItem('ca_pending_course_access');
+            localStorage.clear();
+            sessionStorage.clear();
             window.location.replace(new URL('Login.html', window.location.href).href);
         }
     }
