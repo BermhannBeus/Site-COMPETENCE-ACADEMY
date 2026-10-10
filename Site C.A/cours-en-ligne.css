@@ -313,14 +313,14 @@ body {
 .doc-download-label {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex: 0 0 auto;
-    margin-left: 12px;
-    padding: 6px 9px;
-    border-radius: 5px;
+    margin-left: 10px;
+    padding: 5px 8px;
+    border-radius: 8px;
     background: #e2e8f0;
     color: #475569;
-    font-size: 0.72rem;
+    font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
 }
