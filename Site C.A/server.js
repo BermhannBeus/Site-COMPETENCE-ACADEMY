@@ -1064,6 +1064,7 @@ app.post('/api/results/verify', async (req, res) => {
             result: {
                 nom: summary.nom,
                 filiere: summary.filiere,
+                validated: summary.validated,
                 statut: summary.statut,
                 progression: summary.progression,
                 moyenne: summary.moyenne,
