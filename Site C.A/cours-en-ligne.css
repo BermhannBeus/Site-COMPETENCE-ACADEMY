@@ -395,6 +395,13 @@ body {
     min-width: 0;
 }
 
+.profile-greeting {
+    margin: 0 0 2px;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
 .online-panel-title h2 {
     color: var(--academy-dark);
     font-size: 1rem;
@@ -408,7 +415,7 @@ body {
 .online-panel-title p {
     color: #64748b;
     font-size: 0.78rem;
-    margin: 3px 0 0;
+    margin: 2px 0 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -425,6 +432,12 @@ body {
     border-radius: 999px;
     font-size: 0.8rem;
     white-space: nowrap;
+}
+
+.online-count-label {
+    padding-right: 7px;
+    border-right: 1px solid #bbf7d0;
+    font-weight: 700;
 }
 
 .online-count strong {
@@ -473,10 +486,16 @@ body {
     .online-panel-header {
         align-items: flex-start;
         flex-direction: column;
+        gap: 14px;
+    }
+    .online-panel-title {
+        width: 100%;
+        min-width: 0;
     }
     .online-count {
         align-self: stretch;
         justify-content: center;
+        flex-wrap: wrap;
     }
 }
 
