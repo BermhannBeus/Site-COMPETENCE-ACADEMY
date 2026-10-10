@@ -24,7 +24,7 @@
     const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5000/api'
         : 'https://site-competence-academy-backend.onrender.com/api';
-    const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil.';
+    const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil. Nouvelle connexion refusée.';
     let singleSessionRedirectStarted = false;
 
     function handleSingleSessionConflict(data) {
