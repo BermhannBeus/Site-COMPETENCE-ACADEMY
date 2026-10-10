@@ -77,11 +77,17 @@ io.use(async (socket, next) => {
         if (!decoded.id || decoded.accessConfirmed !== true) {
             return next(new Error('Authentication required'));
         }
-        const user = await User.findById(decoded.id).select('tokenVersion');
-        if (!user || decoded.tokenVersion !== user.tokenVersion) {
+        const user = await User.findById(decoded.id)
+            .select('tokenVersion activeSessionId activeSessionExpiresAt');
+        if (!user || decoded.tokenVersion !== user.tokenVersion
+            || decoded.sessionId !== user.activeSessionId
+            || !user.activeSessionExpiresAt
+            || user.activeSessionExpiresAt <= new Date()) {
             return next(new Error('Authentication required'));
         }
         socket.data.userId = String(decoded.id);
+        socket.data.sessionId = decoded.sessionId;
+        socket.data.sessionExpiresAt = user.activeSessionExpiresAt.getTime();
         await socket.join(socket.data.userId);
         next();
     } catch (error) {
@@ -125,14 +131,33 @@ const setAuthCookie = (res, token) => {
 const clearAuthCookie = (res) => {
     res.clearCookie('ca_token', { path: '/' });
 };
+const ACTIVE_SESSION_CONFLICT_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil. Nouvelle connexion refusée.';
+const hasActiveSession = (userId) => User.exists({
+    _id: userId,
+    activeSessionId: { $nin: [null, ''] },
+    activeSessionExpiresAt: { $gt: new Date() }
+});
 const sendAuthenticatedSession = async (res, user) => {
-    const activeUser = await User.findByIdAndUpdate(
-        user._id,
-        { $inc: { tokenVersion: 1 } },
-        { new: true }
-    ).select('_id name email nameOnCertificate phone location registeredCourse tokenVersion');
+    const now = new Date();
+    const sessionId = crypto.randomUUID();
+    const activeUser = await User.findOneAndUpdate({
+        _id: user._id,
+        $or: [
+            { activeSessionId: { $in: [null, ''] } },
+            { activeSessionExpiresAt: { $lte: now } },
+            { activeSessionExpiresAt: { $exists: false } }
+        ]
+    }, {
+        $set: {
+            activeSessionId: sessionId,
+            activeSessionExpiresAt: new Date(now.getTime() + 60 * 60 * 1000)
+        }
+    }, { new: true }).select('_id name email nameOnCertificate phone location registeredCourse tokenVersion');
     if (!activeUser) {
-        throw new Error('Unable to create an authenticated session for a missing user.');
+        return res.status(401).json({
+            success: false,
+            message: ACTIVE_SESSION_CONFLICT_MESSAGE
+        });
     }
     io.in(String(activeUser._id)).disconnectSockets(true);
     const token = jwt.sign(
@@ -140,7 +165,8 @@ const sendAuthenticatedSession = async (res, user) => {
             id: activeUser.id,
             email: activeUser.email,
             accessConfirmed: true,
-            tokenVersion: activeUser.tokenVersion
+            tokenVersion: activeUser.tokenVersion,
+            sessionId
         },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
@@ -442,6 +468,8 @@ const userSchema = new mongoose.Schema({
     password: { type: String, default: '' },
     googleId: { type: String, default: '' },
     tokenVersion: { type: Number, default: 0 },
+    activeSessionId: { type: String, default: null },
+    activeSessionExpiresAt: { type: Date, default: null },
     nameOnCertificate: { type: String, default: '', trim: true, maxlength: 100 },
     phone: { type: String, default: '', trim: true, maxlength: 30 },
     location: { type: String, default: '', trim: true, maxlength: 100 },
@@ -749,13 +777,19 @@ const authenticate = async (req, res, next) => {
     }
 
     try {
-        const user = await User.findById(decoded.id).select('tokenVersion');
+        const user = await User.findById(decoded.id)
+            .select('tokenVersion activeSessionId activeSessionExpiresAt');
         if (!user) {
             return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
         }
         if (decoded.tokenVersion !== user.tokenVersion) {
+            return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
+        }
+        if (decoded.sessionId !== user.activeSessionId
+            || !user.activeSessionExpiresAt
+            || user.activeSessionExpiresAt <= new Date()) {
             clearAuthCookie(res);
-            return res.status(401).json({ success: false, message: 'Vous êtes déjà connecté sur un autre appareil.' });
+            return res.status(401).json({ success: false, message: ACTIVE_SESSION_CONFLICT_MESSAGE });
         }
         req.user = decoded;
         return next();
@@ -1133,6 +1167,10 @@ app.post('/api/login', authLimiter, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Adresse e-mail ou mot de passe incorrect.' });
         }
 
+        if (await hasActiveSession(user._id)) {
+            return res.status(401).json({ success: false, message: ACTIVE_SESSION_CONFLICT_MESSAGE });
+        }
+
         if (user.accessApprovedAt) {
             return await sendAuthenticatedSession(res, user);
         }
@@ -1185,6 +1223,10 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
         } else if (!user.googleId) {
             user.googleId = googleId;
             await user.save();
+        }
+
+        if (await hasActiveSession(user._id)) {
+            return res.status(401).json({ success: false, message: ACTIVE_SESSION_CONFLICT_MESSAGE });
         }
 
         if (user.accessApprovedAt) {
@@ -1240,6 +1282,10 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
         await AccessConfirmation.deleteOne({ _id: challenge._id });
         if (!user) {
             return res.status(404).json({ success: false, message: 'Compte utilisateur introuvable.' });
+        }
+
+        if (await hasActiveSession(user._id)) {
+            return res.status(401).json({ success: false, message: ACTIVE_SESSION_CONFLICT_MESSAGE });
         }
 
         if (!user.accessApprovedAt) {
@@ -1731,7 +1777,30 @@ app.get('/api/me', authenticate, async (req, res) => {
     }
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
+    const token = req.cookies?.ca_token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+            if (decoded.id && decoded.sessionId) {
+                const releasedUser = await User.findOneAndUpdate({
+                    _id: decoded.id,
+                    tokenVersion: decoded.tokenVersion,
+                    activeSessionId: decoded.sessionId
+                }, {
+                    $set: { activeSessionId: null, activeSessionExpiresAt: null }
+                }).select('_id');
+                if (releasedUser) io.in(String(releasedUser._id)).disconnectSockets(true);
+            }
+        } catch (error) {
+            console.error('Logout session release failed:', error);
+            clearAuthCookie(res);
+            return res.status(500).json({
+                success: false,
+                message: 'Impossible de fermer complètement la session. Réessayez.'
+            });
+        }
+    }
     clearAuthCookie(res);
     res.json({ success: true, message: 'Déconnexion réussie.' });
 });
@@ -1741,12 +1810,17 @@ const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
     const userId = socket.data.userId;
+    const sessionExpiryTimer = setTimeout(
+        () => socket.disconnect(true),
+        Math.max(0, socket.data.sessionExpiresAt - Date.now())
+    );
     const userSockets = onlineUsers.get(userId) || new Set();
     userSockets.add(socket.id);
     onlineUsers.set(userId, userSockets);
     io.emit('onlineCount', onlineUsers.size);
 
     socket.on('disconnect', () => {
+        clearTimeout(sessionExpiryTimer);
         const activeSockets = onlineUsers.get(userId);
         if (activeSockets) {
             activeSockets.delete(socket.id);
