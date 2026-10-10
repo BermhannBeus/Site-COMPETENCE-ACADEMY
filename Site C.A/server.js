@@ -36,6 +36,7 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
+const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
     .split(',')
@@ -87,6 +88,7 @@ io.use(async (socket, next) => {
         }
         socket.data.userId = String(decoded.id);
         socket.data.sessionId = decoded.sessionId;
+        socket.data.tokenVersion = decoded.tokenVersion;
         socket.data.sessionExpiresAt = user.activeSessionExpiresAt.getTime();
         await socket.join(socket.data.userId);
         next();
@@ -145,12 +147,13 @@ const sendAuthenticatedSession = async (res, user) => {
         $or: [
             { activeSessionId: { $in: [null, ''] } },
             { activeSessionExpiresAt: { $lte: now } },
+            { activeSessionExpiresAt: null },
             { activeSessionExpiresAt: { $exists: false } }
         ]
     }, {
         $set: {
             activeSessionId: sessionId,
-            activeSessionExpiresAt: new Date(now.getTime() + 60 * 60 * 1000)
+            activeSessionExpiresAt: new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS)
         }
     }, { new: true }).select('_id name email avatarUrl nameOnCertificate phone location registeredCourse tokenVersion');
     if (!activeUser) {
@@ -787,11 +790,27 @@ const authenticate = async (req, res, next) => {
         if (decoded.tokenVersion !== user.tokenVersion) {
             return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
         }
-        if (decoded.sessionId !== user.activeSessionId
-            || !user.activeSessionExpiresAt
-            || user.activeSessionExpiresAt <= new Date()) {
+        const now = new Date();
+        if (decoded.sessionId !== user.activeSessionId) {
             clearAuthCookie(res);
             return res.status(401).json({ success: false, message: ACTIVE_SESSION_CONFLICT_MESSAGE });
+        }
+        if (!user.activeSessionExpiresAt || user.activeSessionExpiresAt <= now) {
+            clearAuthCookie(res);
+            return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
+        }
+
+        const refreshedSession = await User.findOneAndUpdate({
+            _id: user._id,
+            tokenVersion: decoded.tokenVersion,
+            activeSessionId: decoded.sessionId,
+            activeSessionExpiresAt: { $gt: now }
+        }, {
+            $set: { activeSessionExpiresAt: new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS) }
+        }, { new: true }).select('_id');
+        if (!refreshedSession) {
+            clearAuthCookie(res);
+            return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
         }
         req.user = decoded;
         return next();
@@ -1793,6 +1812,10 @@ app.get('/api/me', authenticate, async (req, res) => {
     }
 });
 
+app.post('/api/auth/heartbeat', authenticate, (req, res) => {
+    res.json({ success: true, message: 'Session active.' });
+});
+
 app.post('/api/logout', async (req, res) => {
     const token = req.cookies?.ca_token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
     if (token) {
@@ -1852,14 +1875,42 @@ const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
     const userId = socket.data.userId;
-    const sessionExpiryTimer = setTimeout(
-        () => socket.disconnect(true),
-        Math.max(0, socket.data.sessionExpiresAt - Date.now())
-    );
+    let sessionExpiryTimer;
+    const scheduleSessionExpiry = () => {
+        clearTimeout(sessionExpiryTimer);
+        sessionExpiryTimer = setTimeout(
+            () => socket.disconnect(true),
+            Math.max(0, socket.data.sessionExpiresAt - Date.now())
+        );
+    };
+    scheduleSessionExpiry();
     const userSockets = onlineUsers.get(userId) || new Set();
     userSockets.add(socket.id);
     onlineUsers.set(userId, userSockets);
     io.emit('onlineCount', onlineUsers.size);
+
+    socket.on('sessionHeartbeat', async () => {
+        try {
+            const now = new Date();
+            const refreshedUser = await User.findOneAndUpdate({
+                _id: userId,
+                tokenVersion: socket.data.tokenVersion,
+                activeSessionId: socket.data.sessionId,
+                activeSessionExpiresAt: { $gt: now }
+            }, {
+                $set: { activeSessionExpiresAt: new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS) }
+            }, { new: true }).select('activeSessionExpiresAt');
+            if (!refreshedUser) {
+                socket.disconnect(true);
+                return;
+            }
+            socket.data.sessionExpiresAt = refreshedUser.activeSessionExpiresAt.getTime();
+            scheduleSessionExpiry();
+        } catch (error) {
+            console.error('Socket session heartbeat failed:', error);
+            socket.disconnect(true);
+        }
+    });
 
     socket.on('disconnect', () => {
         clearTimeout(sessionExpiryTimer);
