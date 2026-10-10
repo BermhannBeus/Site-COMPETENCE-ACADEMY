@@ -9,6 +9,152 @@
     <link rel="stylesheet" href="cours-en-ligne.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @page {
+            size: letter;
+            margin: 0;
+        }
+
+        #student-status.is-approved {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        #student-status.is-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        #student-dashboard.pdf-export {
+            box-sizing: border-box;
+            width: 8.5in;
+            min-height: 11in;
+            max-width: none;
+            padding: 0.4in;
+            overflow: visible;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            background: #fff;
+        }
+
+        #student-dashboard .institution-letterhead {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center;
+            gap: 0.12in;
+            padding-bottom: 0.12in;
+        }
+
+        #student-dashboard .letterhead-logo {
+            width: 0.62in;
+            height: 0.62in;
+            flex: 0 0 0.62in;
+        }
+
+        #student-dashboard .letterhead-center {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        #student-dashboard .letterhead-center h1 {
+            font-size: 16pt;
+            white-space: nowrap;
+        }
+
+        #student-dashboard .institution-meta-info {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: center;
+            gap: 0.06in;
+            font-size: 7pt;
+            white-space: nowrap;
+        }
+
+        #student-dashboard .meta-separator {
+            display: inline !important;
+        }
+
+        #student-dashboard .addon-signatures-container {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: start;
+            flex-wrap: nowrap !important;
+            gap: 0.3in;
+        }
+
+        #student-dashboard .signature-box {
+            min-width: 0;
+        }
+
+        #student-dashboard .signature-box:last-child {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        #student-dashboard .institution-stamp {
+            width: 0.85in;
+            height: 0.85in;
+            flex: 0 0 0.85in;
+            margin: 0;
+        }
+
+        #student-dashboard .modules-table tr,
+        #student-dashboard .dashboard-top,
+        #student-dashboard .dashboard-grid,
+        #student-dashboard .addon-signatures-container {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        @media print {
+            html,
+            body {
+                width: 8.5in;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+
+            body > .navbar,
+            body > .nav-spacer,
+            body > .course-footer,
+            #resultats > .results-header,
+            #results-auth-screen {
+                display: none !important;
+            }
+
+            #resultats {
+                display: block !important;
+                box-sizing: border-box;
+                width: 8.5in;
+                max-width: none;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            #student-dashboard {
+                display: block !important;
+                box-sizing: border-box;
+                width: 8.5in;
+                min-height: 11in;
+                max-width: none;
+                margin: 0 !important;
+                padding: 0.4in;
+                overflow: visible;
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+                background: #fff;
+            }
+
+            #pdfActions {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -85,7 +231,6 @@
                 <button id="downloadResult" type="button" style="background:#111E62;color:#fff;border:0;padding:12px 25px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
                     <i class="fa-solid fa-file-pdf"></i> Télécharger mon bulletin
                 </button>
-                <button id="changeCode" type="button" style="margin-left:8px"><i class="fa-solid fa-right-from-bracket"></i> Quitter le bulletin</button>
             </div>
         </div>
     </section>
@@ -100,7 +245,10 @@
         function displayResult(result) {
             document.getElementById('student-name').textContent = result.nom;
             document.getElementById('student-course').textContent = `Filière : ${result.filiere}`;
-            document.getElementById('student-status').textContent = `STATUT : ${result.statut}`;
+            const statusBadge = document.getElementById('student-status');
+            statusBadge.textContent = `STATUT : ${result.statut}`;
+            statusBadge.classList.toggle('is-approved', result.validated === true);
+            statusBadge.classList.toggle('is-pending', result.validated !== true);
             document.getElementById('global-progress').style.width = `${result.progression}%`;
             document.getElementById('progress-text').textContent = `${result.progression}% Complété`;
             document.getElementById('student-average').textContent = result.moyenne;
@@ -144,26 +292,22 @@
             event.preventDefault();
             verifyResult(resultInput.value.trim());
         });
-        document.getElementById('changeCode').addEventListener('click', function() {
-            document.getElementById('student-dashboard').style.display = 'none';
-            document.getElementById('results-auth-screen').style.display = '';
-            resultInput.value = '';
-            resultInput.focus();
-        });
         document.getElementById('downloadResult').addEventListener('click', async function() {
             const button = this;
             const actions = document.getElementById('pdfActions');
+            const dashboard = document.getElementById('student-dashboard');
             button.disabled = true;
             actions.style.display = 'none';
+            dashboard.classList.add('pdf-export');
             try {
                 await html2pdf().set({
-                    margin: [10, 12, 12, 12],
+                    margin: 0,
                     filename: `Bulletin_${document.getElementById('student-name').textContent.trim().replace(/\s+/g, '_')}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css'] }
-                }).from(document.getElementById('student-dashboard')).save();
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
+                }).from(dashboard).save();
             } catch (error) {
                 console.error('Result PDF generation failed:', error);
                 resultsError.textContent = 'Le téléchargement du bulletin a échoué. Réessayez.';
@@ -171,6 +315,7 @@
             } finally {
                 actions.style.display = '';
                 button.disabled = false;
+                dashboard.classList.remove('pdf-export');
             }
         });
         const emailCode = new URLSearchParams(window.location.hash.slice(1)).get('code');
