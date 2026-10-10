@@ -24,6 +24,10 @@
                     </div>
                     <h2>Connexion</h2>
                 </div>
+                <div id="loginSessionNotice" class="session-conflict-banner" role="alert" hidden>
+                    <span class="session-conflict-icon" aria-hidden="true">!</span>
+                    <span></span>
+                </div>
                 <form onsubmit="handleLoginOrSignup(event, 'login')">
                     <div class="input-group">
                         <label>Email</label>
@@ -296,20 +300,21 @@
        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
          ? 'http://localhost:5000/api'
          : 'https://site-competence-academy-backend.onrender.com/api';
-       const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil.';
-       let singleSessionRedirectStarted = false;
+       const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil. Nouvelle connexion refusée.';
        let activeAccessChallengeId = sessionStorage.getItem('ca_access_challenge_id') || '';
 
-       function handleSingleSessionConflict(data) {
-           if (data?.message !== SINGLE_SESSION_MESSAGE || singleSessionRedirectStarted) return false;
-           singleSessionRedirectStarted = true;
+       function showSingleSessionNotice(data) {
+           if (data?.message !== SINGLE_SESSION_MESSAGE) return false;
            localStorage.removeItem('ca_token');
            localStorage.removeItem('competence_academy_user');
            sessionStorage.removeItem('ca_token');
            sessionStorage.removeItem('competence_academy_user');
            sessionStorage.removeItem('ca_access_challenge_id');
-           alert(SINGLE_SESSION_MESSAGE);
-           window.location.replace(new URL('Login.html', window.location.href).href);
+           activeAccessChallengeId = '';
+           switchView('login');
+           const notice = document.getElementById('loginSessionNotice');
+           notice.querySelector('span').textContent = SINGLE_SESSION_MESSAGE;
+           notice.hidden = false;
            return true;
        }
 
@@ -353,6 +358,7 @@
         function continueAfterAuthentication(data) {
             sessionStorage.removeItem('ca_access_challenge_id');
             activeAccessChallengeId = '';
+            document.getElementById('loginSessionNotice').hidden = true;
             localStorage.removeItem('ca_token');
             localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
             if (data.profileComplete) {
@@ -386,6 +392,8 @@
             const profileView = document.getElementById('profileView');
             const accessConfirmationForm = document.getElementById('accessConfirmationForm');
             const certificateProfileForm = document.getElementById('certificateProfileForm');
+            const loginSessionNotice = document.getElementById('loginSessionNotice');
+            if (viewType !== 'login' && loginSessionNotice) loginSessionNotice.hidden = true;
 
             if (loginForm) loginForm.classList.remove('active');
             if (signupForm) signupForm.classList.remove('active');
@@ -406,6 +414,7 @@
 
         async function handleLoginOrSignup(event, endpoint) {
             event.preventDefault();
+            if (endpoint === 'login') document.getElementById('loginSessionNotice').hidden = true;
             
             const name = endpoint === 'signup' ? document.getElementById('signupName').value.trim() : '';
             const email = document.getElementById(endpoint === 'signup' ? 'signupEmail' : 'loginEmail').value;
@@ -425,7 +434,7 @@
                 });
 
                 const data = await response.json();
-                if (response.status === 401 && handleSingleSessionConflict(data)) return;
+                if (response.status === 401 && showSingleSessionNotice(data)) return;
 
                 if (response.ok && data.success && data.authenticated) {
                     continueAfterAuthentication(data);
@@ -443,6 +452,7 @@
 
         // Traitement de la réponse Google OAuth
         async function handleCredentialResponse(response) {
+            document.getElementById('loginSessionNotice').hidden = true;
             try {
                 const res = await fetch(`${API_BASE_URL}/google-login`, {
                     method: 'POST',
@@ -452,7 +462,7 @@
                 });
 
                 const data = await res.json();
-                if (res.status === 401 && handleSingleSessionConflict(data)) return;
+                if (res.status === 401 && showSingleSessionNotice(data)) return;
 
                 if (res.ok && data.success && data.authenticated) {
                     continueAfterAuthentication(data);
@@ -488,7 +498,7 @@
                     })
                 });
                 const data = await response.json();
-                if (response.status === 401 && handleSingleSessionConflict(data)) return;
+                if (response.status === 401 && showSingleSessionNotice(data)) return;
                 if (!response.ok || !data.success) {
                     errorMessage.textContent = data.message || 'Le code est incorrect ou a expiré.';
                     errorMessage.hidden = false;
@@ -530,7 +540,7 @@
                     })
                 });
                 const data = await response.json();
-                if (response.status === 401 && handleSingleSessionConflict(data)) return;
+                if (response.status === 401 && showSingleSessionNotice(data)) return;
                 if (!response.ok || !data.success) {
                     errorMessage.textContent = data.message || 'Vérifiez les informations saisies et réessayez.';
                     errorMessage.hidden = false;
