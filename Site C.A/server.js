@@ -1806,6 +1806,31 @@ app.post('/api/logout', async (req, res) => {
     res.json({ success: true, message: 'Déconnexion réussie.' });
 });
 
+app.post('/api/auth/logout', authenticate, async (req, res) => {
+    try {
+        const releasedUser = await User.findOneAndUpdate({
+            _id: req.user.id,
+            tokenVersion: req.user.tokenVersion,
+            activeSessionId: req.user.sessionId
+        }, {
+            $inc: { tokenVersion: 1 },
+            $set: { activeSessionId: null, activeSessionExpiresAt: null }
+        }).select('_id');
+
+        clearAuthCookie(res);
+        if (!releasedUser) {
+            return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
+        }
+
+        io.in(String(releasedUser._id)).disconnectSockets(true);
+        return res.json({ success: true, message: 'Déconnexion réussie.' });
+    } catch (error) {
+        console.error('Authenticated logout failed:', error);
+        clearAuthCookie(res);
+        return res.status(500).json({ success: false, message: 'Impossible de fermer complètement la session.' });
+    }
+});
+
 // Count authenticated students, not browser tabs or devices.
 const onlineUsers = new Map();
 
