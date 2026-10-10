@@ -10,6 +10,7 @@ const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
@@ -20,7 +21,13 @@ const server = http.createServer(app);
 app.set('trust proxy', 1);
 const io = new Server(server, {
     cors: {
-        origin: true,
+        origin: (origin, callback) => {
+            if (isAllowedOrigin(origin)) {
+                callback(null, true);
+                return;
+            }
+            callback(new Error('Not allowed by CORS'));
+        },
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -35,7 +42,31 @@ const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_U
     .map((url) => url.trim().replace(/\/$/, ''))
     .filter(Boolean);
 
-io.use((socket, next) => {
+const developmentOrigins = [
+    'http://localhost',
+    'http://localhost:5000',
+    'http://127.0.0.1',
+    'http://127.0.0.1:5000'
+];
+const isDevelopmentHostname = (hostname) => /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[?::1\]?)$/i.test(hostname)
+    || hostname.endsWith('.localhost')
+    || hostname.endsWith('.local');
+const productionOrigins = [...new Set(FRONTEND_URLS.flatMap((frontendUrl) => {
+    try {
+        const parsedUrl = new URL(frontendUrl);
+        return parsedUrl.protocol === 'https:' && !isDevelopmentHostname(parsedUrl.hostname)
+            ? [parsedUrl.origin]
+            : [];
+    } catch (error) {
+        return [];
+    }
+}))];
+const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? productionOrigins
+    : [...new Set([...developmentOrigins, ...FRONTEND_URLS])];
+const isAllowedOrigin = (origin) => !origin || allowedOrigins.includes(origin);
+
+io.use(async (socket, next) => {
     const cookieHeader = socket.handshake.headers.cookie || '';
     const authCookie = cookieHeader.split(';').map((cookie) => cookie.trim())
         .find((cookie) => cookie.startsWith('ca_token='));
@@ -46,7 +77,12 @@ io.use((socket, next) => {
         if (!decoded.id || decoded.accessConfirmed !== true) {
             return next(new Error('Authentication required'));
         }
+        const user = await User.findById(decoded.id).select('tokenVersion');
+        if (!user || decoded.tokenVersion !== user.tokenVersion) {
+            return next(new Error('Authentication required'));
+        }
         socket.data.userId = String(decoded.id);
+        await socket.join(socket.data.userId);
         next();
     } catch (error) {
         next(new Error('Authentication required'));
@@ -89,28 +125,42 @@ const setAuthCookie = (res, token) => {
 const clearAuthCookie = (res) => {
     res.clearCookie('ca_token', { path: '/' });
 };
-const sendAuthenticatedSession = (res, user) => {
+const sendAuthenticatedSession = async (res, user) => {
+    const activeUser = await User.findByIdAndUpdate(
+        user._id,
+        { $inc: { tokenVersion: 1 } },
+        { new: true }
+    ).select('_id name email nameOnCertificate phone location registeredCourse tokenVersion');
+    if (!activeUser) {
+        throw new Error('Unable to create an authenticated session for a missing user.');
+    }
+    io.in(String(activeUser._id)).disconnectSockets(true);
     const token = jwt.sign(
-        { id: user.id, email: user.email, accessConfirmed: true },
+        {
+            id: activeUser.id,
+            email: activeUser.email,
+            accessConfirmed: true,
+            tokenVersion: activeUser.tokenVersion
+        },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
     );
     setAuthCookie(res, token);
     const serializedUser = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        nameOnCertificate: user.nameOnCertificate,
-        phone: user.phone,
-        location: user.location,
-        registeredCourse: user.registeredCourse
+        id: activeUser.id,
+        name: activeUser.name,
+        email: activeUser.email,
+        nameOnCertificate: activeUser.nameOnCertificate,
+        phone: activeUser.phone,
+        location: activeUser.location,
+        registeredCourse: activeUser.registeredCourse
     };
     return res.json({
         success: true,
         authenticated: true,
         user: serializedUser,
         profileComplete: Boolean(
-            user.nameOnCertificate && user.phone && user.location && user.registeredCourse
+            activeUser.nameOnCertificate && activeUser.phone && activeUser.location && activeUser.registeredCourse
         )
     });
 };
@@ -294,20 +344,13 @@ const createCodeEmail = ({ greeting, message, code, buttonLabel, buttonUrl, note
     `
 });
 
-const allowedOrigins = [
-    'http://localhost',
-    'http://localhost:5000',
-    'http://127.0.0.1',
-    'http://127.0.0.1:5000',
-    ...FRONTEND_URLS
-];
-
 // Middleware
+app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (isAllowedOrigin(origin)) {
             callback(null, true);
             return;
         }
@@ -398,6 +441,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     password: { type: String, default: '' },
     googleId: { type: String, default: '' },
+    tokenVersion: { type: Number, default: 0 },
     nameOnCertificate: { type: String, default: '', trim: true, maxlength: 100 },
     phone: { type: String, default: '', trim: true, maxlength: 30 },
     location: { type: String, default: '', trim: true, maxlength: 100 },
@@ -687,22 +731,33 @@ const recordVideoWatchProgress = async ({ userId, videoId, watchSessionId, curre
     return { watchSession };
 };
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
     const token = req.cookies?.ca_token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
 
     if (!token) {
         return res.status(401).json({ success: false, message: 'Non authentifié.' });
     }
 
+    let decoded;
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        decoded = jwt.verify(token, JWT_SECRET);
         if (decoded.accessConfirmed !== true) {
             return res.status(401).json({ success: false, message: 'Confirmation de connexion requise.' });
         }
-        req.user = decoded;
-        next();
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
+    }
+
+    try {
+        const user = await User.findById(decoded.id).select('tokenVersion');
+        if (!user || decoded.tokenVersion !== user.tokenVersion) {
+            return res.status(401).json({ success: false, message: 'Session expirée ou remplacée par une autre connexion.' });
+        }
+        req.user = decoded;
+        return next();
+    } catch (error) {
+        console.error('Authentication session validation error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de vérifier la session.' });
     }
 };
 
@@ -1075,7 +1130,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
         }
 
         if (user.accessApprovedAt) {
-            return sendAuthenticatedSession(res, user);
+            return await sendAuthenticatedSession(res, user);
         }
 
         const confirmation = await createAccessConfirmation(user);
@@ -1129,7 +1184,7 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
         }
 
         if (user.accessApprovedAt) {
-            return sendAuthenticatedSession(res, user);
+            return await sendAuthenticatedSession(res, user);
         }
 
         const confirmation = await createAccessConfirmation(user);
@@ -1187,7 +1242,7 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
             user.accessApprovedAt = new Date();
             await user.save();
         }
-        sendAuthenticatedSession(res, user);
+        await sendAuthenticatedSession(res, user);
     } catch (error) {
         console.error('Confirm login access error:', error);
         res.status(500).json({ success: false, message: 'Impossible de confirmer cette connexion.' });
