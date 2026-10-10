@@ -9,6 +9,8 @@
     : 'https://site-competence-academy-backend.onrender.com/api';
   const PASSING_PERCENTAGE = 75;
   const QUESTION_SECONDS = 25;
+  const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil.';
+  let singleSessionRedirectStarted = false;
   const state = {
     quizId: '',
     question: null,
@@ -37,6 +39,19 @@
 
   function showScreen(active) {
     screens.forEach((screen) => { screen.hidden = screen !== active; });
+  }
+
+  function handleSingleSessionConflict(data) {
+    if (data?.message !== SINGLE_SESSION_MESSAGE || singleSessionRedirectStarted) return false;
+    singleSessionRedirectStarted = true;
+    localStorage.removeItem('ca_token');
+    localStorage.removeItem('competence_academy_user');
+    sessionStorage.removeItem('ca_token');
+    sessionStorage.removeItem('competence_academy_user');
+    sessionStorage.removeItem('ca_access_challenge_id');
+    window.alert(SINGLE_SESSION_MESSAGE);
+    window.location.replace(new URL('Login.html', window.location.href).href);
+    return true;
   }
 
   function stopQuestionTimer() {
@@ -263,6 +278,10 @@
     try {
       const response = await fetch(`${ACCOUNT_API_URL}/me`, { credentials: 'include' });
       if (!response.ok) {
+        if (response.status === 401) {
+          const data = await response.json().catch(() => ({}));
+          if (handleSingleSessionConflict(data)) return;
+        }
         if (response.status !== 401) throw new Error(`Le profil étudiant a répondu avec l’erreur HTTP ${response.status}.`);
         return;
       }
