@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0056b3">
+    <title>Résultats des étudiants | Competence Academy</title>
+    <link rel="stylesheet" href="cours-en-ligne.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo"><img src="Logo.png" alt="Competence Academy"></div>
+        <div class="nav-marquee"><marquee behavior="scroll" direction="left" scrollamount="6">COMPETENCE ACADEMY — FORMATION PROFESSIONNELLE DE QUALITÉ</marquee></div>
+        <a href="Cours en Ligne.html" class="btn-logout"><i class="fa-solid fa-book-open"></i> Cours en ligne</a>
+    </nav>
+    <div class="nav-spacer"></div>
+    <section class="results-section" id="resultats">
+        <div class="results-header" style="text-align:center">
+            <h2>ESPACE RESULTATS</h2>
+            <p>Consultez vos notes, votre progression globale et le statut de votre certification.</p>
+        </div>
+        <div id="results-auth-screen" class="results-auth-container" style="margin:0 auto;text-align:center">
+            <div class="auth-icon-box" style="display:flex;justify-content:center;align-items:center;margin:0 auto 20px"><i class="fa-solid fa-user-graduate"></i></div>
+            <h3>Accéder à vos résultats</h3>
+            <p>Veuillez saisir votre code d'accès personnel pour afficher votre bulletin.</p>
+            <form id="resultLookupForm" class="results-input-group" style="justify-content:center;max-width:400px;margin:0 auto">
+                <input type="text" id="student-code-input" placeholder="Ex: CA-RESULT-XXXXXXXXXXXX" autocomplete="off" required>
+                <button type="submit">Vérifier <i class="fa-solid fa-arrow-right"></i></button>
+            </form>
+            <p id="results-error" class="results-error-msg" role="alert" style="display:none;justify-content:center"></p>
+        </div>
+        <div id="student-dashboard" class="dashboard-container" style="display:none;margin:0 auto">
+            <div class="institution-letterhead">
+                <div class="letterhead-left"><img src="Logo copie.webp" alt="Competence Academy Logo" class="letterhead-logo"></div>
+                <div class="letterhead-center">
+                    <h1>COMPETENCE ACADEMY</h1>
+                    <div class="institution-meta-info">
+                        <span><i class="fa-solid fa-location-dot"></i> Arcahaie, Bas-Cortade, Ouest / Haïti</span>
+                        <span class="meta-separator">|</span>
+                        <span><i class="fa-solid fa-phone"></i> (509) 4883-6113 / 4914-1084</span>
+                        <span class="meta-separator">|</span>
+                        <span><i class="fa-solid fa-envelope"></i> competenceacademy34@gmail.com</span>
+                    </div>
+                </div>
+            </div>
+            <div class="letterhead-divider"></div>
+            <div class="dashboard-top">
+                <div class="student-profile">
+                    <div class="student-avatar" style="display:flex;justify-content:center;align-items:center"><i class="fa-solid fa-user"></i></div>
+                    <div><h3 id="student-name"></h3><p id="student-course"></p></div>
+                </div>
+                <div class="status-badge" id="student-status"></div>
+            </div>
+            <hr class="dashboard-divider">
+            <div class="dashboard-grid">
+                <div class="dash-card progress-card">
+                    <h4>Progression Globale</h4>
+                    <div class="progress-bar-container"><div class="progress-bar-fill" id="global-progress"></div></div>
+                    <span class="progress-percentage" id="progress-text"></span>
+                </div>
+                <div class="dash-card score-card">
+                    <h4>Moyenne Générale</h4>
+                    <div class="score-display" style="justify-content:center"><span class="big-score" id="student-average"></span><span class="max-score">/10</span></div>
+                    <p class="score-mention" id="student-mention"></p>
+                </div>
+            </div>
+            <div class="modules-table-container">
+                <h4>Détails des Modules</h4>
+                <table class="modules-table">
+                    <thead><tr><th>Module</th><th>Note</th><th>Évolution / Statut</th></tr></thead>
+                    <tbody id="modules-list"></tbody>
+                </table>
+            </div>
+            <div class="dashboard-footer-addon">
+                <p class="addon-legal-text">* Ce bulletin est un relevé de notes officiel généré par Competence Academy. Le certificat de fin d'études ne sera délivré qu'après la validation de tous les modules avec une moyenne minimale de 7.0/10 et la régularisation complète des frais de formation.</p>
+                <div class="addon-signatures-container">
+                    <div class="signature-box"><p class="signature-title">La Direction COMPETENCE ACADEMY</p><div class="signature-line"></div></div>
+                    <div class="signature-box"><div class="institution-stamp">CA STAMP</div></div>
+                </div>
+            </div>
+            <div id="pdfActions" style="text-align:center;margin-top:35px">
+                <button id="downloadResult" type="button" style="background:#111E62;color:#fff;border:0;padding:12px 25px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+                    <i class="fa-solid fa-file-pdf"></i> Télécharger mon bulletin
+                </button>
+                <button id="changeCode" type="button" style="margin-left:8px"><i class="fa-solid fa-right-from-bracket"></i> Quitter le bulletin</button>
+            </div>
+        </div>
+    </section>
+    <footer class="course-footer">    <a href="index.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Retour à l'accueil</a></footer>
+    <script>
+        const RESULTS_API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000/api'
+            : 'https://site-competence-academy-backend.onrender.com/api';
+        const resultsError = document.getElementById('results-error');
+        const resultInput = document.getElementById('student-code-input');
+
+        function displayResult(result) {
+            document.getElementById('student-name').textContent = result.nom;
+            document.getElementById('student-course').textContent = `Filière : ${result.filiere}`;
+            document.getElementById('student-status').textContent = `STATUT : ${result.statut}`;
+            document.getElementById('global-progress').style.width = `${result.progression}%`;
+            document.getElementById('progress-text').textContent = `${result.progression}% Complété`;
+            document.getElementById('student-average').textContent = result.moyenne;
+            document.getElementById('student-mention').textContent = result.mention;
+            const modules = document.getElementById('modules-list');
+            modules.replaceChildren();
+            result.modules.forEach(function(module) {
+                const row = document.createElement('tr');
+                [module.nom, module.note, module.statut].forEach(function(value, index) {
+                    const cell = document.createElement('td');
+                    cell.textContent = value;
+                    if (index === 1) cell.className = 'note-badge';
+                    if (index === 2) cell.className = 'status-text';
+                    row.appendChild(cell);
+                });
+                modules.appendChild(row);
+            });
+            document.getElementById('results-auth-screen').style.display = 'none';
+            document.getElementById('student-dashboard').style.display = 'block';
+        }
+
+        async function verifyResult(code) {
+            resultsError.style.display = 'none';
+            try {
+                const response = await fetch(`${RESULTS_API_BASE_URL}/results/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    cache: 'no-store',
+                    body: JSON.stringify({ code })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de vérifier ce code.');
+                displayResult(data.result);
+            } catch (error) {
+                resultsError.textContent = error.message;
+                resultsError.style.display = 'flex';
+            }
+        }
+
+        document.getElementById('resultLookupForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            verifyResult(resultInput.value.trim());
+        });
+        document.getElementById('changeCode').addEventListener('click', function() {
+            document.getElementById('student-dashboard').style.display = 'none';
+            document.getElementById('results-auth-screen').style.display = '';
+            resultInput.value = '';
+            resultInput.focus();
+        });
+        document.getElementById('downloadResult').addEventListener('click', async function() {
+            const button = this;
+            const actions = document.getElementById('pdfActions');
+            button.disabled = true;
+            actions.style.display = 'none';
+            try {
+                await html2pdf().set({
+                    margin: [10, 12, 12, 12],
+                    filename: `Bulletin_${document.getElementById('student-name').textContent.trim().replace(/\s+/g, '_')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css'] }
+                }).from(document.getElementById('student-dashboard')).save();
+            } catch (error) {
+                console.error('Result PDF generation failed:', error);
+                resultsError.textContent = 'Le téléchargement du bulletin a échoué. Réessayez.';
+                resultsError.style.display = 'flex';
+            } finally {
+                actions.style.display = '';
+                button.disabled = false;
+            }
+        });
+        const emailCode = new URLSearchParams(window.location.hash.slice(1)).get('code');
+        if (emailCode) {
+            history.replaceState(history.state, '', `${window.location.pathname}${window.location.search}`);
+            resultInput.value = emailCode;
+            verifyResult(emailCode);
+        }
+    </script>
+</body>
+</html>
