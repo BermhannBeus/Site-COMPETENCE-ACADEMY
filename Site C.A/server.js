@@ -1789,6 +1789,7 @@ app.post('/api/logout', async (req, res) => {
                     tokenVersion: decoded.tokenVersion,
                     activeSessionId: decoded.sessionId
                 }, {
+                    $inc: { tokenVersion: 1 },
                     $set: { activeSessionId: null, activeSessionExpiresAt: null }
                 }).select('_id');
                 if (releasedUser) io.in(String(releasedUser._id)).disconnectSockets(true);
