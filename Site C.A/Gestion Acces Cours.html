@@ -101,8 +101,13 @@
         .quiz-question-actions { display: flex; flex-wrap: wrap; gap: 8px; }
         .quiz-question-actions button { min-height: 38px; padding: 8px 12px; font-size: .9rem; }
         .quiz-empty { margin: 18px 0 0; padding: 18px; border: 1px dashed #cbd5e1; border-radius: 9px; color: var(--muted); text-align: center; }
+        .result-module-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; gap: 10px; margin-top: 10px; align-items: end; }
+        .result-module-row button { background: #b91c1c; }
+        .result-record { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fbfdff; }
         footer { margin: 24px 0 0; color: var(--muted); text-align: center; font-size: .9rem; }
         @media (max-width: 620px) {
+            .result-module-row { grid-template-columns: 1fr 100px; }
+            .result-module-row button { grid-column: 1 / -1; }
             .topbar { min-height: 104px; gap: 12px; padding: 0 14px; }
             .logo { flex-basis: 120px; width: 120px; height: 104px; }
             .logo img { width: 104px; height: 104px; }
@@ -203,6 +208,45 @@
             </div>
         </section>
 
+        <section class="panel" aria-labelledby="studentResultsTitle">
+            <div class="section-heading"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><h2 id="studentResultsTitle">Résultats des étudiants</h2></div>
+            <p class="muted">Enregistrez un bulletin en brouillon, puis validez-le pour créer un nouveau code d’accès. Le code précédent est désactivé à chaque modification. WhatsApp ouvre un message prérempli que vous devez envoyer manuellement.</p>
+            <form id="resultForm">
+                <input id="resultId" type="hidden">
+                <div class="field-grid">
+                    <div><label for="resultName">Nom de l’étudiant</label><input id="resultName" maxlength="100" required></div>
+                    <div><label for="resultEmail">E-mail</label><input id="resultEmail" type="email" required></div>
+                    <div><label for="resultPhone">Téléphone WhatsApp</label><input id="resultPhone" type="tel" maxlength="30" required></div>
+                    <div><label for="resultFormation">Formation</label>
+                        <select id="resultFormation">
+                            <option value="bureautique">Informatique Bureautique</option>
+                            <option value="photographie">Photographie</option>
+                            <option value="design">Design Graphic</option>
+                            <option value="videographie">Vidéographie</option>
+                            <option value="montage">Montage Vidéo</option>
+                            <option value="quickbooks">QuickBooks</option>
+                            <option value="surveillance">Surveillance</option>
+                        </select>
+                    </div>
+                </div>
+                <h3 style="margin-top:20px;">Notes des modules (sur 10)</h3>
+                <div id="resultModules"></div>
+                <div class="actions">
+                    <button id="addResultModule" class="secondary" type="button"><i class="fa-solid fa-plus"></i> Ajouter un module</button>
+                </div>
+                <label style="display:flex;align-items:center;gap:9px;margin-top:18px;"><input id="resultValidated" type="checkbox" style="width:20px;min-height:20px;"> Valider le bulletin et générer un nouveau code d’accès</label>
+                <div class="actions">
+                    <button class="primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Enregistrer le bulletin</button>
+                    <button id="cancelResultEdit" class="secondary" type="button" hidden>Annuler la modification</button>
+                </div>
+            </form>
+            <div id="resultNotice" class="notice" role="status" hidden></div>
+            <div id="resultIssued" class="issued-code" hidden></div>
+            <h3 style="margin-top:24px;">Bulletins enregistrés</h3>
+            <div class="actions"><button id="refreshResults" class="secondary" type="button"><i class="fa-solid fa-rotate"></i> Actualiser les bulletins</button></div>
+            <div id="resultList" class="access-list" aria-live="polite"></div>
+        </section>
+
         <section class="panel" aria-labelledby="quizBankTitle">
             <div class="section-heading"><i class="fa-solid fa-list-check" aria-hidden="true"></i><h2 id="quizBankTitle">Banque de questions du quiz</h2></div>
             <p class="quiz-admin-help">Choisissez une filière, puis ajoutez ou gérez ses questions directement ici. La banque accepte jusqu’à 80 questions par formation. Configurez <code>QUIZ_ADMIN_API_KEY</code> dans les variables d’environnement Render du Quiz Backend.</p>
@@ -293,6 +337,11 @@
         const quizQuestionForm = document.getElementById('quizQuestionForm');
         const quizQuestionList = document.getElementById('quizQuestionList');
         const quizQuestionSaveButton = document.getElementById('quizQuestionSaveButton');
+        const resultForm = document.getElementById('resultForm');
+        const resultModules = document.getElementById('resultModules');
+        const resultNotice = document.getElementById('resultNotice');
+        const resultIssued = document.getElementById('resultIssued');
+        const resultList = document.getElementById('resultList');
         const QUIZ_API_BASE_URL = 'https://competence-academy-quiz.onrender.com';
         let busy = false;
         let editingQuizQuestionId = '';
@@ -316,8 +365,8 @@
 
         async function adminRequest(path, options) {
             const key = adminKeyInput.value.trim();
-            if (!key) throw new Error('Veuillez saisir la clé d’administration configurée dans COURSE_ADMIN_API_KEY.');
-            const response = await fetch(`${API_BASE_URL}${path}`, {
+            if (!key) throw new Error('Veuillez saisir la cle d’administration configuree dans COURSE_ADMIN_API_KEY.');
+            const response = await fetch(API_BASE_URL + path, {
                 ...options,
                 cache: 'no-store',
                 headers: {
@@ -328,12 +377,165 @@
             });
             const data = await response.json();
             if (response.status === 401) {
-                throw new Error('La clé saisie ne correspond pas à COURSE_ADMIN_API_KEY sur le backend Render connecté. Vérifiez que vous utilisez la même clé que dans ce service Render, sans espace en trop, puis redéployez le backend après toute modification.');
+                throw new Error('La cle saisie ne correspond pas a COURSE_ADMIN_API_KEY sur le backend Render connecte. Verifiez que vous utilisez la meme cle que dans ce service Render, sans espace en trop, puis redeployez le backend apres toute modification.');
             }
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || 'La demande a échoué.');
-            }
+            if (!response.ok || !data.success) throw new Error(data.message || 'La demande a echoue.');
             return data;
+        }
+
+        function addResultModule(name, score) {
+            const row = document.createElement('div');
+            row.className = 'result-module-row';
+            const nameLabel = document.createElement('label');
+            nameLabel.textContent = 'Nom du module';
+            const nameInput = document.createElement('input');
+            nameInput.className = 'result-module-name';
+            nameInput.maxLength = 100;
+            nameInput.required = true;
+            nameInput.value = name || '';
+            nameLabel.appendChild(nameInput);
+            const scoreLabel = document.createElement('label');
+            scoreLabel.textContent = 'Note /10';
+            const scoreInput = document.createElement('input');
+            scoreInput.className = 'result-module-score';
+            scoreInput.type = 'number';
+            scoreInput.min = '0';
+            scoreInput.max = '10';
+            scoreInput.step = '0.1';
+            scoreInput.required = true;
+            scoreInput.value = score === undefined ? '' : score;
+            scoreLabel.appendChild(scoreInput);
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.textContent = 'Retirer';
+            removeButton.addEventListener('click', function() { row.remove(); });
+            row.append(nameLabel, scoreLabel, removeButton);
+            resultModules.appendChild(row);
+        }
+
+        async function loadResults() {
+            resultList.replaceChildren();
+            try {
+                const firstPage = await adminRequest('/admin/results?limit=100&page=1', { method: 'GET' });
+                const allResults = firstPage.results.slice();
+                for (let page = 2; page <= firstPage.pages; page += 1) {
+                    const nextPage = await adminRequest('/admin/results?limit=100&page=' + page, { method: 'GET' });
+                    allResults.push(...nextPage.results);
+                }
+                if (!allResults.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'quiz-empty';
+                    empty.textContent = 'Aucun bulletin enregistre.';
+                    resultList.appendChild(empty);
+                    return;
+                }
+                allResults.forEach(function(result) {
+                    const card = document.createElement('article');
+                    card.className = 'result-record';
+                    const heading = document.createElement('strong');
+                    heading.textContent = result.nom + ' - ' + result.filiere;
+                    const details = document.createElement('p');
+                    details.className = 'muted';
+                    details.textContent = result.email + ' | ' + result.telephone + ' | ' + result.statut + ' | Moyenne ' + result.moyenne + '/10';
+                    const actions = document.createElement('div');
+                    actions.className = 'access-actions';
+                    const edit = document.createElement('button');
+                    edit.type = 'button';
+                    edit.className = 'secondary';
+                    edit.textContent = 'Modifier';
+                    edit.addEventListener('click', function() {
+                        resultIssued.hidden = true;
+                        document.getElementById('resultId').value = result.id;
+                        document.getElementById('resultName').value = result.nom;
+                        document.getElementById('resultEmail').value = result.email;
+                        document.getElementById('resultPhone').value = result.telephone;
+                        document.getElementById('resultFormation').value = result.formation;
+                        document.getElementById('resultValidated').checked = result.validated;
+                        resultModules.replaceChildren();
+                        result.modulesRaw.forEach(function(module) { addResultModule(module.name, module.score); });
+                        document.getElementById('cancelResultEdit').hidden = false;
+                        resultForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                    actions.appendChild(edit);
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'danger';
+                    remove.textContent = 'Supprimer';
+                    remove.addEventListener('click', async function() {
+                        if (!window.confirm('Supprimer le bulletin de ' + result.nom + ' ?')) return;
+                        try {
+                            await adminRequest('/admin/results/' + encodeURIComponent(result.id), { method: 'DELETE' });
+                            await loadResults();
+                        } catch (error) {
+                            showNotice(resultNotice, error.message, true);
+                        }
+                    });
+                    actions.appendChild(remove);
+                    card.append(heading, details, actions);
+                    resultList.appendChild(card);
+                });
+            } catch (error) {
+                showNotice(resultNotice, error.message, true);
+            }
+        }
+
+        async function saveStudentResult(event) {
+            event.preventDefault();
+            const id = document.getElementById('resultId').value;
+            const payload = {
+                name: document.getElementById('resultName').value.trim(),
+                email: document.getElementById('resultEmail').value.trim(),
+                phone: document.getElementById('resultPhone').value.trim(),
+                formation: document.getElementById('resultFormation').value,
+                validated: document.getElementById('resultValidated').checked,
+                modules: Array.from(resultModules.querySelectorAll('.result-module-row')).map(function(row) {
+                    return {
+                        name: row.querySelector('.result-module-name').value.trim(),
+                        score: Number(row.querySelector('.result-module-score').value)
+                    };
+                })
+            };
+            resultNotice.hidden = true;
+            resultIssued.hidden = true;
+            try {
+                const data = await adminRequest(id ? '/admin/results/' + encodeURIComponent(id) : '/admin/results', {
+                    method: id ? 'PUT' : 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showNotice(resultNotice, data.message, false);
+                resultIssued.replaceChildren();
+                if (data.code) {
+                    const code = document.createElement('code');
+                    code.textContent = data.code;
+                    const copy = document.createElement('button');
+                    copy.type = 'button';
+                    copy.className = 'secondary';
+                    copy.textContent = 'Copier le code';
+                    copy.addEventListener('click', async function() {
+                        try { await navigator.clipboard.writeText(data.code); }
+                        catch (error) { showNotice(resultNotice, 'Copiez le code affiche manuellement : le presse-papiers est indisponible.', true); }
+                    });
+                    resultIssued.append('Nouveau code : ', code, copy);
+                    if (data.whatsAppUrl) {
+                        const whatsapp = document.createElement('a');
+                        whatsapp.href = data.whatsAppUrl;
+                        whatsapp.target = '_blank';
+                        whatsapp.rel = 'noopener noreferrer';
+                        whatsapp.textContent = 'Ouvrir WhatsApp';
+                        whatsapp.style.cssText = 'display:inline-flex;align-items:center;padding:10px 14px;border-radius:8px;background:#15803d;color:#fff;text-decoration:none;font-weight:700;';
+                        resultIssued.appendChild(whatsapp);
+                    }
+                    resultIssued.hidden = false;
+                }
+                resultForm.reset();
+                document.getElementById('resultId').value = '';
+                resultModules.replaceChildren();
+                addResultModule();
+                document.getElementById('cancelResultEdit').hidden = true;
+                await loadResults();
+            } catch (error) {
+                showNotice(resultNotice, error.message, true);
+            }
         }
 
         async function quizAdminRequest(path, options) {
@@ -661,6 +863,18 @@
 
         document.getElementById('lookupButton').addEventListener('click', loadStudent);
         document.getElementById('issueButton').addEventListener('click', issueCode);
+        document.getElementById('addResultModule').addEventListener('click', function() { addResultModule(); });
+        resultForm.addEventListener('submit', saveStudentResult);
+        document.getElementById('refreshResults').addEventListener('click', loadResults);
+        document.getElementById('cancelResultEdit').addEventListener('click', function() {
+            resultForm.reset();
+            document.getElementById('resultId').value = '';
+            resultModules.replaceChildren();
+            addResultModule();
+            this.hidden = true;
+            resultIssued.hidden = true;
+        });
+        addResultModule();
         document.getElementById('quizBankStatusButton').addEventListener('click', refreshQuizBankStatus);
         quizQuestionForm.addEventListener('submit', saveQuizQuestion);
         document.getElementById('quizQuestionCancelButton').addEventListener('click', resetQuizQuestionForm);
