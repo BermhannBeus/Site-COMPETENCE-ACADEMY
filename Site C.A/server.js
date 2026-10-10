@@ -448,6 +448,27 @@ const CourseProgress = mongoose.model('CourseProgress', courseProgressSchema);
 const VideoWatchSession = mongoose.model('VideoWatchSession', videoWatchSessionSchema);
 const CourseEnrollmentAccess = mongoose.model('CourseEnrollmentAccess', courseAccessCodeSchema);
 const AccessConfirmation = mongoose.model('AccessConfirmation', accessConfirmationSchema);
+const studentResultSchema = new mongoose.Schema({
+    accessCodeHash: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 100 },
+    email: { type: String, required: true, lowercase: true, trim: true, index: true },
+    phone: { type: String, required: true, trim: true, maxlength: 30 },
+    formation: { type: String, required: true, enum: COURSE_ACCESS_CATEGORIES, index: true },
+    modules: {
+        type: [{
+            name: { type: String, required: true, trim: true, maxlength: 100 },
+            score: { type: Number, required: true, min: 0, max: 10 }
+        }],
+        validate: {
+            validator: (modules) => Array.isArray(modules) && modules.length > 0,
+            message: 'Au moins un module noté est requis.'
+        }
+    },
+    validated: { type: Boolean, default: false, index: true },
+    active: { type: Boolean, default: true, index: true },
+    createdBy: { type: String, default: 'admin' }
+}, { timestamps: true });
+const StudentResult = mongoose.model('StudentResult', studentResultSchema);
 
 const getStudentAccessOtp = (user) => {
     const digest = crypto.createHmac('sha256', JWT_SECRET)
@@ -708,6 +729,260 @@ const requireCourseAdmin = (req, res, next) => {
     }
     next();
 };
+
+const createStudentResultCode = () => `CA-RESULT-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+const hashStudentResultCode = (code) => crypto.createHmac('sha256', JWT_SECRET)
+    .update(`student-result:${String(code).trim().toUpperCase()}`)
+    .digest('hex');
+const getStudentResultSummary = (result) => {
+    const modules = result.modules.map((module) => ({
+        nom: module.name,
+        note: `${module.score.toFixed(1)}/10`,
+        statut: module.score >= 7 ? 'Validé' : 'À renforcer'
+    }));
+    const average = modules.length
+        ? result.modules.reduce((sum, module) => sum + module.score, 0) / result.modules.length
+        : 0;
+    const progression = modules.length ? 100 : 0;
+    const validated = average >= 7 && result.modules.every((module) => module.score >= 7);
+    return {
+        id: String(result._id),
+        nom: result.name,
+        email: result.email,
+        telephone: result.phone,
+        filiere: COURSE_TITLES[result.formation],
+        validated: Boolean(result.validated),
+        statut: result.validated ? (validated ? 'Certifié • Terminé' : 'Validé') : 'En cours',
+        progression,
+        moyenne: average.toFixed(2),
+        mention: average >= 8 ? 'Mention : Excellent' : average >= 7.5 ? 'Mention : Très Bien' : average >= 7 ? 'Mention : Bien' : 'Mention : À renforcer',
+        modules
+    };
+};
+const validateStudentResultInput = (body) => {
+    const name = String(body?.name || '').trim();
+    const email = sanitizeEmail(body?.email);
+    const phone = String(body?.phone || '').trim();
+    const formation = String(body?.formation || '').trim();
+    const submittedModules = body?.modules;
+    const errors = [];
+    if (!name || name.length > 100) errors.push('Le nom est obligatoire (100 caractères maximum).');
+    if (!/^\S+@\S+\.\S+$/.test(email)) errors.push('Une adresse e-mail valide est requise.');
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phone || phone.length > 30 || phoneDigits.length < 7 || phoneDigits.length > 15) {
+        errors.push('Un numéro WhatsApp valide est requis (7 à 15 chiffres).');
+    }
+    if (!COURSE_ACCESS_CATEGORIES.includes(formation)) errors.push('La formation sélectionnée est invalide.');
+    if (!Array.isArray(submittedModules) || !submittedModules.length) errors.push('Ajoutez au moins un module avec sa note.');
+    const modules = Array.isArray(submittedModules) ? submittedModules.map((module, index) => {
+        const moduleName = String(module?.name || '').trim();
+        const score = Number(module?.score);
+        if (!moduleName || moduleName.length > 100) errors.push(`Le nom du module ${index + 1} est obligatoire (100 caractères maximum).`);
+        if (!Number.isFinite(score) || score < 0 || score > 10) errors.push(`La note du module ${index + 1} doit être comprise entre 0 et 10.`);
+        return { name: moduleName, score };
+    }) : [];
+    const uniqueNames = new Set(modules.map((module) => module.name.toLocaleLowerCase()));
+    if (uniqueNames.size !== modules.length) errors.push('Chaque module doit avoir un nom différent.');
+    return {
+        errors,
+        document: { name, email, phone, formation, modules, validated: body?.validated === true }
+    };
+};
+
+app.get('/api/admin/results', requireCourseAdmin, async (req, res) => {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
+    try {
+        const [results, total] = await Promise.all([
+            StudentResult.find({ active: true })
+                .select('name email phone formation modules validated createdAt')
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            StudentResult.countDocuments({ active: true })
+        ]);
+        res.json({
+            success: true,
+            results: results.map((result) => ({
+                ...getStudentResultSummary(result),
+                formation: result.formation,
+                modulesRaw: result.modules.map((module) => ({ name: module.name, score: module.score }))
+            })),
+            total,
+            page,
+            pages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        console.error('Admin student results list error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de charger les résultats des étudiants.' });
+    }
+});
+
+app.post('/api/admin/results', requireCourseAdmin, async (req, res) => {
+    const { errors, document } = validateStudentResultInput(req.body);
+    if (errors.length) return res.status(400).json({ success: false, message: errors.join(' ') });
+
+    const code = document.validated ? createStudentResultCode() : '';
+    let result;
+    try {
+        result = await StudentResult.create({
+            ...document,
+            accessCodeHash: hashStudentResultCode(code || createStudentResultCode())
+        });
+    } catch (error) {
+        console.error('Admin student result creation error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’enregistrer le bulletin.' });
+        return;
+    }
+
+    if (!document.validated) {
+        return res.status(201).json({
+            success: true,
+            emailSent: false,
+            message: 'Bulletin enregistré comme en cours. Validez-le pour générer et envoyer le code d’accès.',
+            result: getStudentResultSummary(result)
+        });
+    }
+
+    const resultUrl = getFrontendUrl('/resultats.html', { code });
+    const whatsAppText = `Bonjour ${document.name}, voici votre code personnel pour consulter votre bulletin Competence Academy : ${code}. Ouvrez le lien ${resultUrl}`;
+    let emailSent = false;
+    try {
+        await sendEmail({
+            to: document.email,
+            subject: 'Votre bulletin de résultats — Competence Academy',
+            ...createCodeEmail({
+                greeting: `Bonjour ${document.name},`,
+                message: `Votre bulletin pour la formation ${COURSE_TITLES[document.formation]} est disponible.`,
+                code,
+                buttonLabel: 'Consulter mon bulletin',
+                buttonUrl: resultUrl,
+                note: 'Conservez ce code personnel. Il donne accès à votre bulletin et ne doit pas être partagé.'
+            })
+        });
+        emailSent = true;
+    } catch (error) {
+        console.error('Student result notification email failed:', error);
+    }
+
+    res.status(201).json({
+        success: true,
+        emailSent,
+        message: emailSent
+            ? 'Bulletin enregistré et code envoyé par e-mail.'
+            : 'Bulletin enregistré, mais l’e-mail n’a pas pu être envoyé. Remettez le code à l’étudiant manuellement.',
+        code,
+        result: getStudentResultSummary(result),
+        resultUrl,
+        whatsAppUrl: `https://wa.me/${document.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsAppText)}`
+    });
+});
+
+app.put('/api/admin/results/:id', requireCourseAdmin, async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Identifiant de bulletin invalide.' });
+    }
+    const { errors, document } = validateStudentResultInput(req.body);
+    if (errors.length) return res.status(400).json({ success: false, message: errors.join(' ') });
+    try {
+        const code = document.validated ? createStudentResultCode() : '';
+        const result = await StudentResult.findByIdAndUpdate(req.params.id, {
+            ...document,
+            accessCodeHash: hashStudentResultCode(code || createStudentResultCode())
+        }, {
+            new: true,
+            runValidators: true
+        });
+        if (!result) return res.status(404).json({ success: false, message: 'Bulletin introuvable.' });
+        if (!document.validated) {
+            return res.json({
+                success: true,
+                message: 'Bulletin modifié. Il est en attente de validation et le code précédent a été désactivé.',
+                result: getStudentResultSummary(result)
+            });
+        }
+        const resultUrl = getFrontendUrl('/resultats.html', { code });
+        const whatsAppText = `Bonjour ${document.name}, voici votre code personnel pour consulter votre bulletin Competence Academy : ${code}. Ouvrez le lien ${resultUrl}`;
+        let emailSent = false;
+        try {
+            await sendEmail({
+                to: document.email,
+                subject: 'Votre bulletin de résultats — Competence Academy',
+                ...createCodeEmail({
+                    greeting: `Bonjour ${document.name},`,
+                    message: `Votre bulletin pour la formation ${COURSE_TITLES[document.formation]} est validé et disponible.`,
+                    code,
+                    buttonLabel: 'Consulter mon bulletin',
+                    buttonUrl: resultUrl,
+                    note: 'Conservez ce code personnel. Il donne accès à votre bulletin et ne doit pas être partagé.'
+                })
+            });
+            emailSent = true;
+        } catch (emailError) {
+            console.error('Student result notification email failed:', emailError);
+        }
+        res.json({
+            success: true,
+            emailSent,
+            message: emailSent
+                ? 'Bulletin modifié et code renvoyé par e-mail.'
+                : 'Bulletin modifié, mais l’e-mail n’a pas pu être envoyé. Remettez le code à l’étudiant manuellement.',
+            code,
+            result: getStudentResultSummary(result),
+            resultUrl,
+            whatsAppUrl: `https://wa.me/${document.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsAppText)}`
+        });
+    } catch (error) {
+        console.error('Admin student result update error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de modifier le bulletin.' });
+    }
+});
+
+app.delete('/api/admin/results/:id', requireCourseAdmin, async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Identifiant de bulletin invalide.' });
+    }
+    try {
+        const result = await StudentResult.findByIdAndDelete(req.params.id);
+        if (!result) return res.status(404).json({ success: false, message: 'Bulletin introuvable.' });
+        res.json({ success: true, message: 'Bulletin et code d’accès supprimés.' });
+    } catch (error) {
+        console.error('Admin student result delete error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de supprimer le bulletin.' });
+    }
+});
+
+app.post('/api/results/verify', async (req, res) => {
+    const code = String(req.body?.code || '').trim();
+    if (!/^CA-RESULT-[A-F0-9]{12}$/i.test(code)) {
+        return res.status(400).json({ success: false, message: 'Vérifiez le format du code de votre bulletin.' });
+    }
+    try {
+        const result = await StudentResult.findOne({
+            accessCodeHash: hashStudentResultCode(code),
+            active: true
+        }).select('name email phone formation modules validated createdAt');
+        if (!result) return res.status(404).json({ success: false, message: 'Code invalide ou bulletin indisponible.' });
+        if (!result.validated) return res.status(403).json({ success: false, message: 'Ce bulletin est en attente de validation.' });
+        const summary = getStudentResultSummary(result);
+        res.json({
+            success: true,
+            result: {
+                nom: summary.nom,
+                filiere: summary.filiere,
+                statut: summary.statut,
+                progression: summary.progression,
+                moyenne: summary.moyenne,
+                mention: summary.mention,
+                modules: summary.modules
+            }
+        });
+    } catch (error) {
+        console.error('Student result verification error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de charger le bulletin. Réessayez plus tard.' });
+    }
+});
 
 // 1. Route d’inscription
 app.post('/api/signup', authLimiter, async (req, res) => {
