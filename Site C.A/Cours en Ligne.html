@@ -30,14 +30,41 @@
     function handleSingleSessionConflict(data) {
         if (data?.message !== SINGLE_SESSION_MESSAGE || singleSessionRedirectStarted) return false;
         singleSessionRedirectStarted = true;
+        clearLocalStudentSession();
+        alert(SINGLE_SESSION_MESSAGE);
+        window.location.replace(new URL('Login.html', window.location.href).href);
+        return true;
+    }
+
+    function clearLocalStudentSession() {
         localStorage.removeItem('ca_token');
         localStorage.removeItem('competence_academy_user');
         sessionStorage.removeItem('ca_token');
         sessionStorage.removeItem('competence_academy_user');
         sessionStorage.removeItem('ca_access_challenge_id');
-        alert(SINGLE_SESSION_MESSAGE);
-        window.location.replace(new URL('Login.html', window.location.href).href);
-        return true;
+        sessionStorage.removeItem('ca_pending_course_access');
+    }
+
+    async function releaseExpiredServerSession() {
+        const token = localStorage.getItem('ca_token') || sessionStorage.getItem('ca_token');
+        const headers = {};
+        if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
+        try {
+            const response = await fetch(`${API_BASE_URL}/logout`, {
+                method: 'POST',
+                credentials: 'include',
+                headers,
+                keepalive: true
+            });
+            if (!response.ok) {
+                console.error('Le serveur n’a pas pu libérer la session expirée:', response.status);
+            }
+        } catch (error) {
+            console.error('La libération de la session expirée a échoué:', error);
+        } finally {
+            clearLocalStudentSession();
+            window.location.replace(new URL('Login.html', window.location.href).href);
+        }
     }
 
     const emailCourseAccess = new URLSearchParams(window.location.hash.slice(1));
@@ -66,6 +93,10 @@
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 if (handleSingleSessionConflict(data)) return null;
+                if (response.status === 401) {
+                    await releaseExpiredServerSession();
+                    return null;
+                }
                 throw new Error(data.message || 'Unauthorized');
             }
             return data;
@@ -81,7 +112,10 @@
             document.documentElement.classList.remove('auth-pending');
         })
         .catch(() => {
-            if (!singleSessionRedirectStarted) window.location.replace('/login');
+            if (!singleSessionRedirectStarted) {
+                clearLocalStudentSession();
+                window.location.replace(new URL('Login.html', window.location.href).href);
+            }
         });
 </script>
 
@@ -193,7 +227,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-pdf"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Guide Word.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/word-guide.pdf</span>
                                     <span class="doc-size" id="text-bureautique">Bloqué • 1.2 MB</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -255,7 +288,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-pdf"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Triangle_Exposition.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/Vitesse_ISO.pdf</span>
                                     <span class="doc-size" id="text-photo">Bloqué • 3.5 MB</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -317,7 +349,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-pdf"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Guide_Vecteurs.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/Illustrator_Logo.pdf</span>
                                     <span class="doc-size" id="text-design">Bloqué • 4.2 MB</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -379,7 +410,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-pdf"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Mouvements_Camera.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/Cadrage_Pro.pdf</span>
                                     <span class="doc-size" id="text-vid">Bloqué • 2.8 MB</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -441,7 +471,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-pdf"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Raccourcis_Premiere.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/Premiere_Pro.pdf</span>
                                     <span class="doc-size" id="text-montage">Bloqué • 5.1 MB</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -503,7 +532,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-lines"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Guide QuickBooks.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/Guide_QuickBooks.pdf</span>
                                     <span class="doc-size" id="text-quickbooks">Bloqué • Document réservé</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -558,7 +586,6 @@
                                 <div class="doc-icon"><i class="fa-solid fa-file-lines"></i></div>
                                 <div class="doc-details">
                                     <span class="doc-name">Guide Caméra.pdf</span>
-                                    <span style="display:block; margin-top:3px; color:#64748b; font-size:0.72rem;">Fichier : dokiman/Guide_Camera.pdf</span>
                                     <span class="doc-size" id="text-surveillance">Bloqué • Document réservé</span>
                                 </div>
                                 <span class="doc-download-label"><i class="fa-solid fa-lock" aria-hidden="true"></i> Débloquer pour télécharger</span>
@@ -609,13 +636,13 @@
 
     async function deconnecterEtudiant() {
         const token = localStorage.getItem('ca_token') || sessionStorage.getItem('ca_token');
-        try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
+        const requestLogout = async function(path) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 4000);
-            const headers = { 'Content-Type': 'application/json' };
-            if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
             try {
-                await fetch(`${COURSE_API_BASE_URL}/auth/logout`, {
+                return await fetch(`${COURSE_API_BASE_URL}${path}`, {
                     method: 'POST',
                     credentials: 'include',
                     headers,
@@ -624,6 +651,16 @@
                 });
             } finally {
                 clearTimeout(timeoutId);
+            }
+        };
+        try {
+            const response = await requestLogout('/auth/logout');
+            if (!response.ok) {
+                console.error('La déconnexion authentifiée a échoué:', response.status);
+                const fallbackResponse = await requestLogout('/logout');
+                if (!fallbackResponse.ok) {
+                    console.error('La déconnexion de secours a échoué:', fallbackResponse.status);
+                }
             }
         } catch (error) {
             console.error('La fermeture de session côté serveur a échoué:', error);
