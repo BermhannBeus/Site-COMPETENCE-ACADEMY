@@ -81,6 +81,70 @@
         history.replaceState(history.state, '', `${window.location.pathname}${window.location.search}`);
     }
 
+    function md5Hex(value) {
+        const input = new TextEncoder().encode(value);
+        const paddedLength = Math.ceil((input.length + 9) / 64) * 64;
+        const padded = new Uint8Array(paddedLength);
+        padded.set(input);
+        padded[input.length] = 0x80;
+        const view = new DataView(padded.buffer);
+        view.setUint32(paddedLength - 8, (input.length * 8) >>> 0, true);
+        view.setUint32(paddedLength - 4, Math.floor(input.length / 0x20000000), true);
+
+        const shifts = [
+            7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+            5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+            4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+            6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+        ];
+        const constants = Array.from({ length: 64 }, (_, index) =>
+            Math.floor(Math.abs(Math.sin(index + 1)) * 0x100000000) >>> 0
+        );
+        let a0 = 0x67452301;
+        let b0 = 0xefcdab89;
+        let c0 = 0x98badcfe;
+        let d0 = 0x10325476;
+
+        for (let offset = 0; offset < paddedLength; offset += 64) {
+            const words = Array.from({ length: 16 }, (_, index) => view.getUint32(offset + index * 4, true));
+            let a = a0;
+            let b = b0;
+            let c = c0;
+            let d = d0;
+
+            for (let index = 0; index < 64; index += 1) {
+                let mix;
+                let wordIndex;
+                if (index < 16) {
+                    mix = (b & c) | (~b & d);
+                    wordIndex = index;
+                } else if (index < 32) {
+                    mix = (d & b) | (~d & c);
+                    wordIndex = (5 * index + 1) % 16;
+                } else if (index < 48) {
+                    mix = b ^ c ^ d;
+                    wordIndex = (3 * index + 5) % 16;
+                } else {
+                    mix = c ^ (b | ~d);
+                    wordIndex = (7 * index) % 16;
+                }
+
+                const sum = (a + mix + constants[index] + words[wordIndex]) >>> 0;
+                const rotated = (sum << shifts[index]) | (sum >>> (32 - shifts[index]));
+                [a, b, c, d] = [d, (b + rotated) >>> 0, b, c];
+            }
+
+            a0 = (a0 + a) >>> 0;
+            b0 = (b0 + b) >>> 0;
+            c0 = (c0 + c) >>> 0;
+            d0 = (d0 + d) >>> 0;
+        }
+
+        const digest = new DataView(new ArrayBuffer(16));
+        [a0, b0, c0, d0].forEach((word, index) => digest.setUint32(index * 4, word, true));
+        return Array.from(new Uint8Array(digest.buffer), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+
     const showOnlineIdentity = (user) => {
         const nameElement = document.getElementById('onlineIdentity');
         const emailElement = document.getElementById('onlineEmail');
@@ -91,28 +155,52 @@
         const displayName = String(
             user.fullName || user.username || user.nameOnCertificate || user.name || user.email || 'Étudiant'
         ).trim();
-        nameElement.textContent = displayName;
+        nameElement.textContent = `Vous êtes connecté en tant que ${displayName}`;
         if (emailElement) emailElement.textContent = user.email || '';
 
         const avatarValue = user.avatarUrl || user.profileImage || user.profilePicture || user.picture || user.avatar || '';
         let avatarUrl = '';
         try {
             const parsedAvatarUrl = new URL(avatarValue, window.location.href);
-            if (parsedAvatarUrl.protocol === 'https:') avatarUrl = parsedAvatarUrl.href;
+            if (parsedAvatarUrl.protocol === 'https:' || parsedAvatarUrl.protocol === 'http:') {
+                avatarUrl = parsedAvatarUrl.href;
+            }
         } catch (error) {
             if (avatarValue) console.warn('L’URL de la photo de profil est invalide.');
         }
 
         if (avatarImage && avatarFallback) {
-            avatarImage.hidden = !avatarUrl;
-            avatarFallback.hidden = Boolean(avatarUrl);
             avatarFallback.textContent = Array.from(displayName)[0]?.toLocaleUpperCase() || 'É';
+            const normalizedEmail = String(user.email || '').toLowerCase().replace(/\s+/g, '');
+            const gravatarUrl = normalizedEmail
+                ? `https://www.gravatar.com/avatar/${md5Hex(normalizedEmail)}?d=404`
+                : '';
+            avatarImage.hidden = true;
+            avatarFallback.hidden = false;
+            avatarImage.dataset.gravatarUrl = gravatarUrl;
+            avatarImage.dataset.gravatarTried = String(!avatarUrl);
+            avatarImage.onload = () => {
+                avatarImage.hidden = false;
+                avatarFallback.hidden = true;
+            };
             avatarImage.onerror = () => {
+                const fallbackUrl = avatarImage.dataset.gravatarUrl;
+                if (!avatarImage.dataset.gravatarTried && fallbackUrl) {
+                    avatarImage.dataset.gravatarTried = 'true';
+                    avatarImage.src = fallbackUrl;
+                    return;
+                }
                 avatarImage.hidden = true;
                 avatarFallback.hidden = false;
             };
-            if (avatarUrl) avatarImage.src = avatarUrl;
-            else avatarImage.removeAttribute('src');
+            if (avatarUrl) {
+                avatarImage.src = avatarUrl;
+            } else if (gravatarUrl) {
+                avatarImage.dataset.gravatarTried = 'true';
+                avatarImage.src = gravatarUrl;
+            } else {
+                avatarImage.removeAttribute('src');
+            }
         }
     };
 
@@ -201,13 +289,12 @@
                     <span id="onlineAvatarFallback">É</span>
                 </span>
                 <div class="profile-identity">
-                    <p class="profile-greeting">Vous êtes connecté en tant que :</p>
-                    <h2 id="onlineIdentity">Étudiant</h2>
+                    <h2>Présence en direct</h2>
+                    <p id="onlineIdentity" class="online-identity">Vous êtes connecté en tant que Étudiant</p>
                     <p id="onlineEmail"></p>
                 </div>
             </div>
             <div class="online-count" aria-live="polite">
-                <span class="online-count-label">Présence en direct</span>
                 <span class="online-count-dot" aria-hidden="true"></span>
                 <strong id="onlineCount">0</strong>
                 <span>en ligne</span>
