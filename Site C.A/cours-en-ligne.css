@@ -310,7 +310,20 @@ body {
 .doc-details { flex-grow: 1; }
 .doc-name { display: block; font-weight: 600; color: var(--academy-dark); font-size: 0.9rem; }
 .doc-size { font-size: 0.75rem; color: #94a3b8; }
-.download-icon { color: #94a3b8; }
+.doc-download-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    margin-left: 12px;
+    padding: 6px 9px;
+    border-radius: 5px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
 .course-footer { text-align: center; margin-top: 20px; margin-bottom: 40px; }
 .back-btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #64748b; font-weight: 600; transition: var(--transition); }
 .back-btn:hover { color: var(--academy-orange); }
@@ -749,14 +762,6 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .doc-details { flex-grow: 1; }
 .doc-name { display: block; font-weight: 600; color: var(--academy-dark); font-size: 0.9rem; }
 .doc-size { font-size: 0.75rem; color: #94a3b8; }
-.download-icon { color: #94a3b8; }
-#icon-lock-bureautique,
-#icon-lock-photo,
-#icon-lock-design,
-#icon-lock-vid,
-#icon-lock-montage,
-#icon-lock-quickbooks,
-#icon-lock-surveillance { color: #ffc107 !important; }
 .course-footer { text-align: center; margin-top: 20px; margin-bottom: 40px; }
 .back-btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #64748b; font-weight: 600; transition: var(--transition); }
 .back-btn:hover { color: var(--academy-orange); }
@@ -1676,6 +1681,36 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .course-footer {
     text-align: center;
     margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 11px 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #dc2626;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.logout-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+.logout-btn:focus-visible {
+    outline: 3px solid rgba(220, 38, 38, 0.3);
+    outline-offset: 3px;
 }
 
 .back-btn {
