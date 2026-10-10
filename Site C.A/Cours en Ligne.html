@@ -73,6 +73,56 @@
     const emailAccessCode = emailCourseAccess.get('access-code');
     const emailAccessCourse = emailCourseAccess.get('course');
     const validEmailAccessCourses = ['bureautique', 'photographie', 'design', 'videographie', 'montage', 'quickbooks', 'surveillance'];
+    const SESSION_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+    const SESSION_ACTIVITY_WINDOW_MS = 10 * 60 * 1000;
+    let lastSessionActivityAt = Date.now();
+    let sessionHeartbeatTimer = null;
+    let courseSocket = null;
+
+    ['pointerdown', 'keydown', 'touchstart', 'scroll', 'click'].forEach((eventName) => {
+        window.addEventListener(eventName, () => {
+            lastSessionActivityAt = Date.now();
+        }, { passive: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            lastSessionActivityAt = Date.now();
+            sendSessionHeartbeat();
+        }
+    });
+
+    async function sendSessionHeartbeat() {
+        if (document.visibilityState !== 'visible'
+            || Date.now() - lastSessionActivityAt > SESSION_ACTIVITY_WINDOW_MS) return;
+
+        const token = localStorage.getItem('ca_token') || sessionStorage.getItem('ca_token');
+        const headers = {};
+        if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/heartbeat`, {
+                method: 'POST',
+                credentials: 'include',
+                headers
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && courseSocket?.connected) courseSocket.emit('sessionHeartbeat');
+            if (response.status === 401) {
+                if (!handleSingleSessionConflict(data)) await releaseExpiredServerSession();
+                return;
+            }
+            if (!response.ok) {
+                console.error('Le renouvellement de la session a échoué:', response.status);
+            }
+        } catch (error) {
+            console.error('Impossible de renouveler la session active:', error);
+        }
+    }
+
+    function startSessionHeartbeat() {
+        if (sessionHeartbeatTimer !== null) clearInterval(sessionHeartbeatTimer);
+        sessionHeartbeatTimer = setInterval(sendSessionHeartbeat, SESSION_HEARTBEAT_INTERVAL_MS);
+    }
+
     if (emailAccessCode && emailAccessCode.length <= 128 && validEmailAccessCourses.includes(emailAccessCourse)) {
         sessionStorage.setItem('ca_pending_course_access', JSON.stringify({
             code: emailAccessCode,
@@ -232,6 +282,7 @@
             if (!data) return;
             localStorage.setItem('competence_academy_user', JSON.stringify(data.user));
             localStorage.setItem('user', JSON.stringify(data.user));
+            startSessionHeartbeat();
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => showOnlineIdentity(data.user), { once: true });
             } else {
@@ -1211,11 +1262,11 @@
 
 <script src="https://site-competence-academy-backend.onrender.com/socket.io/socket.io.js"></script>
 <script>
-    const socket = io('https://site-competence-academy-backend.onrender.com', {
+    courseSocket = io('https://site-competence-academy-backend.onrender.com', {
         withCredentials: true
     });
 
-    socket.on('onlineCount', (count) => {
+    courseSocket.on('onlineCount', (count) => {
         const counterElement = document.getElementById('onlineCount');
         if (!counterElement) return;
 
