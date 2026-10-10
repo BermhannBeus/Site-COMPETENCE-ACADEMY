@@ -750,8 +750,12 @@ const authenticate = async (req, res, next) => {
 
     try {
         const user = await User.findById(decoded.id).select('tokenVersion');
-        if (!user || decoded.tokenVersion !== user.tokenVersion) {
-            return res.status(401).json({ success: false, message: 'Session expirée ou remplacée par une autre connexion.' });
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
+        }
+        if (decoded.tokenVersion !== user.tokenVersion) {
+            clearAuthCookie(res);
+            return res.status(401).json({ success: false, message: 'Vous êtes déjà connecté sur un autre appareil.' });
         }
         req.user = decoded;
         return next();
@@ -1788,4 +1792,3 @@ startServer().catch((error) => {
     console.error('Server startup failed:', error.message);
     process.exit(1);
 });
-
