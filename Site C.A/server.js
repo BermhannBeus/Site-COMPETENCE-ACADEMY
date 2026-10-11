@@ -37,6 +37,7 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+const SESSION_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
     .split(',')
@@ -79,17 +80,20 @@ io.use(async (socket, next) => {
             return next(new Error('Authentication required'));
         }
         const user = await User.findById(decoded.id)
-            .select('tokenVersion activeSessionId activeSessionExpiresAt');
+            .select('tokenVersion activeSessionId activeSessionExpiresAt activeSessionTokenExpiresAt');
         if (!user || decoded.tokenVersion !== user.tokenVersion
             || decoded.sessionId !== user.activeSessionId
             || !user.activeSessionExpiresAt
-            || user.activeSessionExpiresAt <= new Date()) {
+            || user.activeSessionExpiresAt <= new Date()
+            || (user.activeSessionTokenExpiresAt && user.activeSessionTokenExpiresAt <= new Date())) {
             return next(new Error('Authentication required'));
         }
         socket.data.userId = String(decoded.id);
         socket.data.sessionId = decoded.sessionId;
         socket.data.tokenVersion = decoded.tokenVersion;
         socket.data.sessionExpiresAt = user.activeSessionExpiresAt.getTime();
+        socket.data.sessionTokenExpiresAt = user.activeSessionTokenExpiresAt?.getTime()
+            || user.activeSessionExpiresAt.getTime();
         await socket.join(socket.data.userId);
         next();
     } catch (error) {
@@ -134,26 +138,43 @@ const clearAuthCookie = (res) => {
     res.clearCookie('ca_token', { path: '/' });
 };
 const ACTIVE_SESSION_CONFLICT_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil. Nouvelle connexion refusée.';
-const hasActiveSession = (userId) => User.exists({
-    _id: userId,
-    activeSessionId: { $nin: [null, ''] },
-    activeSessionExpiresAt: { $gt: new Date() }
-});
+const hasActiveSession = (userId) => {
+    const now = new Date();
+    return User.exists({
+        _id: userId,
+        activeSessionId: { $nin: [null, ''] },
+        activeSessionExpiresAt: { $gt: now },
+        isLoggedIn: { $ne: false },
+        $or: [
+            { activeSessionTokenExpiresAt: { $gt: now } },
+            { activeSessionTokenExpiresAt: { $exists: false } },
+            { activeSessionTokenExpiresAt: null }
+        ]
+    });
+};
 const sendAuthenticatedSession = async (res, user) => {
     const now = new Date();
     const sessionId = crypto.randomUUID();
+    const tokenExpiresAt = new Date(
+        Math.floor(now.getTime() / 1000) * 1000 + SESSION_TOKEN_LIFETIME_MS
+    );
     const activeUser = await User.findOneAndUpdate({
         _id: user._id,
         $or: [
+            { isLoggedIn: false },
             { activeSessionId: { $in: [null, ''] } },
             { activeSessionExpiresAt: { $lte: now } },
             { activeSessionExpiresAt: null },
-            { activeSessionExpiresAt: { $exists: false } }
+            { activeSessionExpiresAt: { $exists: false } },
+            { activeSessionTokenExpiresAt: { $lte: now } }
         ]
     }, {
+        $inc: { tokenVersion: 1 },
         $set: {
+            isLoggedIn: true,
             activeSessionId: sessionId,
-            activeSessionExpiresAt: new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS)
+            activeSessionExpiresAt: new Date(Math.min(now.getTime() + SESSION_IDLE_TIMEOUT_MS, tokenExpiresAt.getTime())),
+            activeSessionTokenExpiresAt: tokenExpiresAt
         }
     }, { new: true }).select('_id name email avatarUrl nameOnCertificate phone location registeredCourse tokenVersion');
     if (!activeUser) {
@@ -475,6 +496,8 @@ const userSchema = new mongoose.Schema({
     tokenVersion: { type: Number, default: 0 },
     activeSessionId: { type: String, default: null },
     activeSessionExpiresAt: { type: Date, default: null },
+    activeSessionTokenExpiresAt: { type: Date, default: null },
+    isLoggedIn: { type: Boolean, default: false },
     nameOnCertificate: { type: String, default: '', trim: true, maxlength: 100 },
     phone: { type: String, default: '', trim: true, maxlength: 30 },
     location: { type: String, default: '', trim: true, maxlength: 100 },
@@ -795,18 +818,25 @@ const authenticate = async (req, res, next) => {
             clearAuthCookie(res);
             return res.status(401).json({ success: false, message: ACTIVE_SESSION_CONFLICT_MESSAGE });
         }
-        if (!user.activeSessionExpiresAt || user.activeSessionExpiresAt <= now) {
+        if (!user.activeSessionExpiresAt || user.activeSessionExpiresAt <= now
+            || (user.activeSessionTokenExpiresAt && user.activeSessionTokenExpiresAt <= now)) {
             clearAuthCookie(res);
             return res.status(401).json({ success: false, message: 'Session expirée ou invalide.' });
         }
 
+        const refreshedSessionExpiresAt = new Date(Math.min(
+            now.getTime() + SESSION_IDLE_TIMEOUT_MS,
+            user.activeSessionTokenExpiresAt
+                ? user.activeSessionTokenExpiresAt.getTime()
+                : now.getTime() + SESSION_IDLE_TIMEOUT_MS
+        ));
         const refreshedSession = await User.findOneAndUpdate({
             _id: user._id,
             tokenVersion: decoded.tokenVersion,
             activeSessionId: decoded.sessionId,
             activeSessionExpiresAt: { $gt: now }
         }, {
-            $set: { activeSessionExpiresAt: new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS) }
+            $set: { activeSessionExpiresAt: refreshedSessionExpiresAt }
         }, { new: true }).select('_id');
         if (!refreshedSession) {
             clearAuthCookie(res);
@@ -1828,7 +1858,12 @@ app.post('/api/logout', async (req, res) => {
                     activeSessionId: decoded.sessionId
                 }, {
                     $inc: { tokenVersion: 1 },
-                    $set: { activeSessionId: null, activeSessionExpiresAt: null }
+                    $set: {
+                        isLoggedIn: false,
+                        activeSessionId: null,
+                        activeSessionExpiresAt: null,
+                        activeSessionTokenExpiresAt: null
+                    }
                 }).select('_id');
                 if (releasedUser) io.in(String(releasedUser._id)).disconnectSockets(true);
             }
@@ -1842,7 +1877,7 @@ app.post('/api/logout', async (req, res) => {
         }
     }
     clearAuthCookie(res);
-    res.json({ success: true, message: 'Déconnexion réussie.' });
+    res.json({ success: true, message: 'Déconnexion réussie' });
 });
 
 app.post('/api/auth/logout', authenticate, async (req, res) => {
@@ -1853,7 +1888,12 @@ app.post('/api/auth/logout', authenticate, async (req, res) => {
             activeSessionId: req.user.sessionId
         }, {
             $inc: { tokenVersion: 1 },
-            $set: { activeSessionId: null, activeSessionExpiresAt: null }
+            $set: {
+                isLoggedIn: false,
+                activeSessionId: null,
+                activeSessionExpiresAt: null,
+                activeSessionTokenExpiresAt: null
+            }
         }).select('_id');
 
         clearAuthCookie(res);
@@ -1862,7 +1902,7 @@ app.post('/api/auth/logout', authenticate, async (req, res) => {
         }
 
         io.in(String(releasedUser._id)).disconnectSockets(true);
-        return res.json({ success: true, message: 'Déconnexion réussie.' });
+        return res.json({ success: true, message: 'Déconnexion réussie' });
     } catch (error) {
         console.error('Authenticated logout failed:', error);
         clearAuthCookie(res);
@@ -1896,9 +1936,15 @@ io.on('connection', (socket) => {
                 _id: userId,
                 tokenVersion: socket.data.tokenVersion,
                 activeSessionId: socket.data.sessionId,
-                activeSessionExpiresAt: { $gt: now }
+                activeSessionExpiresAt: { $gt: now },
+                activeSessionTokenExpiresAt: { $gt: now }
             }, {
-                $set: { activeSessionExpiresAt: new Date(now.getTime() + SESSION_IDLE_TIMEOUT_MS) }
+                $set: {
+                    activeSessionExpiresAt: new Date(Math.min(
+                        now.getTime() + SESSION_IDLE_TIMEOUT_MS,
+                        socket.data.sessionTokenExpiresAt
+                    ))
+                }
             }, { new: true }).select('activeSessionExpiresAt');
             if (!refreshedUser) {
                 socket.disconnect(true);
@@ -1959,4 +2005,3 @@ startServer().catch((error) => {
     console.error('Server startup failed:', error.message);
     process.exit(1);
 });
-
