@@ -856,7 +856,7 @@ const requireCourseAdmin = (req, res, next) => {
         return res.status(503).json({ success: false, message: 'L’administration des accès aux cours n’est pas configurée.' });
     }
 
-    const keyHeader = String(req.get('x-course-admin-key') || '');
+    const keyHeader = String(req.get('x-admin-key') || req.get('x-course-admin-key') || '').trim();
     let submittedKey = keyHeader;
     if (keyHeader.startsWith('utf8:')) {
         const encodedKey = keyHeader.slice(5);
