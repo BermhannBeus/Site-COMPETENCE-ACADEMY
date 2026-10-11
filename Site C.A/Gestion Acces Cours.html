@@ -404,18 +404,21 @@
             return `utf8:${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
         }
 
-        function normalizeAndStoreAdminKey() {
-            const key = adminKeyInput.value.trim();
-            if (adminKeyInput.value !== key) adminKeyInput.value = key;
+        function normalizeAndStoreAdminKey(useStoredFallback) {
+            let cleanKey = adminKeyInput.value.trim();
             try {
-                if (key) localStorage.setItem(ADMIN_KEY_STORAGE_KEY, key);
+                if (!cleanKey && useStoredFallback) {
+                    cleanKey = String(localStorage.getItem(ADMIN_KEY_STORAGE_KEY) || '').trim();
+                }
+                adminKeyInput.value = cleanKey;
+                if (cleanKey) localStorage.setItem(ADMIN_KEY_STORAGE_KEY, cleanKey);
                 else localStorage.removeItem(ADMIN_KEY_STORAGE_KEY);
             } catch (error) {
                 console.error('Impossible de sauvegarder la clé d’administration dans ce navigateur.', error);
                 throw new Error('Le navigateur ne permet pas de sauvegarder la clé d’administration. Autorisez le stockage du site puis réessayez.');
             }
             adminKeyNotice.hidden = true;
-            return key;
+            return cleanKey;
         }
 
         try {
@@ -433,21 +436,23 @@
 
         adminKeyInput.addEventListener('input', function() {
             try {
-                normalizeAndStoreAdminKey();
+                normalizeAndStoreAdminKey(false);
             } catch (error) {
                 showNotice(adminKeyNotice, error.message, true);
             }
         });
 
         async function adminRequest(path, options) {
-            const key = normalizeAndStoreAdminKey();
-            if (!key) throw new Error('Veuillez saisir la cle d’administration configuree dans COURSE_ADMIN_API_KEY.');
+            const cleanKey = normalizeAndStoreAdminKey(true);
+            if (!cleanKey) throw new Error('Veuillez saisir la clé d’administration.');
+            const adminKeyHeader = encodeAdminKeyHeader(cleanKey);
             const response = await fetch(API_BASE_URL + path, {
                 ...options,
                 cache: 'no-store',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-course-admin-key': encodeAdminKeyHeader(key),
+                    'x-admin-key': adminKeyHeader,
+                    'x-course-admin-key': adminKeyHeader,
                     ...(options && options.headers)
                 }
             });
