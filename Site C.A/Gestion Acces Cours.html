@@ -167,6 +167,7 @@
                 <input id="adminKey" type="password" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="done" required>
                 <button id="toggleAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé d’administration" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
             </div>
+            <div id="adminKeyNotice" class="notice" role="status" hidden></div>
         </section>
 
         <div id="accessPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="accessTab" hidden>
@@ -330,6 +331,8 @@
     <script>
         const API_BASE_URL = 'https://site-competence-academy-backend.onrender.com/api';
         const adminKeyInput = document.getElementById('adminKey');
+        const adminKeyNotice = document.getElementById('adminKeyNotice');
+        const ADMIN_KEY_STORAGE_KEY = 'competence_academy_course_admin_key';
         const emailInput = document.getElementById('studentEmail');
         const lookupNotice = document.getElementById('lookupNotice');
         const issueNotice = document.getElementById('issueNotice');
@@ -400,8 +403,43 @@
             return `utf8:${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
         }
 
-        async function adminRequest(path, options) {
+        function normalizeAndStoreAdminKey() {
             const key = adminKeyInput.value.trim();
+            if (adminKeyInput.value !== key) adminKeyInput.value = key;
+            try {
+                if (key) localStorage.setItem(ADMIN_KEY_STORAGE_KEY, key);
+                else localStorage.removeItem(ADMIN_KEY_STORAGE_KEY);
+            } catch (error) {
+                console.error('Impossible de sauvegarder la clé d’administration dans ce navigateur.', error);
+                throw new Error('Le navigateur ne permet pas de sauvegarder la clé d’administration. Autorisez le stockage du site puis réessayez.');
+            }
+            adminKeyNotice.hidden = true;
+            return key;
+        }
+
+        try {
+            const savedAdminKey = localStorage.getItem(ADMIN_KEY_STORAGE_KEY);
+            if (savedAdminKey) {
+                adminKeyInput.value = savedAdminKey.trim();
+                if (savedAdminKey !== adminKeyInput.value) {
+                    localStorage.setItem(ADMIN_KEY_STORAGE_KEY, adminKeyInput.value);
+                }
+            }
+        } catch (error) {
+            console.error('Impossible de charger la clé d’administration sauvegardée.', error);
+            showNotice(adminKeyNotice, 'Impossible de lire la clé sauvegardée dans ce navigateur.', true);
+        }
+
+        adminKeyInput.addEventListener('input', function() {
+            try {
+                normalizeAndStoreAdminKey();
+            } catch (error) {
+                showNotice(adminKeyNotice, error.message, true);
+            }
+        });
+
+        async function adminRequest(path, options) {
+            const key = normalizeAndStoreAdminKey();
             if (!key) throw new Error('Veuillez saisir la cle d’administration configuree dans COURSE_ADMIN_API_KEY.');
             const response = await fetch(API_BASE_URL + path, {
                 ...options,
@@ -414,7 +452,7 @@
             });
             const data = await response.json();
             if (response.status === 401) {
-                throw new Error('La cle saisie ne correspond pas a COURSE_ADMIN_API_KEY sur le backend Render connecte. Verifiez que vous utilisez la meme cle que dans ce service Render, sans espace en trop, puis redeployez le backend apres toute modification.');
+                throw new Error('La clé saisie ne correspond pas à celle configurée sur le backend.');
             }
             if (!response.ok || !data.success) throw new Error(data.message || 'La demande a echoue.');
             return data;
