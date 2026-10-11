@@ -205,7 +205,7 @@
         const displayName = String(
             user.fullName || user.username || user.nameOnCertificate || user.name || user.email || 'Étudiant'
         ).trim();
-        nameElement.textContent = `Vous êtes connecté en tant que ${displayName}`;
+        nameElement.textContent = displayName;
         if (emailElement) emailElement.textContent = user.email || '';
 
         const avatarValue = user.avatarUrl || user.profileImage || user.profilePicture || user.picture || user.avatar || '';
@@ -341,7 +341,7 @@
                 </span>
                 <div class="profile-identity">
                     <h2>Présence en direct</h2>
-                    <p id="onlineIdentity" class="online-identity">Vous êtes connecté en tant que Étudiant</p>
+                    <p class="online-identity">Vous êtes connecté en tant que <strong id="onlineIdentity">Étudiant</strong></p>
                     <p id="onlineEmail"></p>
                 </div>
             </div>
