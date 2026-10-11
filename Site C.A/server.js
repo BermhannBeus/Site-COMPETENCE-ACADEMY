@@ -38,8 +38,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 const ADMIN_JWT_EXPIRES_IN = '1h';
-const ADMIN_OTP_TTL_MS = 30 * 1000;
-const ADMIN_OTP_RESEND_INTERVAL_MS = 30 * 1000;
+const ADMIN_OTP_TTL_MS = 2 * 60 * 1000;
+const ADMIN_OTP_RESEND_INTERVAL_MS = ADMIN_OTP_TTL_MS;
 const ADMIN_OTP_MAX_ATTEMPTS = 5;
 const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
@@ -913,13 +913,13 @@ app.post('/api/admin/request-otp', adminOtpRequestLimiter, async (req, res) => {
         await sendEmail({
             to: email,
             subject: 'Votre code temporaire d’administration - Competence Academy',
-            text: `Votre code de confirmation est ${code}. Il expire dans 30 secondes.\n\nAccéder à la page d’administration : ${adminPageUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
+            text: `Votre code de confirmation est ${code}. Il expire dans 2 minutes.\n\nAccéder à la page d’administration : ${adminPageUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
             html: `
                 <div style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1e293b">
                     <div style="max-width:520px;margin:0 auto;padding:32px;border:1px solid #dbe3ee;border-radius:16px;background:#fff">
                         <p style="margin:0 0 8px;color:#111e62;font-size:13px;font-weight:bold;letter-spacing:2px">COMPETENCE ACADEMY</p>
                         <h1 style="margin:0 0 16px;color:#111e62;font-size:24px">Confirmation administrateur</h1>
-                        <p style="margin:0 0 20px;line-height:1.6">Utilisez le code ci-dessous pour accéder à l’espace d’administration. Il n’est valable que pendant <strong>30 secondes</strong>.</p>
+                        <p style="margin:0 0 20px;line-height:1.6">Utilisez le code ci-dessous pour accéder à l’espace d’administration. Il n’est valable que pendant <strong>2 minutes</strong>.</p>
                         <div style="margin:0 0 24px;padding:20px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;text-align:center">
                             <span style="color:#64748b;font-size:12px;letter-spacing:2px">CODE DE CONFIRMATION</span>
                             <div style="margin-top:8px;color:#111e62;font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:8px;user-select:all">${code}</div>
