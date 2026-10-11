@@ -438,6 +438,23 @@ section h2 {
     color: #e2e8f0;
 }
 
+.contact-map-link {
+    width: fit-content;
+    text-decoration: none;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.contact-map-link:hover {
+    color: #ffffff;
+    opacity: 0.85;
+}
+
+.contact-map-link:focus-visible {
+    outline: 2px solid #F76B00;
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
 .detail-item i {
     color: #F76B00; /* Ti icon yo an zoranj */
     font-size: 1.3rem;
