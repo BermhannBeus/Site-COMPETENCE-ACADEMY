@@ -41,7 +41,7 @@ section h2 {
   left: 0;
   width: 100%;
   height: 88px;
-  background: #111E62;
+  background: #0a192f;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -640,6 +640,7 @@ section h2 {
             font-size: 0.9rem;
         }
     }
+
     .contact-header h2 {
         font-size: 2rem;
     }
@@ -748,7 +749,7 @@ section h2 {
     width: 100%;
     min-height: 66px;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-    background: rgba(17, 30, 98, 0.98);
+    background: #0a192f;
     flex-direction: row;
     justify-content: space-around;
     gap: 4px;
@@ -2233,5 +2234,229 @@ ul li img {
 
   #enable-notifications-button {
     bottom: 74px;
+  }
+}
+
+.Contact-container,
+.card,
+.highlight-box,
+.service-card,
+.advantage-card,
+.faq-container,
+.faq-item,
+.faq-answer,
+.content-deroule {
+  background-color: rgba(255, 255, 255, 0.45);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.58),
+    rgba(255, 255, 255, 0.12) 52%,
+    rgba(255, 255, 255, 0.3)
+  );
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.founder-card {
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.58),
+    rgba(255, 255, 255, 0.12) 52%,
+    rgba(255, 255, 255, 0.3)
+  ) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+.faq-item {
+  border-left: 5px solid #F76B00;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  flex: 0 0 42px;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-left: 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 13px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.25s ease, background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  color: #F76B00;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid #F76B00;
+  outline-offset: 3px;
+}
+
+html[data-theme="dark"] body {
+  background: #0b1220;
+  color: #e2e8f0;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html[data-theme="dark"] .historique,
+html[data-theme="dark"] .about-section,
+html[data-theme="dark"] .stats-section,
+html[data-theme="dark"] .Contact-section,
+html[data-theme="dark"] .faq-section,
+html[data-theme="dark"] footer {
+  background-color: #0f172a !important;
+}
+
+html[data-theme="dark"] .historique,
+html[data-theme="dark"] .historique p,
+html[data-theme="dark"] .about-content,
+html[data-theme="dark"] .about-content p,
+html[data-theme="dark"] .custom-list li,
+html[data-theme="dark"] .highlight-box,
+html[data-theme="dark"] .highlight-box p,
+html[data-theme="dark"] .highlight-box li,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .card p,
+html[data-theme="dark"] .service-card,
+html[data-theme="dark"] .service-card p,
+html[data-theme="dark"] .advantage-card,
+html[data-theme="dark"] .advantage-card p,
+html[data-theme="dark"] .founder-card,
+html[data-theme="dark"] .founder-card p,
+html[data-theme="dark"] .faq-answer,
+html[data-theme="dark"] .remerciement-section,
+html[data-theme="dark"] .content-deroule,
+html[data-theme="dark"] footer {
+  color: #dbe4f0 !important;
+}
+
+html[data-theme="dark"] section h2,
+html[data-theme="dark"] .historique h2,
+html[data-theme="dark"] .about-content h2,
+html[data-theme="dark"] .about-content h3,
+html[data-theme="dark"] .contact-header h2,
+html[data-theme="dark"] .contact-header p,
+html[data-theme="dark"] .contact-form-box h3,
+html[data-theme="dark"] .faq-section h2,
+html[data-theme="dark"] .founder-card h3,
+html[data-theme="dark"] .advantage-card h3,
+html[data-theme="dark"] .service-card h3,
+html[data-theme="dark"] .card h3,
+html[data-theme="dark"] .section-title-container p {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .Contact-container,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .highlight-box,
+html[data-theme="dark"] .service-card,
+html[data-theme="dark"] .advantage-card,
+html[data-theme="dark"] .faq-container,
+html[data-theme="dark"] .faq-item,
+html[data-theme="dark"] .faq-answer,
+html[data-theme="dark"] .founder-card,
+html[data-theme="dark"] .content-deroule {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.035) 52%,
+    rgba(255, 255, 255, 0.1)
+  ) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 40px rgba(0, 0, 0, 0.25) !important;
+}
+
+html[data-theme="dark"] .faq-item:hover {
+  background-color: rgba(30, 41, 59, 0.65) !important;
+}
+
+html[data-theme="dark"] .faq-item {
+  border-left-color: #F76B00 !important;
+}
+
+html[data-theme="dark"] .faq-answer {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] .form-group label {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .form-group input,
+html[data-theme="dark"] .form-group textarea {
+  color: #f1f5f9;
+  background-color: rgba(15, 23, 42, 0.78);
+  border-color: rgba(203, 213, 225, 0.28);
+}
+
+html[data-theme="dark"] .form-group input:focus,
+html[data-theme="dark"] .form-group textarea:focus {
+  background-color: #111e36;
+}
+
+html[data-theme="dark"] .footer-social a {
+  color: #dbeafe;
+}
+
+html[data-theme="dark"] .content-deroule {
+  color: #dbe4f0 !important;
+}
+
+.highlight-box:hover {
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 20px 40px rgba(17, 30, 98, 0.12);
+}
+
+.service-card:hover {
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+.faq-item:hover {
+  background-color: rgba(255, 255, 255, 0.58);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.68),
+    rgba(255, 255, 255, 0.18) 52%,
+    rgba(255, 255, 255, 0.38)
+  );
+}
+
+html[data-theme="dark"] .faq-item:hover {
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.035) 52%,
+    rgba(255, 255, 255, 0.1)
+  ) !important;
+}
+
+@media (max-width: 768px) {
+  .theme-toggle {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    transform: translateY(-50%);
+  }
+
+  .theme-toggle:hover,
+  .theme-toggle:focus-visible {
+    transform: translateY(calc(-50% - 2px));
   }
 }
