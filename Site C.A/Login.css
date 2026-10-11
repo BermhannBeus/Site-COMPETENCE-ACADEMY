@@ -59,6 +59,37 @@ body {
     transform: translateY(0);
 }
 
+.session-conflict-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -8px 0 18px;
+    padding: 12px 14px;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.session-conflict-banner[hidden] {
+    display: none;
+}
+
+.session-conflict-icon {
+    display: grid;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border-radius: 50%;
+    background: #ffedd5;
+    color: #c2410c;
+    font-weight: 800;
+}
+
 /* En-tête et icône : proportions adaptées à tous les appareils */
 .form-header {
     text-align: center;
@@ -310,6 +341,11 @@ body {
     display: flex;
     gap: 12px;
     justify-content: center;
+    width: 100%;
+}
+
+#googleSignInButton {
+    width: 100%;
 }
 
 .social-btn {
