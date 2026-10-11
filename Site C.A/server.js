@@ -1046,10 +1046,7 @@ const getStudentResultSummary = (result) => {
     const average = modules.length
         ? result.modules.reduce((sum, module) => sum + module.score, 0) / result.modules.length
         : 0;
-    const validatedModuleCount = result.modules.filter((module) => module.score >= 7).length;
-    const progression = modules.length
-        ? Math.round((validatedModuleCount / modules.length) * 100)
-        : 0;
+    const progression = Math.round((Math.min(modules.length, 5) / 5) * 100);
     const validated = average >= 7 && result.modules.every((module) => module.score >= 7);
     return {
         id: String(result._id),
@@ -1145,39 +1142,16 @@ app.post('/api/admin/results', requireCourseAdmin, async (req, res) => {
     if (!document.validated) {
         return res.status(201).json({
             success: true,
-            emailSent: false,
-            message: 'Bulletin enregistré comme en cours. Validez-le pour générer et envoyer le code d’accès.',
+            message: 'Bulletin enregistré comme en cours. Validez-le pour générer le code d’accès.',
             result: getStudentResultSummary(result)
         });
     }
 
     const resultUrl = getFrontendUrl('/resultats.html', { code });
     const whatsAppText = `Bonjour ${document.name}, voici votre code personnel pour consulter votre bulletin Competence Academy : ${code}. Ouvrez le lien ${resultUrl}`;
-    let emailSent = false;
-    try {
-        await sendEmail({
-            to: document.email,
-            subject: 'Votre bulletin de résultats — Competence Academy',
-            ...createCodeEmail({
-                greeting: `Bonjour ${document.name},`,
-                message: `Votre bulletin pour la formation ${COURSE_TITLES[document.formation]} est disponible.`,
-                code,
-                buttonLabel: 'Consulter mon bulletin',
-                buttonUrl: resultUrl,
-                note: 'Conservez ce code personnel. Il donne accès à votre bulletin et ne doit pas être partagé.'
-            })
-        });
-        emailSent = true;
-    } catch (error) {
-        console.error('Student result notification email failed:', error);
-    }
-
     res.status(201).json({
         success: true,
-        emailSent,
-        message: emailSent
-            ? 'Bulletin enregistré et code envoyé par e-mail.'
-            : 'Bulletin enregistré, mais l’e-mail n’a pas pu être envoyé. Remettez le code à l’étudiant manuellement.',
+        message: 'Bulletin enregistré. Choisissez un mode d’envoi du code d’accès.',
         code,
         result: getStudentResultSummary(result),
         resultUrl,
@@ -1210,30 +1184,9 @@ app.put('/api/admin/results/:id', requireCourseAdmin, async (req, res) => {
         }
         const resultUrl = getFrontendUrl('/resultats.html', { code });
         const whatsAppText = `Bonjour ${document.name}, voici votre code personnel pour consulter votre bulletin Competence Academy : ${code}. Ouvrez le lien ${resultUrl}`;
-        let emailSent = false;
-        try {
-            await sendEmail({
-                to: document.email,
-                subject: 'Votre bulletin de résultats — Competence Academy',
-                ...createCodeEmail({
-                    greeting: `Bonjour ${document.name},`,
-                    message: `Votre bulletin pour la formation ${COURSE_TITLES[document.formation]} est validé et disponible.`,
-                    code,
-                    buttonLabel: 'Consulter mon bulletin',
-                    buttonUrl: resultUrl,
-                    note: 'Conservez ce code personnel. Il donne accès à votre bulletin et ne doit pas être partagé.'
-                })
-            });
-            emailSent = true;
-        } catch (emailError) {
-            console.error('Student result notification email failed:', emailError);
-        }
         res.json({
             success: true,
-            emailSent,
-            message: emailSent
-                ? 'Bulletin modifié et code renvoyé par e-mail.'
-                : 'Bulletin modifié, mais l’e-mail n’a pas pu être envoyé. Remettez le code à l’étudiant manuellement.',
+            message: 'Bulletin modifié. Choisissez un mode d’envoi du code d’accès.',
             code,
             result: getStudentResultSummary(result),
             resultUrl,
@@ -1242,6 +1195,51 @@ app.put('/api/admin/results/:id', requireCourseAdmin, async (req, res) => {
     } catch (error) {
         console.error('Admin student result update error:', error);
         res.status(500).json({ success: false, message: 'Impossible de modifier le bulletin.' });
+    }
+});
+
+app.post('/api/admin/results/:id/send-email', requireCourseAdmin, async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Identifiant de bulletin invalide.' });
+    }
+    const code = String(req.body?.code || '').trim().toUpperCase();
+    if (!/^CA-RESULT-[A-F0-9]{12}$/.test(code)) {
+        return res.status(400).json({ success: false, message: 'Code d’accès au bulletin invalide.' });
+    }
+
+    try {
+        const result = await StudentResult.findOne({
+            _id: req.params.id,
+            active: true
+        }).select('name email formation validated accessCodeHash');
+        if (!result) return res.status(404).json({ success: false, message: 'Bulletin introuvable.' });
+        if (!result.validated) {
+            return res.status(409).json({ success: false, message: 'Le bulletin doit être validé avant son envoi.' });
+        }
+
+        const storedHash = Buffer.from(result.accessCodeHash, 'hex');
+        const submittedHash = Buffer.from(hashStudentResultCode(code), 'hex');
+        if (storedHash.length !== submittedHash.length || !crypto.timingSafeEqual(storedHash, submittedHash)) {
+            return res.status(403).json({ success: false, message: 'Le code d’accès ne correspond plus à ce bulletin.' });
+        }
+
+        const resultUrl = getFrontendUrl('/resultats.html', { code });
+        await sendEmail({
+            to: result.email,
+            subject: 'Votre bulletin de résultats — Competence Academy',
+            ...createCodeEmail({
+                greeting: `Bonjour ${result.name},`,
+                message: `Votre bulletin pour la formation ${COURSE_TITLES[result.formation]} est disponible.`,
+                code,
+                buttonLabel: 'Consulter mon bulletin',
+                buttonUrl: resultUrl,
+                note: 'Conservez ce code personnel. Il donne accès à votre bulletin et ne doit pas être partagé.'
+            })
+        });
+        return res.json({ success: true, emailSent: true, message: 'Bulletin envoyé par e-mail.' });
+    } catch (error) {
+        console.error('Admin student result email delivery failed:', error);
+        return res.status(503).json({ success: false, message: 'Impossible d’envoyer le bulletin par e-mail. Réessayez plus tard.' });
     }
 });
 
