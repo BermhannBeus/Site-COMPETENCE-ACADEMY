@@ -35,7 +35,12 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
+const ADMIN_JWT_EXPIRES_IN = '1h';
+const ADMIN_OTP_TTL_MS = 30 * 1000;
+const ADMIN_OTP_RESEND_INTERVAL_MS = 30 * 1000;
+const ADMIN_OTP_MAX_ATTEMPTS = 5;
 const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -106,6 +111,27 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const sanitizeEmail = (value = '') => String(value).trim().toLowerCase();
+const getAllowedAdminEmails = () => String(process.env.ALLOWED_ADMIN_EMAILS || '')
+    .split(',')
+    .map(sanitizeEmail)
+    .filter(Boolean);
+const isAllowedAdminEmail = (email) => getAllowedAdminEmails().includes(sanitizeEmail(email));
+const adminOtpChallenges = new Map();
+const adminOtpLastSentAt = new Map();
+const adminOtpRequestLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Trop de demandes de code. Réessayez plus tard.' }
+});
+const adminOtpVerifyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Trop de tentatives. Réessayez plus tard.' }
+});
 const getAdminNotificationEmails = () => {
     const recipients = [...new Set([
         process.env.ACCESS_APPROVAL_EMAIL,
@@ -850,28 +876,161 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-const requireCourseAdmin = (req, res, next) => {
-    const configuredKey = String(process.env.COURSE_ADMIN_API_KEY || '').trim();
-    if (!configuredKey) {
-        return res.status(503).json({ success: false, message: 'L’administration des accès aux cours n’est pas configurée.' });
+app.post('/api/admin/request-otp', adminOtpRequestLimiter, async (req, res) => {
+    const email = sanitizeEmail(req.body?.email);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !isAllowedAdminEmail(email)) {
+        return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
 
-    const keyHeader = String(req.get('x-admin-key') || req.get('x-course-admin-key') || '').trim();
-    let submittedKey = keyHeader;
-    if (keyHeader.startsWith('utf8:')) {
-        const encodedKey = keyHeader.slice(5);
-        if (!/^[A-Za-z0-9_-]+$/.test(encodedKey)) {
-            return res.status(401).json({ success: false, message: 'Accès administrateur refusé.' });
+    const now = Date.now();
+    for (const [challengeEmail, challenge] of adminOtpChallenges) {
+        if (challenge.expiresAt <= now) adminOtpChallenges.delete(challengeEmail);
+    }
+    for (const [sentEmail, sentAt] of adminOtpLastSentAt) {
+        if (now - sentAt > 15 * 60 * 1000) adminOtpLastSentAt.delete(sentEmail);
+    }
+
+    const lastSentAt = adminOtpLastSentAt.get(email) || 0;
+    const retryAfterSeconds = Math.ceil((ADMIN_OTP_RESEND_INTERVAL_MS - (now - lastSentAt)) / 1000);
+    if (retryAfterSeconds > 0) {
+        return res.status(429).json({
+            success: false,
+            message: 'Un code vient d’être envoyé. Attendez son expiration avant d’en demander un autre.',
+            retryAfterSeconds
+        });
+    }
+
+    const code = String(crypto.randomInt(100000, 1000000));
+    const expiresAt = now + ADMIN_OTP_TTL_MS;
+    const codeHash = crypto.createHmac('sha256', ADMIN_JWT_SECRET)
+        .update(`${email}:${code}`)
+        .digest();
+    adminOtpChallenges.set(email, { codeHash, expiresAt, attempts: 0 });
+    adminOtpLastSentAt.set(email, now);
+
+    const adminPageUrl = getFrontendUrl('/Gestion%20Acces%20Cours.html');
+    try {
+        await sendEmail({
+            to: email,
+            subject: 'Votre code temporaire d’administration - Competence Academy',
+            text: `Votre code de confirmation est ${code}. Il expire dans 30 secondes.\n\nAccéder à la page d’administration : ${adminPageUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
+            html: `
+                <div style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1e293b">
+                    <div style="max-width:520px;margin:0 auto;padding:32px;border:1px solid #dbe3ee;border-radius:16px;background:#fff">
+                        <p style="margin:0 0 8px;color:#111e62;font-size:13px;font-weight:bold;letter-spacing:2px">COMPETENCE ACADEMY</p>
+                        <h1 style="margin:0 0 16px;color:#111e62;font-size:24px">Confirmation administrateur</h1>
+                        <p style="margin:0 0 20px;line-height:1.6">Utilisez le code ci-dessous pour accéder à l’espace d’administration. Il n’est valable que pendant <strong>30 secondes</strong>.</p>
+                        <div style="margin:0 0 24px;padding:20px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;text-align:center">
+                            <span style="color:#64748b;font-size:12px;letter-spacing:2px">CODE DE CONFIRMATION</span>
+                            <div style="margin-top:8px;color:#111e62;font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:8px;user-select:all">${code}</div>
+                            <p style="margin:12px 0 0;color:#64748b;font-size:12px">Sélectionnez le code pour le copier.</p>
+                        </div>
+                        <p style="margin:0 0 24px;text-align:center">
+                            <a href="${adminPageUrl}" style="display:inline-block;padding:13px 22px;border-radius:8px;background:#111e62;color:#fff;font-weight:bold;text-decoration:none">Ouvrir l’administration</a>
+                        </p>
+                        <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5">Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.</p>
+                    </div>
+                </div>`
+        });
+    } catch (error) {
+        adminOtpChallenges.delete(email);
+        console.error('Admin OTP email delivery failed:', error);
+        return res.status(503).json({ success: false, message: 'Impossible d’envoyer le code de confirmation. Réessayez plus tard.' });
+    }
+
+    return res.json({ success: true, expiresAt });
+});
+
+app.post('/api/admin/verify-otp', adminOtpVerifyLimiter, (req, res) => {
+    const email = sanitizeEmail(req.body?.email);
+    const code = String(req.body?.code || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !isAllowedAdminEmail(email)) {
+        return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    const challenge = adminOtpChallenges.get(email);
+    if (!challenge || challenge.expiresAt <= Date.now() || !/^\d{6}$/.test(code)) {
+        adminOtpChallenges.delete(email);
+        return res.status(401).json({ success: false, message: 'Code expiré ou invalide.' });
+    }
+
+    const submittedHash = crypto.createHmac('sha256', ADMIN_JWT_SECRET)
+        .update(`${email}:${code}`)
+        .digest();
+    if (submittedHash.length !== challenge.codeHash.length
+        || !crypto.timingSafeEqual(submittedHash, challenge.codeHash)) {
+        challenge.attempts += 1;
+        if (challenge.attempts >= ADMIN_OTP_MAX_ATTEMPTS) adminOtpChallenges.delete(email);
+        return res.status(401).json({ success: false, message: 'Code expiré ou invalide.' });
+    }
+
+    adminOtpChallenges.delete(email);
+    const token = jwt.sign(
+        { email, role: 'admin', purpose: 'admin-session' },
+        ADMIN_JWT_SECRET,
+        {
+            expiresIn: ADMIN_JWT_EXPIRES_IN,
+            issuer: 'competence-academy',
+            audience: 'competence-academy-admin'
         }
-        submittedKey = Buffer.from(encodedKey, 'base64url').toString('utf8');
+    );
+    return res.json({
+        success: true,
+        token,
+        expiresIn: 60 * 60,
+        email
+    });
+});
+
+app.get('/api/admin/session', (req, res) => {
+    const authorization = String(req.get('authorization') || '');
+    const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
+    if (!tokenMatch) {
+        return res.status(401).json({ success: false, message: 'Session administrateur requise.' });
     }
-    submittedKey = submittedKey.trim();
-    const submittedBuffer = Buffer.from(submittedKey);
-    const expectedBuffer = Buffer.from(configuredKey);
-    if (submittedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(submittedBuffer, expectedBuffer)) {
-        return res.status(401).json({ success: false, message: 'Accès administrateur refusé.' });
+    try {
+        const decoded = jwt.verify(tokenMatch[1], ADMIN_JWT_SECRET, {
+            issuer: 'competence-academy',
+            audience: 'competence-academy-admin'
+        });
+        if (decoded.role !== 'admin' || decoded.purpose !== 'admin-session'
+            || !isAllowedAdminEmail(decoded.email)) {
+            return res.status(401).json({ success: false, message: 'Session administrateur invalide.' });
+        }
+        return res.json({ success: true, email: sanitizeEmail(decoded.email) });
+    } catch (error) {
+        if (error.name !== 'JsonWebTokenError' && error.name !== 'TokenExpiredError') {
+            console.error('Admin session validation error:', error);
+            return res.status(500).json({ success: false, message: 'Impossible de vérifier la session administrateur.' });
+        }
+        return res.status(401).json({ success: false, message: 'Session administrateur expirée ou invalide.' });
     }
-    next();
+});
+
+const requireCourseAdmin = (req, res, next) => {
+    const authorization = String(req.get('authorization') || '');
+    const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
+    if (!tokenMatch) {
+        return res.status(401).json({ success: false, message: 'Session administrateur requise.' });
+    }
+    try {
+        const decoded = jwt.verify(tokenMatch[1], ADMIN_JWT_SECRET, {
+            issuer: 'competence-academy',
+            audience: 'competence-academy-admin'
+        });
+        if (decoded.role !== 'admin' || decoded.purpose !== 'admin-session'
+            || !isAllowedAdminEmail(decoded.email)) {
+            return res.status(401).json({ success: false, message: 'Session administrateur invalide.' });
+        }
+        req.admin = { email: sanitizeEmail(decoded.email) };
+        return next();
+    } catch (error) {
+        if (error.name !== 'JsonWebTokenError' && error.name !== 'TokenExpiredError') {
+            console.error('Admin session validation error:', error);
+            return res.status(500).json({ success: false, message: 'Impossible de vérifier la session administrateur.' });
+        }
+        return res.status(401).json({ success: false, message: 'Session administrateur expirée ou invalide.' });
+    }
 };
 
 const createStudentResultCode = () => `CA-RESULT-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
@@ -1973,11 +2132,22 @@ io.on('connection', (socket) => {
 const startServer = async () => {
     const requiredEnvironment = {
         JWT_SECRET,
+        ADMIN_JWT_SECRET,
+        ALLOWED_ADMIN_EMAILS: getAllowedAdminEmails().join(','),
         MONGODB_URI,
         GOOGLE_CLIENT_ID,
         FRONTEND_URLS: FRONTEND_URLS.join(',')
     };
     const missingEnvironment = Object.keys(requiredEnvironment).filter((key) => !requiredEnvironment[key]);
+    const configuredAdminEmails = getAllowedAdminEmails();
+    if (configuredAdminEmails.length !== 3
+        || new Set(configuredAdminEmails).size !== 3
+        || configuredAdminEmails.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+        throw new Error('ALLOWED_ADMIN_EMAILS must contain exactly three distinct valid comma-separated email addresses.');
+    }
+    if (Buffer.byteLength(ADMIN_JWT_SECRET || '', 'utf8') < 32) {
+        throw new Error('ADMIN_JWT_SECRET must contain at least 32 bytes of random data and be shared with Quiz Backend.');
+    }
     const hasBrevoConfiguration = Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
     const hasResendConfiguration = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
     const hasSmtpConfiguration = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
