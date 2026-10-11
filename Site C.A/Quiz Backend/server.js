@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
-const { timingSafeEqual } = require('crypto');
+const { createHmac, timingSafeEqual } = require('crypto');
 
 const app = express();
 const PORT = Number(process.env.PORT || 5100);
@@ -118,29 +118,53 @@ app.get('/api/formations', async (req, res) => {
 });
 
 function requireQuizAdmin(req, res, next) {
-  const configuredKey = String(process.env.QUIZ_ADMIN_API_KEY || '').trim();
-  if (!configuredKey) {
-    return res.status(503).json({ success: false, message: 'L’administration du quiz n’est pas configurée sur le serveur.' });
+  const secret = String(process.env.ADMIN_JWT_SECRET || '');
+  if (!secret) {
+    return res.status(503).json({ success: false, message: 'L’authentification administrateur n’est pas configurée.' });
   }
 
-  const keyHeader = String(req.get('x-quiz-admin-key') || '');
-  let submittedKey = keyHeader;
-  if (keyHeader.startsWith('utf8:')) {
-    try {
-      const encoded = keyHeader.slice(5);
-      if (!/^[A-Za-z0-9_-]+$/.test(encoded)) throw new Error('Invalid encoded key.');
-      submittedKey = Buffer.from(encoded, 'base64url').toString('utf8');
-    } catch (error) {
-      return res.status(401).json({ success: false, message: 'Clé administrateur du quiz invalide.' });
+  const tokenMatch = String(req.get('authorization') || '').match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
+  if (!tokenMatch) {
+    return res.status(401).json({ success: false, message: 'Session administrateur requise.' });
+  }
+
+  try {
+    const [encodedHeader, encodedPayload, encodedSignature, ...extraParts] = tokenMatch[1].split('.');
+    if (!encodedHeader || !encodedPayload || !encodedSignature || extraParts.length) throw new Error('Malformed JWT.');
+    const header = JSON.parse(Buffer.from(encodedHeader, 'base64url').toString('utf8'));
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    if (header.alg !== 'HS256') throw new Error('Unsupported JWT algorithm.');
+    const expectedSignature = createHmac('sha256', secret)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest();
+    const actualSignature = Buffer.from(encodedSignature, 'base64url');
+    if (actualSignature.length !== expectedSignature.length
+      || !timingSafeEqual(actualSignature, expectedSignature)) {
+      throw new Error('Invalid JWT signature.');
     }
-  }
 
-  const expected = Buffer.from(configuredKey, 'utf8');
-  const actual = Buffer.from(submittedKey.trim(), 'utf8');
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-    return res.status(401).json({ success: false, message: 'Clé administrateur du quiz incorrecte.' });
+    const now = Math.floor(Date.now() / 1000);
+    const allowedEmails = String(process.env.ALLOWED_ADMIN_EMAILS || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+    const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+    if (payload.iss !== 'competence-academy'
+      || payload.aud !== 'competence-academy-admin'
+      || payload.role !== 'admin'
+      || payload.purpose !== 'admin-session'
+      || !Number.isFinite(payload.exp)
+      || payload.exp <= now
+      || (payload.nbf && payload.nbf > now)
+      || !email
+      || !allowedEmails.includes(email)) {
+      throw new Error('Expired or unauthorized admin JWT.');
+    }
+    req.admin = { email };
+    return next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Session administrateur expirée ou invalide.' });
   }
-  next();
 }
 
 app.get('/api/admin/questions', requireQuizAdmin, async (req, res) => {
@@ -513,6 +537,18 @@ app.post('/api/quiz/next', async (req, res) => {
 
 async function start() {
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI est obligatoire.');
+  if (Buffer.byteLength(String(process.env.ADMIN_JWT_SECRET || ''), 'utf8') < 32) {
+    throw new Error('ADMIN_JWT_SECRET doit contenir au moins 32 octets aleatoires et correspondre a celui du backend principal.');
+  }
+  const allowedAdminEmails = String(process.env.ALLOWED_ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowedAdminEmails.length !== 3
+    || new Set(allowedAdminEmails).size !== 3
+    || allowedAdminEmails.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    throw new Error('ALLOWED_ADMIN_EMAILS doit contenir exactement trois adresses e-mail distinctes et valides.');
+  }
   await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
   console.log('Quiz MongoDB connected');
   console.log('Quiz backend uses the Quiz Backend folder; add the real question bank to the QuizQuestion collection.');
