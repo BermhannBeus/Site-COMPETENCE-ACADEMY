@@ -55,12 +55,7 @@
                 <div class="divider"><span>Ou continuer avec</span></div>
                 
                 <div class="social-buttons">
-                    <div id="g_id_onload"
-                         data-client_id="745679796774-7jodshecnt3upfn3g307q24sn8fm91it.apps.googleusercontent.com"
-                         data-callback="handleCredentialResponse"
-                         data-auto_select="false">
-                    </div>
-                    <div class="g_id_signin" data-type="standard" data-size="large" data-width="100%"></div>
+                    <div id="googleSignInButton"></div>
                 </div>
                 <p id="googleLocalFileWarning" class="google-local-file-warning" hidden>
                     Pour vous connecter avec Google, ouvrez le site depuis son adresse HTTPS ou depuis localhost. N’ouvrez pas directement le fichier Login.html.
@@ -646,6 +641,28 @@
             }
         }
 
+        function renderGoogleSignInButton() {
+            const buttonContainer = document.getElementById('googleSignInButton');
+            if (!buttonContainer || buttonContainer.dataset.rendered === 'true'
+                || !window.google?.accounts?.id) return;
+
+            window.google.accounts.id.initialize({
+                client_id: '745679796774-7jodshecnt3upfn3g307q24sn8fm91it.apps.googleusercontent.com',
+                callback: handleCredentialResponse,
+                auto_select: false
+            });
+            window.google.accounts.id.renderButton(buttonContainer, {
+                type: 'standard',
+                theme: 'outline',
+                size: 'large',
+                text: 'signin_with',
+                shape: 'rectangular',
+                logo_alignment: 'left',
+                width: Math.min(buttonContainer.clientWidth || 320, 400)
+            });
+            buttonContainer.dataset.rendered = 'true';
+        }
+
         // Afficher le formulaire de connexion au chargement sans ouvrir automatiquement les formations.
         window.addEventListener('DOMContentLoaded', () => {
             if (window.location.protocol === 'file:') {
@@ -657,6 +674,10 @@
                 googleSignInSdk.src = 'https://accounts.google.com/gsi/client';
                 googleSignInSdk.async = true;
                 googleSignInSdk.defer = true;
+                googleSignInSdk.onload = renderGoogleSignInButton;
+                googleSignInSdk.onerror = () => {
+                    console.error('Le service de connexion Google n’a pas pu être chargé.');
+                };
                 document.head.appendChild(googleSignInSdk);
             }
 
