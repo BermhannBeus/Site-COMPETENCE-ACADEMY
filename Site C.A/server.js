@@ -1046,7 +1046,10 @@ const getStudentResultSummary = (result) => {
     const average = modules.length
         ? result.modules.reduce((sum, module) => sum + module.score, 0) / result.modules.length
         : 0;
-    const progression = modules.length ? 100 : 0;
+    const validatedModuleCount = result.modules.filter((module) => module.score >= 7).length;
+    const progression = modules.length
+        ? Math.round((validatedModuleCount / modules.length) * 100)
+        : 0;
     const validated = average >= 7 && result.modules.every((module) => module.score >= 7);
     return {
         id: String(result._id),
@@ -1055,7 +1058,7 @@ const getStudentResultSummary = (result) => {
         telephone: result.phone,
         filiere: COURSE_TITLES[result.formation],
         validated: Boolean(result.validated),
-        statut: result.validated ? (validated ? 'Certifié • Terminé' : 'Validé') : 'En cours',
+        statut: result.validated ? (validated ? 'Certifié • Terminé' : 'Certifié') : 'En cours',
         progression,
         moyenne: average.toFixed(2),
         mention: average >= 8 ? 'Mention : Excellent' : average >= 7.5 ? 'Mention : Très Bien' : average >= 7 ? 'Mention : Bien' : 'Mention : À renforcer',
