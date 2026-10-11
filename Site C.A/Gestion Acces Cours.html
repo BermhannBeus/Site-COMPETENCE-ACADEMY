@@ -777,10 +777,29 @@
                         whatsapp.href = data.whatsAppUrl;
                         whatsapp.target = '_blank';
                         whatsapp.rel = 'noopener noreferrer';
-                        whatsapp.textContent = 'Ouvrir WhatsApp';
+                        whatsapp.textContent = 'Envoyer par WhatsApp';
                         whatsapp.style.cssText = 'display:inline-flex;align-items:center;padding:10px 14px;border-radius:8px;background:#15803d;color:#fff;text-decoration:none;font-weight:700;';
                         resultIssued.appendChild(whatsapp);
                     }
+                    const email = document.createElement('button');
+                    email.type = 'button';
+                    email.className = 'secondary';
+                    email.textContent = 'Envoyer par e-mail';
+                    email.addEventListener('click', async function() {
+                        email.disabled = true;
+                        try {
+                            const delivery = await adminRequest('/admin/results/' + encodeURIComponent(data.result.id) + '/send-email', {
+                                method: 'POST',
+                                body: JSON.stringify({ code: data.code })
+                            });
+                            showNotice(resultNotice, delivery.message, false);
+                        } catch (error) {
+                            showNotice(resultNotice, error.message, true);
+                        } finally {
+                            email.disabled = false;
+                        }
+                    });
+                    resultIssued.appendChild(email);
                     resultIssued.hidden = false;
                 }
                 resultForm.reset();
