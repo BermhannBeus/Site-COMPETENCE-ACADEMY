@@ -318,6 +318,16 @@
            return true;
        }
 
+       function clearSingleSessionNotice() {
+           const notice = document.getElementById('loginSessionNotice');
+           if (notice) notice.hidden = true;
+       }
+
+       ['loginEmail', 'loginPassword'].forEach((inputId) => {
+           const input = document.getElementById(inputId);
+           if (input) input.addEventListener('input', clearSingleSessionNotice);
+       });
+
        function getPendingCourseAccess() {
            try {
                const pending = JSON.parse(sessionStorage.getItem('ca_pending_course_access') || 'null');
