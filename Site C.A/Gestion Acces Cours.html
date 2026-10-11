@@ -418,7 +418,7 @@
         function getAdminToken() {
             if (adminToken) return adminToken;
             try {
-                adminToken = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '';
+                adminToken = sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '';
                 return adminToken;
             } catch (error) {
                 console.error('Impossible de lire la session administrateur sauvegardée.', error);
@@ -428,7 +428,7 @@
 
         function startOtpCountdown(expiresAt) {
             window.clearInterval(otpCountdownTimer);
-            const deadline = Number.isFinite(expiresAt) ? expiresAt : Date.now() + 30000;
+            const deadline = Number.isFinite(expiresAt) ? expiresAt : Date.now() + 2 * 60 * 1000;
             adminOtpInput.value = '';
             adminOtpInput.disabled = false;
             verifyAdminOtpButton.disabled = false;
@@ -436,8 +436,10 @@
 
             const updateCountdown = function() {
                 const secondsLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+                const minutes = Math.floor(secondsLeft / 60);
+                const seconds = secondsLeft % 60;
                 adminOtpCountdown.textContent = secondsLeft
-                    ? `Le code expire dans ${secondsLeft} seconde${secondsLeft > 1 ? 's' : ''}.`
+                    ? `Le code expire dans ${minutes}:${String(seconds).padStart(2, '0')}.`
                     : 'Le code a expiré. Demandez-en un nouveau.';
                 if (secondsLeft) return;
                 adminOtpInput.disabled = true;
@@ -484,7 +486,7 @@
                 adminEmailInput.value = email;
                 adminEmailForm.hidden = true;
                 adminOtpForm.hidden = false;
-                startOtpCountdown(data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 30000);
+                startOtpCountdown(data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 2 * 60 * 1000);
                 adminOtpInput.focus();
                 showNotice(adminLoginNotice, `Le code de confirmation a été envoyé à ${email}.`, false);
             } catch (error) {
@@ -499,10 +501,16 @@
             window.clearInterval(otpCountdownTimer);
             adminToken = '';
             try {
+                sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+                sessionStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
+            } catch (error) {
+                console.error('Impossible de supprimer la session administrateur de cet onglet.', error);
+            }
+            try {
                 localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
                 localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
             } catch (error) {
-                console.error('Impossible de supprimer la session administrateur sauvegardée.', error);
+                console.error('Impossible de supprimer une ancienne session administrateur persistante.', error);
             }
             adminTabsContainer.hidden = true;
             adminLogoutButton.hidden = true;
@@ -538,8 +546,8 @@
                 return false;
             }
             try {
-                localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-                localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, data.email);
+                sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
+                sessionStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, data.email);
             } catch (error) {
                 closeAdminSession('Impossible de sauvegarder la session dans ce navigateur.');
                 return false;
@@ -594,12 +602,18 @@
         async function restoreAdminSession() {
             let savedToken = '';
             try {
-                localStorage.removeItem(LEGACY_ADMIN_KEY_STORAGE_KEY);
-                savedToken = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '';
+                savedToken = sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '';
             } catch (error) {
                 console.error('Impossible de lire la session administrateur sauvegardée.', error);
                 showNotice(adminLoginNotice, 'Impossible de lire la session sauvegardée dans ce navigateur.', true);
                 return;
+            }
+            try {
+                localStorage.removeItem(LEGACY_ADMIN_KEY_STORAGE_KEY);
+                localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+                localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
+            } catch (error) {
+                console.error('Impossible de supprimer une ancienne session administrateur persistante.', error);
             }
             if (savedToken) await openAdminSession(savedToken);
         }
