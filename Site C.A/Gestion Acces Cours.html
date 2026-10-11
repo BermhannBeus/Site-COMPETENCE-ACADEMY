@@ -43,7 +43,10 @@
         .admin-tab:hover:not(:disabled) { color: #fff; background: #ffffff1f; transform: none; }
         .admin-tab[aria-selected="true"] { border-color: #fff; color: var(--academy-blue); background: #fff; box-shadow: inset 0 -3px 0 var(--academy-orange); }
         .admin-tab:focus-visible { outline: 3px solid #fff9; outline-offset: 2px; }
+        .admin-tabs[hidden], .admin-logout[hidden], .otp-form[hidden] { display: none; }
+        .admin-logout { flex: 0 0 auto; background: #b91c1c; }
         .admin-tabpanel[hidden] { display: none; }
+        .otp-countdown { color: var(--academy-blue); font-weight: 700; }
         main { width: min(100% - 32px, 980px); min-width: 0; margin: 36px auto 56px; }
         h1, h2, h3 { color: var(--academy-blue); }
         h1 { margin: 0 0 10px; font-size: clamp(1.6rem, 4vw, 2.25rem); }
@@ -153,21 +156,33 @@
             <p class="brand-title">COMPETENCE ACADEMY</p>
             <p class="brand-caption">Administration de l’espace de formation</p>
         </div>
-        <div class="admin-tabs" role="tablist" aria-label="Sections de gestion admin">
+        <div class="admin-tabs" role="tablist" aria-label="Sections de gestion admin" hidden>
             <button id="resultsTab" class="admin-tab" type="button" role="tab" aria-selected="true" aria-controls="resultsPanel" tabindex="0"><i class="fas fa-graduation-cap" aria-hidden="true"></i> Résultats &amp; Bulletins</button>
             <button id="accessTab" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="accessPanel" tabindex="-1"><i class="fas fa-key" aria-hidden="true"></i> Gestion des Accès</button>
             <button id="quizTab" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="quizPanel" tabindex="-1"><i class="fas fa-question-circle" aria-hidden="true"></i> Banque de Quiz</button>
         </div>
+        <button id="adminLogout" class="admin-logout" type="button" hidden><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Se déconnecter</button>
     </header>
     <main>
-        <section class="panel" aria-labelledby="adminKeyTitle">
-            <div class="section-heading"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><h2 id="adminKeyTitle">Connexion administrateur</h2></div>
-            <label for="adminKey">Clé d’administration</label>
-            <div class="password-field">
-                <input id="adminKey" type="password" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="done" required>
-                <button id="toggleAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé d’administration" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
-            </div>
-            <div id="adminKeyNotice" class="notice" role="status" hidden></div>
+        <section id="adminLoginPanel" class="panel" aria-labelledby="adminLoginTitle">
+            <div class="section-heading"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><h2 id="adminLoginTitle">Connexion administrateur</h2></div>
+            <form id="adminEmailForm" class="otp-form">
+                <label for="adminEmail">Adresse e-mail autorisée</label>
+                <input id="adminEmail" type="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required>
+                <div class="actions">
+                    <button id="requestAdminOtp" class="primary" type="submit"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Envoyer le code d’accès</button>
+                </div>
+            </form>
+            <form id="adminOtpForm" class="otp-form" hidden>
+                <label for="adminOtpCode">Code de confirmation envoyé par e-mail</label>
+                <input id="adminOtpCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" required disabled>
+                <p id="adminOtpCountdown" class="otp-countdown" role="status" aria-live="polite"></p>
+                <div class="actions">
+                    <button id="verifyAdminOtp" class="primary" type="submit" disabled><i class="fa-solid fa-unlock-keyhole" aria-hidden="true"></i> Confirmer et ouvrir l’administration</button>
+                    <button id="resendAdminOtp" class="secondary" type="button" hidden><i class="fa-solid fa-rotate" aria-hidden="true"></i> Renvoyer un nouveau code</button>
+                </div>
+            </form>
+            <div id="adminLoginNotice" class="notice" role="status" hidden></div>
         </section>
 
         <div id="accessPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="accessTab" hidden>
@@ -215,7 +230,7 @@
         </section>
         </div>
 
-        <div id="resultsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="resultsTab">
+        <div id="resultsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="resultsTab" hidden>
         <section class="panel" aria-labelledby="studentResultsTitle">
             <div class="section-heading"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><h2 id="studentResultsTitle">Résultats des étudiants</h2></div>
             <form id="resultForm">
@@ -258,13 +273,6 @@
         <div id="quizPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="quizTab" hidden>
         <section class="panel" aria-labelledby="quizBankTitle">
             <div class="section-heading"><i class="fa-solid fa-list-check" aria-hidden="true"></i><h2 id="quizBankTitle">Banque de questions du quiz</h2></div>
-            <div>
-                <label for="quizAdminKey">Clé d’administration du Quiz Backend</label>
-                <div class="password-field">
-                    <input id="quizAdminKey" type="password" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="done">
-                    <button id="toggleQuizAdminKey" class="password-toggle" type="button" aria-label="Afficher la clé du Quiz Backend" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
-                </div>
-            </div>
             <div class="quiz-bank-controls" style="margin-top: 16px;">
                 <div>
                     <label for="quizFormation">Formation à administrer</label>
@@ -330,9 +338,21 @@
 
     <script>
         const API_BASE_URL = 'https://site-competence-academy-backend.onrender.com/api';
-        const adminKeyInput = document.getElementById('adminKey');
-        const adminKeyNotice = document.getElementById('adminKeyNotice');
-        const ADMIN_KEY_STORAGE_KEY = 'competence_academy_course_admin_key';
+        const ADMIN_TOKEN_STORAGE_KEY = 'competence_academy_admin_token';
+        const ADMIN_EMAIL_STORAGE_KEY = 'competence_academy_admin_email';
+        const LEGACY_ADMIN_KEY_STORAGE_KEY = 'competence_academy_course_admin_key';
+        const adminLoginPanel = document.getElementById('adminLoginPanel');
+        const adminEmailForm = document.getElementById('adminEmailForm');
+        const adminOtpForm = document.getElementById('adminOtpForm');
+        const adminEmailInput = document.getElementById('adminEmail');
+        const adminOtpInput = document.getElementById('adminOtpCode');
+        const adminLoginNotice = document.getElementById('adminLoginNotice');
+        const adminOtpCountdown = document.getElementById('adminOtpCountdown');
+        const requestAdminOtpButton = document.getElementById('requestAdminOtp');
+        const verifyAdminOtpButton = document.getElementById('verifyAdminOtp');
+        const resendAdminOtpButton = document.getElementById('resendAdminOtp');
+        const adminLogoutButton = document.getElementById('adminLogout');
+        const adminTabsContainer = document.querySelector('.admin-tabs');
         const emailInput = document.getElementById('studentEmail');
         const lookupNotice = document.getElementById('lookupNotice');
         const issueNotice = document.getElementById('issueNotice');
@@ -340,7 +360,6 @@
         const accessList = document.getElementById('accessList');
         const issuedCode = document.getElementById('issuedCode');
         const issuedCodeValue = document.getElementById('issuedCodeValue');
-        const quizAdminKeyInput = document.getElementById('quizAdminKey');
         const quizFormationInput = document.getElementById('quizFormation');
         const quizBankStatus = document.getElementById('quizBankStatus');
         const quizBankNotice = document.getElementById('quizBankNotice');
@@ -354,6 +373,8 @@
         const resultList = document.getElementById('resultList');
         const QUIZ_API_BASE_URL = 'https://competence-academy-quiz.onrender.com';
         let busy = false;
+        let adminToken = '';
+        let otpCountdownTimer = null;
         let editingQuizQuestionId = '';
         let quizBankCount = 0;
 
@@ -394,73 +415,213 @@
             });
         });
 
-        function encodeAdminKeyHeader(key) {
-            if (/^[\x20-\x7E]+$/.test(key) && !key.startsWith('utf8:')) return key;
-            const bytes = new TextEncoder().encode(key);
-            let binary = '';
-            bytes.forEach(function(byte) {
-                binary += String.fromCharCode(byte);
-            });
-            return `utf8:${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
-        }
-
-        function normalizeAndStoreAdminKey(useStoredFallback) {
-            let cleanKey = adminKeyInput.value.trim();
+        function getAdminToken() {
+            if (adminToken) return adminToken;
             try {
-                if (!cleanKey && useStoredFallback) {
-                    cleanKey = String(localStorage.getItem(ADMIN_KEY_STORAGE_KEY) || '').trim();
-                }
-                adminKeyInput.value = cleanKey;
-                if (cleanKey) localStorage.setItem(ADMIN_KEY_STORAGE_KEY, cleanKey);
-                else localStorage.removeItem(ADMIN_KEY_STORAGE_KEY);
+                adminToken = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '';
+                return adminToken;
             } catch (error) {
-                console.error('Impossible de sauvegarder la clé d’administration dans ce navigateur.', error);
-                throw new Error('Le navigateur ne permet pas de sauvegarder la clé d’administration. Autorisez le stockage du site puis réessayez.');
+                console.error('Impossible de lire la session administrateur sauvegardée.', error);
+                throw new Error('Le navigateur ne permet pas de lire la session administrateur.');
             }
-            adminKeyNotice.hidden = true;
-            return cleanKey;
         }
 
-        try {
-            const savedAdminKey = localStorage.getItem(ADMIN_KEY_STORAGE_KEY);
-            if (savedAdminKey) {
-                adminKeyInput.value = savedAdminKey.trim();
-                if (savedAdminKey !== adminKeyInput.value) {
-                    localStorage.setItem(ADMIN_KEY_STORAGE_KEY, adminKeyInput.value);
-                }
-            }
-        } catch (error) {
-            console.error('Impossible de charger la clé d’administration sauvegardée.', error);
-            showNotice(adminKeyNotice, 'Impossible de lire la clé sauvegardée dans ce navigateur.', true);
+        function startOtpCountdown(expiresAt) {
+            window.clearInterval(otpCountdownTimer);
+            const deadline = Number.isFinite(expiresAt) ? expiresAt : Date.now() + 30000;
+            adminOtpInput.value = '';
+            adminOtpInput.disabled = false;
+            verifyAdminOtpButton.disabled = false;
+            resendAdminOtpButton.hidden = true;
+
+            const updateCountdown = function() {
+                const secondsLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+                adminOtpCountdown.textContent = secondsLeft
+                    ? `Le code expire dans ${secondsLeft} seconde${secondsLeft > 1 ? 's' : ''}.`
+                    : 'Le code a expiré. Demandez-en un nouveau.';
+                if (secondsLeft) return;
+                adminOtpInput.disabled = true;
+                verifyAdminOtpButton.disabled = true;
+                resendAdminOtpButton.hidden = false;
+                window.clearInterval(otpCountdownTimer);
+            };
+
+            updateCountdown();
+            otpCountdownTimer = window.setInterval(updateCountdown, 250);
         }
 
-        adminKeyInput.addEventListener('input', function() {
+        async function requestAdminOtp() {
+            const email = adminEmailInput.value.trim().toLowerCase();
+            if (!email) {
+                showNotice(adminLoginNotice, 'Saisissez votre adresse e-mail.', true);
+                adminEmailInput.focus();
+                return;
+            }
+            requestAdminOtpButton.disabled = true;
+            resendAdminOtpButton.disabled = true;
+            adminLoginNotice.hidden = true;
             try {
-                normalizeAndStoreAdminKey(false);
+                const response = await fetch(`${API_BASE_URL}/admin/request-otp`, {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    if (response.status === 429 && data.retryAfterSeconds) {
+                        adminEmailForm.hidden = true;
+                        adminOtpForm.hidden = false;
+                        adminOtpInput.disabled = true;
+                        verifyAdminOtpButton.disabled = true;
+                        resendAdminOtpButton.hidden = false;
+                        startOtpCountdown(Date.now() + data.retryAfterSeconds * 1000);
+                        adminOtpInput.disabled = true;
+                        verifyAdminOtpButton.disabled = true;
+                    }
+                    throw new Error(data.message || 'Impossible d’envoyer le code de confirmation.');
+                }
+                adminEmailInput.value = email;
+                adminEmailForm.hidden = true;
+                adminOtpForm.hidden = false;
+                startOtpCountdown(data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 30000);
+                adminOtpInput.focus();
+                showNotice(adminLoginNotice, `Le code de confirmation a été envoyé à ${email}.`, false);
             } catch (error) {
-                showNotice(adminKeyNotice, error.message, true);
+                showNotice(adminLoginNotice, error.message || 'Impossible de contacter le serveur.', true);
+            } finally {
+                requestAdminOtpButton.disabled = false;
+                resendAdminOtpButton.disabled = false;
             }
+        }
+
+        function closeAdminSession(message) {
+            window.clearInterval(otpCountdownTimer);
+            adminToken = '';
+            try {
+                localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+                localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
+            } catch (error) {
+                console.error('Impossible de supprimer la session administrateur sauvegardée.', error);
+            }
+            adminTabsContainer.hidden = true;
+            adminLogoutButton.hidden = true;
+            adminTabPanels.forEach(function(panel) { panel.hidden = true; });
+            adminLoginPanel.hidden = false;
+            adminEmailForm.hidden = false;
+            adminOtpForm.hidden = true;
+            adminOtpInput.value = '';
+            adminOtpInput.disabled = true;
+            verifyAdminOtpButton.disabled = true;
+            resendAdminOtpButton.hidden = true;
+            if (message) showNotice(adminLoginNotice, message, true);
+        }
+
+        async function openAdminSession(token) {
+            adminToken = token;
+            let response;
+            let data;
+            try {
+                response = await fetch(`${API_BASE_URL}/admin/session`, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                data = await response.json().catch(() => ({}));
+            } catch (error) {
+                console.error('Impossible de vérifier la session administrateur.', error);
+                closeAdminSession('Impossible de vérifier la session administrateur. Vérifiez votre connexion puis réessayez.');
+                return false;
+            }
+            if (!response.ok || !data.success) {
+                closeAdminSession(data.message || 'La session administrateur est invalide ou expirée.');
+                return false;
+            }
+            try {
+                localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
+                localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, data.email);
+            } catch (error) {
+                closeAdminSession('Impossible de sauvegarder la session dans ce navigateur.');
+                return false;
+            }
+            window.clearInterval(otpCountdownTimer);
+            adminLoginPanel.hidden = true;
+            adminTabsContainer.hidden = false;
+            adminLogoutButton.hidden = false;
+            activateAdminTab(adminTabs[0], false);
+            await loadResults();
+            return true;
+        }
+
+        async function verifyAdminOtp(event) {
+            event.preventDefault();
+            const email = adminEmailInput.value.trim().toLowerCase();
+            const code = adminOtpInput.value.trim();
+            if (!/^\d{6}$/.test(code)) {
+                showNotice(adminLoginNotice, 'Saisissez le code de confirmation à 6 chiffres.', true);
+                adminOtpInput.focus();
+                return;
+            }
+            verifyAdminOtpButton.disabled = true;
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/verify-otp`, {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success || !data.token) {
+                    throw new Error(data.message || 'Code expiré ou invalide.');
+                }
+                await openAdminSession(data.token);
+            } catch (error) {
+                showNotice(adminLoginNotice, error.message || 'Impossible de contacter le serveur.', true);
+                verifyAdminOtpButton.disabled = adminOtpInput.disabled;
+            }
+        }
+
+        adminEmailForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            requestAdminOtp();
+        });
+        adminOtpForm.addEventListener('submit', verifyAdminOtp);
+        resendAdminOtpButton.addEventListener('click', requestAdminOtp);
+        adminLogoutButton.addEventListener('click', function() {
+            closeAdminSession('Vous êtes déconnecté de l’administration.');
         });
 
+        async function restoreAdminSession() {
+            let savedToken = '';
+            try {
+                localStorage.removeItem(LEGACY_ADMIN_KEY_STORAGE_KEY);
+                savedToken = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '';
+            } catch (error) {
+                console.error('Impossible de lire la session administrateur sauvegardée.', error);
+                showNotice(adminLoginNotice, 'Impossible de lire la session sauvegardée dans ce navigateur.', true);
+                return;
+            }
+            if (savedToken) await openAdminSession(savedToken);
+        }
+
         async function adminRequest(path, options) {
-            const cleanKey = normalizeAndStoreAdminKey(true);
-            if (!cleanKey) throw new Error('Veuillez saisir la clé d’administration.');
-            const adminKeyHeader = encodeAdminKeyHeader(cleanKey);
+            const token = getAdminToken();
+            if (!token) throw new Error('Connectez-vous avec votre code administrateur.');
             const response = await fetch(API_BASE_URL + path, {
                 ...options,
                 cache: 'no-store',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-admin-key': adminKeyHeader,
-                    'x-course-admin-key': adminKeyHeader,
-                    ...(options && options.headers)
+                    ...(options && options.headers),
+                    Authorization: `Bearer ${token}`
                 }
             });
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
             if (response.status === 401) {
-                throw new Error('La clé saisie ne correspond pas à celle configurée sur le backend.');
+                closeAdminSession('Votre session administrateur a expiré. Demandez un nouveau code.');
+                throw new Error(data.message || 'Session administrateur expirée ou invalide.');
             }
-            if (!response.ok || !data.success) throw new Error(data.message || 'La demande a echoue.');
+            if (!response.ok || !data.success) throw new Error(data.message || 'La demande a échoué.');
             return data;
         }
 
@@ -620,19 +781,22 @@
         }
 
         async function quizAdminRequest(path, options) {
-            const key = quizAdminKeyInput.value.trim();
-            if (!key) throw new Error('Saisissez la clé QUIZ_ADMIN_API_KEY configurée dans le Quiz Backend sur Render.');
+            const token = getAdminToken();
+            if (!token) throw new Error('Connectez-vous avec votre code administrateur.');
             const response = await fetch(`${QUIZ_API_BASE_URL}${path}`, {
                 ...options,
                 cache: 'no-store',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-quiz-admin-key': encodeAdminKeyHeader(key),
-                    ...(options && options.headers)
+                    ...(options && options.headers),
+                    Authorization: `Bearer ${token}`
                 }
             });
             const data = await response.json().catch(() => ({}));
-            if (response.status === 401) throw new Error('La clé ne correspond pas à QUIZ_ADMIN_API_KEY sur le Quiz Backend Render.');
+            if (response.status === 401) {
+                closeAdminSession('Votre session administrateur a expiré. Demandez un nouveau code.');
+                throw new Error(data.message || 'Session administrateur expirée ou invalide.');
+            }
             if (!response.ok || !data.success) {
                 const details = Array.isArray(data.errors) ? `\n${data.errors.join('\n')}` : '';
                 throw new Error(`${data.message || `Erreur HTTP ${response.status}.`}${details}`);
@@ -669,7 +833,7 @@
                 quizBankStatus.classList.add('is-error');
                 const empty = document.createElement('p');
                 empty.className = 'quiz-empty';
-                empty.textContent = 'Connectez-vous avec la clé du Quiz Backend pour afficher les questions.';
+                empty.textContent = 'Vérifiez votre session administrateur et réessayez.';
                 quizQuestionList.appendChild(empty);
             }
         }
@@ -966,26 +1130,6 @@
         quizQuestionForm.addEventListener('input', function() {
             quizBankNotice.hidden = true;
         });
-        document.getElementById('toggleQuizAdminKey').addEventListener('click', function() {
-            const isVisible = quizAdminKeyInput.type === 'text';
-            quizAdminKeyInput.type = isVisible ? 'password' : 'text';
-            this.setAttribute('aria-label', isVisible ? 'Afficher la clé du Quiz Backend' : 'Masquer la clé du Quiz Backend');
-            this.setAttribute('aria-pressed', String(!isVisible));
-            this.innerHTML = isVisible
-                ? '<i class="fa-solid fa-eye" aria-hidden="true"></i>'
-                : '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i>';
-            quizAdminKeyInput.focus();
-        });
-        document.getElementById('toggleAdminKey').addEventListener('click', function() {
-            const isVisible = adminKeyInput.type === 'text';
-            adminKeyInput.type = isVisible ? 'password' : 'text';
-            this.setAttribute('aria-label', isVisible ? 'Afficher la clé d’administration' : 'Masquer la clé d’administration');
-            this.setAttribute('aria-pressed', String(!isVisible));
-            this.innerHTML = isVisible
-                ? '<i class="fa-solid fa-eye" aria-hidden="true"></i>'
-                : '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i>';
-            adminKeyInput.focus();
-        });
         document.getElementById('copyButton').addEventListener('click', async function() {
             try {
                 await navigator.clipboard.writeText(issuedCodeValue.textContent);
@@ -994,6 +1138,7 @@
                 showNotice(issueNotice, 'La copie automatique est indisponible dans ce navigateur. Sélectionnez le code et copiez-le manuellement.', true);
             }
         });
+        restoreAdminSession();
     </script>
 </body>
 </html>
