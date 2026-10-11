@@ -49,6 +49,15 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#0056b3">
 <script>
+  try {
+    const savedHomeTheme = localStorage.getItem('ca-home-theme');
+    document.documentElement.dataset.theme = savedHomeTheme === 'dark' ? 'dark' : 'light';
+  } catch (error) {
+    document.documentElement.dataset.theme = 'light';
+    console.warn('Impossible de restaurer le thème enregistré.', error);
+  }
+</script>
+<script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
@@ -217,6 +226,36 @@
     window.open(file, "_blank");
   }
 
+  function applyHomeTheme(theme, persist) {
+    const nextTheme = theme === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = nextTheme;
+    const toggle = document.getElementById("theme-toggle");
+    const icon = toggle && toggle.querySelector("i");
+    const label = nextTheme === "dark" ? "Passer au mode clair" : "Passer au mode sombre";
+
+    if (toggle) {
+      toggle.setAttribute("aria-label", label);
+      toggle.setAttribute("aria-pressed", String(nextTheme === "dark"));
+      toggle.title = label;
+    }
+    if (icon) {
+      icon.classList.toggle("fa-sun", nextTheme === "dark");
+      icon.classList.toggle("fa-moon", nextTheme !== "dark");
+    }
+
+    if (persist) {
+      try {
+        localStorage.setItem("ca-home-theme", nextTheme);
+      } catch (error) {
+        console.warn("Impossible d’enregistrer le thème choisi.", error);
+      }
+    }
+  }
+
+  function toggleHomeTheme() {
+    applyHomeTheme(document.documentElement.dataset.theme !== "dark" ? "dark" : "light", true);
+  }
+
   /* REGLAGE MENUBAR MOBIL */
   function toggleMenu(){
     const navLinks = document.getElementById("nav-links");
@@ -230,6 +269,12 @@
       menuIcon.innerHTML = "☰";
     }
   }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    applyHomeTheme(document.documentElement.dataset.theme, false);
+    const themeToggle = document.getElementById("theme-toggle");
+    if (themeToggle) themeToggle.addEventListener("click", toggleHomeTheme);
+  });
 
   async function envoyerFormulaire(event) {
     event.preventDefault();
@@ -442,6 +487,10 @@ document.addEventListener("DOMContentLoaded", () => {
     <li><a href="resultats.html" data-label="Résultats" aria-label="Résultats" title="Résultats"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i></a></li>
     <li><a href="#Contact" data-label="Contact" aria-label="Contact" title="Contact"><i class="fa-solid fa-envelope" aria-hidden="true"></i></a></li>
   </ul>
+
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Passer au mode sombre" aria-pressed="false" title="Passer au mode sombre">
+    <i class="fa-solid fa-moon" aria-hidden="true"></i>
+  </button>
 
   <div class="menu-icon" id="menu-btn" onclick="toggleMenu()">
     ☰
