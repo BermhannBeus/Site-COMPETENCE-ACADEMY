@@ -1,4 +1,4 @@
-const CACHE_NAME = 'competence-academy-v13';
+const CACHE_NAME = 'competence-academy-v14';
 const urlsToCache = [
   '/',
   '/Logo.png',
@@ -73,6 +73,28 @@ self.addEventListener('fetch', event => {
 
   if (isCoursePage || event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request));
+    return;
+  }
+
+  if (event.request.destination === 'style' && requestUrl.origin === self.location.origin) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (!response.ok) return response;
+          const responseToCache = response.clone();
+          event.waitUntil(
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(event.request, responseToCache))
+          );
+          return response;
+        })
+        .catch(error => caches.match(event.request)
+          .then(response => response || caches.match('/style.css'))
+          .then(response => {
+            if (response) return response;
+            throw error;
+          }))
+    );
     return;
   }
 
