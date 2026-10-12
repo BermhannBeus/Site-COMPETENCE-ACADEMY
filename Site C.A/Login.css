@@ -1,7 +1,7 @@
 :root {
-    --primary-color: #000647;
-    --primary-dark: #000647;
-    --accent-orange: #ff7a00;
+    --primary-color: #000641;
+    --primary-dark: #000641;
+    --accent-orange: #F76B00;
     --bg-color: #f4f7fc;
     --card-bg: #ffffff;
     --text-main: #212529;
@@ -17,7 +17,7 @@
 }
 
 body {
-    background: #000647;
+    background: #000641;
     color: var(--text-main);
     min-height: 100vh;
     display: flex;
@@ -103,14 +103,14 @@ body {
 .avatar-icon {
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, rgba(13, 27, 62, 0.08), rgba(255, 122, 0, 0.15));
+    background: linear-gradient(135deg, rgba(0, 6, 65, 0.08), rgba(255, 122, 0, 0.15));
     border: 2px solid rgba(255, 122, 0, 0.2);
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     margin: 0 auto 15px auto;
-    box-shadow: 0 10px 20px rgba(13, 27, 62, 0.08);
+    box-shadow: 0 10px 20px rgba(0, 6, 65, 0.08);
 }
 
 .avatar-icon svg {
@@ -350,21 +350,26 @@ body {
 .btn-submit {
     width: 100%;
     padding: 14px;
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    background: #000641;
     color: white;
     border: none;
     border-radius: 14px;
     font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
-    box-shadow: 0 10px 20px rgba(13, 27, 62, 0.25);
+    box-shadow: 0 10px 20px rgba(0, 6, 65, 0.25);
     transition: var(--transition);
 }
 
 .btn-submit:hover {
-    background: linear-gradient(135deg, var(--accent-orange), #e66d00);
+    background: #F76B00;
     transform: translateY(-2px);
-    box-shadow: 0 14px 25px rgba(255, 122, 0, 0.3);
+    box-shadow: 0 14px 25px rgba(247, 107, 0, 0.3);
+}
+
+.btn-submit:active {
+    background: #F76B00;
+    transform: translateY(0);
 }
 
 .btn-submit:disabled,
@@ -507,7 +512,7 @@ body {
     align-items: center;
     justify-content: center;
     margin: 0 auto 18px auto;
-    box-shadow: 0 12px 25px rgba(13, 27, 62, 0.25);
+    box-shadow: 0 12px 25px rgba(0, 6, 65, 0.25);
 }
 
 .profile-info h3 {
@@ -565,7 +570,7 @@ body {
     font-weight: bold;
     text-align: center;
     font-size: 18px;
-    color: #0056b3;
+    color: #000641;
     background-color: #f8f9fa;
     border: 2px solid #e0e0e0;
     border-radius: 6px;
@@ -574,7 +579,7 @@ body {
 }
 
 #resetCodeForm .input-field-wrapper input[type="text"]:focus {
-    border-color: #0056b3;
+    border-color: #000641;
     outline: none;
     background-color: #ffffff;
 }
