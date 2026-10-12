@@ -376,8 +376,19 @@ body {
 }
 
 @media (max-width: 768px) {
+    body {
+        min-height: 100svh;
+        padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+    }
+
     .auth-wrapper.signup-layout {
+        width: 100%;
         max-width: 440px;
+        margin: 0 auto;
+    }
+
+    .auth-container {
+        padding: clamp(22px, 5vw, 30px) clamp(18px, 4vw, 24px);
     }
 
     .signup-grid {
@@ -534,10 +545,10 @@ body {
 /* Adaptation aux petits téléphones (iPhone SE, Galaxy 360px, etc.) */
 @media (max-width: 420px) {
     body {
-        padding: 10px;
+        padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
     }
     .auth-container {
-        padding: 25px 18px;
+        padding: 24px 16px;
         border-radius: 20px;
     }
     .form-header h2 {
