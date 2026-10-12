@@ -16,6 +16,8 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
+let tranzakClientPromise;
+
 const app = express();
 const server = http.createServer(app);
 app.set('trust proxy', 1);
@@ -396,9 +398,9 @@ const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => (
 const createCodeEmail = ({ greeting, message, code, buttonLabel, buttonUrl, note }) => ({
     text: `${greeting}\n\n${message}\n\n${code}\n\n${note}\n\nOuvrir la page : ${buttonUrl}\n\nCompetence Academy`,
     html: `
-        <div style="margin:0;background:#f3f6fb;padding:28px 12px;font-family:Arial,sans-serif;color:#1e293b;">
+        <div style="margin:0;background:#f3f6fb;padding:28px 12px;font-family:Arial,sans-serif;color:#000641;">
             <div style="max-width:520px;margin:0 auto;border:1px solid #dbe3ee;border-radius:14px;background:#ffffff;overflow:hidden;">
-                <div style="padding:22px 24px;background:#111e62;color:#ffffff;text-align:center;">
+                <div style="padding:22px 24px;background:#000641;color:#ffffff;text-align:center;">
                     <div style="font-size:20px;font-weight:800;letter-spacing:1px;">COMPETENCE ACADEMY</div>
                 </div>
                 <div style="padding:24px;">
@@ -406,7 +408,7 @@ const createCodeEmail = ({ greeting, message, code, buttonLabel, buttonUrl, note
                     <p style="margin:0 0 20px;line-height:1.6;">${escapeHtml(message)}</p>
                     <div style="margin:0 0 22px;padding:16px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;text-align:center;">
                         <div style="margin-bottom:7px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Votre code</div>
-                        <div style="color:#111e62;font-size:24px;font-weight:800;letter-spacing:2px;overflow-wrap:anywhere;">${escapeHtml(code)}</div>
+                        <div style="color:#000641;font-size:24px;font-weight:800;letter-spacing:2px;overflow-wrap:anywhere;">${escapeHtml(code)}</div>
                     </div>
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
                         <tr><td align="center" bgcolor="#f76b00" style="border-radius:8px;">
@@ -490,6 +492,8 @@ const COURSE_TITLES = {
     surveillance: 'Surveillance'
 };
 const COURSE_ACCESS_CATEGORIES = Object.keys(COURSE_TITLES);
+const COURSE_PRICE_DEFAULT_AMOUNT = 5000;
+const COURSE_PAYMENT_CURRENCY = 'HTG';
 const getCourseForVideo = (videoId) => {
     const existingCourse = COURSE_ACCESS_CATEGORIES.find(
         (courseId) => COURSE_VIDEO_SEQUENCES[courseId].includes(videoId)
@@ -560,6 +564,27 @@ const courseAccessCodeSchema = new mongoose.Schema({
     grantedAt: { type: Date, required: true }
 }, { timestamps: true });
 courseAccessCodeSchema.index({ userId: 1, courseId: 1 }, { unique: true });
+const coursePriceSchema = new mongoose.Schema({
+    courseId: { type: String, required: true, unique: true, enum: COURSE_ACCESS_CATEGORIES },
+    amount: { type: Number, required: true, min: 1, max: 100000000 },
+    currencyCode: { type: String, required: true, enum: [COURSE_PAYMENT_CURRENCY], default: COURSE_PAYMENT_CURRENCY }
+}, { timestamps: true });
+const coursePaymentSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    courseId: { type: String, required: true, enum: COURSE_ACCESS_CATEGORIES, index: true },
+    amount: { type: Number, required: true, min: 1 },
+    currencyCode: { type: String, required: true, enum: [COURSE_PAYMENT_CURRENCY] },
+    mchTransactionRef: { type: String, required: true, unique: true, index: true },
+    requestId: { type: String, default: '', index: true },
+    status: {
+        type: String,
+        enum: ['PENDING', 'SUCCESSFUL', 'CANCELLED', 'REJECTED'],
+        default: 'PENDING',
+        index: true
+    },
+    accessGrantedAt: { type: Date, default: null },
+    paidAt: { type: Date, default: null }
+}, { timestamps: true });
 const accessConfirmationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
     challengeId: { type: String, required: true, unique: true },
@@ -573,6 +598,8 @@ const ResetCode = mongoose.model('ResetCode', resetCodeSchema);
 const CourseProgress = mongoose.model('CourseProgress', courseProgressSchema);
 const VideoWatchSession = mongoose.model('VideoWatchSession', videoWatchSessionSchema);
 const CourseEnrollmentAccess = mongoose.model('CourseEnrollmentAccess', courseAccessCodeSchema);
+const CoursePrice = mongoose.model('CoursePrice', coursePriceSchema);
+const CoursePayment = mongoose.model('CoursePayment', coursePaymentSchema);
 const AccessConfirmation = mongoose.model('AccessConfirmation', accessConfirmationSchema);
 const studentResultSchema = new mongoose.Schema({
     accessCodeHash: { type: String, required: true, unique: true, index: true },
@@ -635,7 +662,56 @@ const decryptCourseAccessCode = (encryptedCode) => {
     ]).toString('utf8');
 };
 
-const issueCourseAccessCode = async (user, courseId) => {
+const getTranzakClient = async () => {
+    const { TRANZAK_APP_ID, TRANZAK_APP_KEY, TRANZAK_MODE = 'live' } = process.env;
+    if (!TRANZAK_APP_ID || !TRANZAK_APP_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        const error = new Error('Le paiement Tranzak n’est pas configuré.');
+        error.code = 'TRANZAK_NOT_CONFIGURED';
+        throw error;
+    }
+    if (!['live', 'sandbox'].includes(TRANZAK_MODE)) {
+        throw new Error('TRANZAK_MODE doit être « live » ou « sandbox ».');
+    }
+    if (!tranzakClientPromise) {
+        tranzakClientPromise = import('tranzak-node')
+            .then(({ default: Tranzak }) => new Tranzak({
+                appId: TRANZAK_APP_ID,
+                appKey: TRANZAK_APP_KEY,
+                mode: TRANZAK_MODE
+            }))
+            .catch((error) => {
+                tranzakClientPromise = null;
+                throw error;
+            });
+    }
+    return tranzakClientPromise;
+};
+
+const sendCourseAccessCodeEmail = async (user, courseId, code, paymentConfirmed = false) => {
+    const adminCopyEmails = getAdminNotificationEmails().filter((email) => email !== user.email);
+    const courseUrl = getFrontendUrl('/Cours%20en%20Ligne.html', {
+        'access-code': code,
+        course: courseId
+    });
+    const emailContent = createCodeEmail({
+        greeting: `Bonjour ${user.name},`,
+        message: paymentConfirmed
+            ? `Votre paiement pour la formation « ${COURSE_TITLES[courseId]} » a été confirmé. Voici votre code personnel pour accéder au cours.`
+            : `Voici votre code personnel pour accéder à la formation « ${COURSE_TITLES[courseId]} ».`,
+        code,
+        buttonLabel: 'Ouvrir le cours',
+        buttonUrl: courseUrl,
+        note: 'Le code est personnel et reste valable tant que votre accès à la formation est actif. Si vous n’êtes pas déjà connecté(e), connectez-vous : le code restera prêt dans le cours.'
+    });
+    await sendEmail({
+        to: user.email,
+        ...(adminCopyEmails.length ? { bcc: adminCopyEmails } : {}),
+        subject: `${paymentConfirmed ? 'Paiement confirmé — ' : ''}code d’accès ${COURSE_TITLES[courseId]} | Competence Academy`,
+        ...emailContent
+    });
+};
+
+const issueCourseAccessCode = async (user, courseId, { paymentConfirmed = false } = {}) => {
     const code = generateCourseAccessCode(courseId);
     const grantedAt = new Date();
     const encryptedCode = encryptCourseAccessCode(code);
@@ -661,25 +737,7 @@ const issueCourseAccessCode = async (user, courseId) => {
     }
 
     try {
-        const adminCopyEmails = getAdminNotificationEmails().filter((email) => email !== user.email);
-        const courseUrl = getFrontendUrl('/Cours%20en%20Ligne.html', {
-            'access-code': code,
-            course: courseId
-        });
-        const emailContent = createCodeEmail({
-            greeting: `Bonjour ${user.name},`,
-            message: `Voici votre code personnel pour la formation « ${COURSE_TITLES[courseId]} ». Appuyez sur le bouton pour ouvrir le cours avec le code déjà préparé.`,
-            code,
-            buttonLabel: 'Ouvrir le cours',
-            buttonUrl: courseUrl,
-            note: 'Le code est personnel et reste valable tant que votre accès à la formation est actif. Si vous n’êtes pas déjà connecté(e), connectez-vous : le code restera prêt dans le cours.'
-        });
-        await sendEmail({
-            to: user.email,
-            ...(adminCopyEmails.length ? { bcc: adminCopyEmails } : {}),
-            subject: `Votre code d’accès - ${COURSE_TITLES[courseId]} | Competence Academy`,
-            ...emailContent
-        });
+        await sendCourseAccessCodeEmail(user, courseId, code, paymentConfirmed);
     } catch (error) {
         if (existingAccess) {
             existingAccess.codeHash = previousCodeHash;
@@ -695,10 +753,10 @@ const issueCourseAccessCode = async (user, courseId) => {
     return code;
 };
 
-const grantCourseAccess = async (user, courseId) => {
+const grantCourseAccess = async (user, courseId, options) => {
     const existingAccess = await CourseEnrollmentAccess.findOne({ userId: user._id, courseId });
     if (existingAccess) return false;
-    await issueCourseAccessCode(user, courseId);
+    await issueCourseAccessCode(user, courseId, options);
     return true;
 };
 
@@ -915,18 +973,18 @@ app.post('/api/admin/request-otp', adminOtpRequestLimiter, async (req, res) => {
             subject: 'Votre code temporaire d’administration - Competence Academy',
             text: `Votre code de confirmation est ${code}. Il expire dans 2 minutes.\n\nAccéder à la page d’administration : ${adminPageUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
             html: `
-                <div style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1e293b">
+                <div style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#000641">
                     <div style="max-width:520px;margin:0 auto;padding:32px;border:1px solid #dbe3ee;border-radius:16px;background:#fff">
-                        <p style="margin:0 0 8px;color:#111e62;font-size:13px;font-weight:bold;letter-spacing:2px">COMPETENCE ACADEMY</p>
-                        <h1 style="margin:0 0 16px;color:#111e62;font-size:24px">Confirmation administrateur</h1>
+                        <p style="margin:0 0 8px;color:#000641;font-size:13px;font-weight:bold;letter-spacing:2px">COMPETENCE ACADEMY</p>
+                        <h1 style="margin:0 0 16px;color:#000641;font-size:24px">Confirmation administrateur</h1>
                         <p style="margin:0 0 20px;line-height:1.6">Utilisez le code ci-dessous pour accéder à l’espace d’administration. Il n’est valable que pendant <strong>2 minutes</strong>.</p>
                         <div style="margin:0 0 24px;padding:20px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;text-align:center">
                             <span style="color:#64748b;font-size:12px;letter-spacing:2px">CODE DE CONFIRMATION</span>
-                            <div style="margin-top:8px;color:#111e62;font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:8px;user-select:all">${code}</div>
+                            <div style="margin-top:8px;color:#000641;font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:8px;user-select:all">${code}</div>
                             <p style="margin:12px 0 0;color:#64748b;font-size:12px">Sélectionnez le code pour le copier.</p>
                         </div>
                         <p style="margin:0 0 24px;text-align:center">
-                            <a href="${adminPageUrl}" style="display:inline-block;padding:13px 22px;border-radius:8px;background:#111e62;color:#fff;font-weight:bold;text-decoration:none">Ouvrir l’administration</a>
+                            <a href="${adminPageUrl}" style="display:inline-block;padding:13px 22px;border-radius:8px;background:#000641;color:#fff;font-weight:bold;text-decoration:none">Ouvrir l’administration</a>
                         </p>
                         <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5">Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.</p>
                     </div>
@@ -1856,6 +1914,289 @@ app.post('/api/course-access/verify', authenticate, async (req, res) => {
     }
 });
 
+app.get('/api/course-prices', async (req, res) => {
+    try {
+        const prices = await CoursePrice.find().select('courseId amount currencyCode').lean();
+        res.set('Cache-Control', 'no-store');
+        res.json({
+            success: true,
+            prices: COURSE_ACCESS_CATEGORIES.map((courseId) => {
+                const price = prices.find((item) => item.courseId === courseId);
+                return {
+                    courseId,
+                    courseName: COURSE_TITLES[courseId],
+                    amount: price?.amount ?? COURSE_PRICE_DEFAULT_AMOUNT,
+                    currencyCode: COURSE_PAYMENT_CURRENCY
+                };
+            })
+        });
+    } catch (error) {
+        console.error('List course prices error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de consulter les tarifs des formations.' });
+    }
+});
+
+app.get('/api/admin/course-prices', requireCourseAdmin, async (req, res) => {
+    try {
+        const prices = await CoursePrice.find().select('courseId amount currencyCode updatedAt').lean();
+        res.json({
+            success: true,
+            prices: COURSE_ACCESS_CATEGORIES.map((courseId) => {
+                const price = prices.find((item) => item.courseId === courseId);
+                return {
+                    courseId,
+                    courseName: COURSE_TITLES[courseId],
+                    amount: price?.amount ?? COURSE_PRICE_DEFAULT_AMOUNT,
+                    currencyCode: COURSE_PAYMENT_CURRENCY,
+                    updatedAt: price?.updatedAt || null
+                };
+            })
+        });
+    } catch (error) {
+        console.error('Admin list course prices error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de consulter les tarifs des formations.' });
+    }
+});
+
+app.put('/api/admin/course-prices/:courseId', requireCourseAdmin, async (req, res) => {
+    try {
+        const courseId = String(req.params.courseId || '');
+        const amount = Number(req.body?.amount);
+        if (!COURSE_ACCESS_CATEGORIES.includes(courseId)
+            || !Number.isSafeInteger(amount)
+            || amount < 1
+            || amount > 100000000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Choisissez une formation valide et un tarif entier en gourdes compris entre 1 et 100 000 000.'
+            });
+        }
+
+        const price = await CoursePrice.findOneAndUpdate(
+            { courseId },
+            { $set: { amount, currencyCode: COURSE_PAYMENT_CURRENCY } },
+            { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+        ).select('courseId amount currencyCode updatedAt');
+        res.json({ success: true, price });
+    } catch (error) {
+        console.error('Update course price error:', error);
+        res.status(500).json({ success: false, message: 'Impossible d’enregistrer le tarif de cette formation.' });
+    }
+});
+
+app.post('/api/payments/tranzak/checkout', authenticate, async (req, res) => {
+    let payment;
+    try {
+        const courseId = String(req.body?.courseId || '');
+        if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+            return res.status(400).json({ success: false, message: 'Choisissez une formation valide.' });
+        }
+        const user = await User.findById(req.user.id).select('_id name email');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Votre compte étudiant est introuvable.' });
+        }
+        if (await CourseEnrollmentAccess.exists({ userId: user._id, courseId })) {
+            return res.status(409).json({ success: false, message: 'Vous avez déjà accès à cette formation.' });
+        }
+        const price = await CoursePrice.findOne({ courseId }).select('amount currencyCode');
+        if (!price) {
+            return res.status(503).json({ success: false, message: 'Le tarif de cette formation n’est pas disponible.' });
+        }
+
+        const tranzak = await getTranzakClient();
+        const mchTransactionRef = `CA${crypto.randomBytes(15).toString('hex')}`;
+        payment = await CoursePayment.create({
+            userId: user._id,
+            courseId,
+            amount: price.amount,
+            currencyCode: COURSE_PAYMENT_CURRENCY,
+            mchTransactionRef
+        });
+        const returnUrl = new URL('https://competenceacademy.netlify.app/payment-success.html');
+        returnUrl.searchParams.set('reference', mchTransactionRef);
+        const transaction = await tranzak.payment.collection.simple.chargeByWebRedirect({
+            amount: price.amount,
+            currencyCode: COURSE_PAYMENT_CURRENCY,
+            description: `Formation ${COURSE_TITLES[courseId]}`.slice(0, 255),
+            payerNote: `Cours ${courseId}`.slice(0, 31),
+            mchTransactionRef,
+            returnUrl: returnUrl.toString(),
+            serviceDiscountAmount: 0
+        });
+        const paymentAuthUrl = new URL(String(transaction.data?.links?.paymentAuthUrl || ''));
+        if (paymentAuthUrl.protocol !== 'https:') {
+            throw new Error('Tranzak did not provide a secure payment authorization URL.');
+        }
+        await CoursePayment.updateOne(
+            { _id: payment._id },
+            { $set: { requestId: String(transaction.data?.requestId || '') } }
+        );
+        res.json({
+            success: true,
+            paymentUrl: paymentAuthUrl.toString(),
+            reference: mchTransactionRef,
+            amount: price.amount,
+            currencyCode: COURSE_PAYMENT_CURRENCY
+        });
+    } catch (error) {
+        console.error('Create Tranzak course payment error:', error);
+        if (error.code === 'TRANZAK_NOT_CONFIGURED') {
+            return res.status(503).json({ success: false, message: 'Le paiement en ligne n’est pas encore configuré. Contactez l’administration.' });
+        }
+        res.status(502).json({ success: false, message: 'Impossible d’ouvrir le paiement Tranzak. Réessayez dans quelques instants.' });
+    }
+});
+
+app.get('/api/payments/tranzak/status', authenticate, async (req, res) => {
+    try {
+        const reference = String(req.query?.reference || '');
+        if (!reference || reference.length > 128 || /[\u0000-\u001f\u007f]/.test(reference)) {
+            return res.status(400).json({ success: false, message: 'Référence de paiement invalide.' });
+        }
+        const payment = await CoursePayment.findOne({
+            userId: req.user.id,
+            $or: [
+                { mchTransactionRef: reference },
+                { requestId: reference }
+            ]
+        }).select('courseId amount currencyCode status accessGrantedAt paidAt');
+        if (!payment) {
+            return res.status(404).json({ success: false, message: 'Aucun paiement ne correspond à cette référence.' });
+        }
+        res.set('Cache-Control', 'no-store');
+        const response = {
+            success: true,
+            status: payment.status,
+            courseId: payment.courseId,
+            courseName: COURSE_TITLES[payment.courseId],
+            amount: payment.amount,
+            currencyCode: payment.currencyCode,
+            paidAt: payment.paidAt
+        };
+        if (payment.accessGrantedAt) {
+            const access = await CourseEnrollmentAccess.findOne({
+                userId: req.user.id,
+                courseId: payment.courseId
+            }).select('+encryptedCode');
+            if (access?.encryptedCode) response.accessCode = decryptCourseAccessCode(access.encryptedCode);
+        }
+        res.json(response);
+    } catch (error) {
+        console.error('Read Tranzak payment status error:', error);
+        res.status(500).json({ success: false, message: 'Impossible de consulter le statut de votre paiement.' });
+    }
+});
+
+app.post('/api/payments/tranzak/webhook', async (req, res) => {
+    try {
+        const expectedSecret = String(process.env.TRANZAK_WEBHOOK_SECRET || '');
+        if (!expectedSecret) {
+            return res.status(503).json({ success: false, message: 'La signature du webhook Tranzak n’est pas configurée.' });
+        }
+        const suppliedSecret = String(req.body?.authKey || '');
+        const expectedBytes = Buffer.from(expectedSecret, 'utf8');
+        const suppliedBytes = Buffer.from(suppliedSecret, 'utf8');
+        if (!expectedSecret || expectedBytes.length !== suppliedBytes.length
+            || !crypto.timingSafeEqual(expectedBytes, suppliedBytes)) {
+            return res.status(401).json({ success: false, message: 'Signature du webhook invalide.' });
+        }
+
+        const eventType = String(req.body?.eventType || '');
+        if (!['REQUEST.COMPLETED', 'REQUEST.CANCELED'].includes(eventType)) {
+            return res.status(400).json({ success: false, message: 'Événement Tranzak non pris en charge.' });
+        }
+        const requestId = String(req.body?.resource?.requestId || '');
+        if (!requestId) {
+            return res.status(400).json({ success: false, message: 'Identifiant de transaction Tranzak manquant.' });
+        }
+
+        const tranzak = await getTranzakClient();
+        const verified = await tranzak.webhook.process(req.body);
+        if (!verified) {
+            return res.status(401).json({ success: false, message: 'Transaction Tranzak non authentifiée.' });
+        }
+        const transaction = await tranzak.payment.collection.simple.find({ requestId });
+        const transactionData = transaction.data;
+        const reference = String(transactionData.mchTransactionRef || '');
+        if (!/^CA[a-f0-9]{30}$/.test(reference)) {
+            return res.status(200).json({ success: true, ignored: true });
+        }
+        const payment = await CoursePayment.findOne({ mchTransactionRef: reference });
+        if (!payment) return res.status(200).json({ success: true, ignored: true });
+        if (payment.accessGrantedAt) return res.json({ success: true, processed: true });
+
+        if (eventType === 'REQUEST.CANCELED') {
+            await CoursePayment.updateOne(
+                { _id: payment._id, status: 'PENDING' },
+                { $set: { status: 'CANCELLED' } }
+            );
+            return res.json({ success: true, cancelled: true });
+        }
+
+        const transactionAmount = Number(transactionData.merchant?.amount ?? transactionData.amount);
+        const transactionCurrency = String(
+            transactionData.currencyCode || transactionData.merchant?.currencyCode || ''
+        );
+        if (transactionData.appId !== process.env.TRANZAK_APP_ID
+            || transactionData.status !== 'SUCCESSFUL'
+            || transactionAmount !== payment.amount
+            || transactionCurrency !== payment.currencyCode) {
+            console.error('Rejected Tranzak payment with mismatched transaction details:', reference);
+            await CoursePayment.updateOne(
+                { _id: payment._id },
+                { $set: { status: 'REJECTED' } }
+            );
+            return res.status(400).json({ success: false, message: 'Montant, devise ou statut de paiement invalide.' });
+        }
+
+        payment.status = 'SUCCESSFUL';
+        payment.requestId = requestId;
+        payment.paidAt = payment.paidAt || new Date();
+        await payment.save();
+
+        const user = await User.findById(payment.userId).select('_id name email');
+        if (!user) throw new Error('Paid course payment references a missing student account.');
+        const wasGranted = await grantCourseAccess(user, payment.courseId, { paymentConfirmed: true });
+        let access;
+        if (wasGranted) {
+            access = await CourseEnrollmentAccess.findOne({
+                userId: user._id,
+                courseId: payment.courseId
+            }).select('+encryptedCode');
+        } else {
+            access = await CourseEnrollmentAccess.findOne({
+                userId: user._id,
+                courseId: payment.courseId
+            }).select('+encryptedCode');
+            if (!access?.encryptedCode) {
+                await issueCourseAccessCode(user, payment.courseId, { paymentConfirmed: true });
+                access = await CourseEnrollmentAccess.findOne({
+                    userId: user._id,
+                    courseId: payment.courseId
+                }).select('+encryptedCode');
+            } else {
+                await sendCourseAccessCodeEmail(
+                    user,
+                    payment.courseId,
+                    decryptCourseAccessCode(access.encryptedCode),
+                    true
+                );
+            }
+        }
+        if (!access?.encryptedCode) throw new Error('Course access code was not stored after successful payment.');
+
+        payment.accessGrantedAt = new Date();
+        await payment.save();
+        res.json({ success: true, processed: true });
+    } catch (error) {
+        console.error('Process Tranzak payment webhook error:', error);
+        if (error.code === 'TRANZAK_NOT_CONFIGURED') {
+            return res.status(503).json({ success: false, message: 'La validation Tranzak n’est pas configurée.' });
+        }
+        res.status(500).json({ success: false, message: 'Le paiement n’a pas encore pu être traité; Tranzak peut réessayer le webhook.' });
+    }
+});
+
 app.post('/api/course-progress/unlock', authenticate, async (req, res) => {
     try {
         const videoId = String(req.body?.videoId || '');
@@ -2161,11 +2502,28 @@ const startServer = async () => {
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
+    if (!process.env.TRANZAK_APP_ID || !process.env.TRANZAK_APP_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        console.warn('Tranzak payments are disabled until TRANZAK_APP_ID, TRANZAK_APP_KEY, and TRANZAK_WEBHOOK_SECRET are configured.');
+    }
 
     await mongoose.connect(MONGODB_URI, {
         serverSelectionTimeoutMS: 10000
     });
     console.log('MongoDB connected');
+    await CoursePrice.bulkWrite(COURSE_ACCESS_CATEGORIES.map((courseId) => ({
+        updateOne: {
+            filter: { courseId },
+            update: {
+                $setOnInsert: {
+                    courseId,
+                    amount: COURSE_PRICE_DEFAULT_AMOUNT,
+                    currencyCode: COURSE_PAYMENT_CURRENCY
+                }
+            },
+            upsert: true
+        }
+    })));
+    console.log('Course prices initialized');
 
     server.listen(PORT, () => {
         console.log(`Server Competence Academy Run ${PORT}`);
