@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #0d1b3e;
-    --primary-dark: #070f24;
+    --primary-color: #000647;
+    --primary-dark: #000647;
     --accent-orange: #ff7a00;
     --bg-color: #f4f7fc;
     --card-bg: #ffffff;
@@ -17,7 +17,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #010635 0%, #010635 100%);
+    background: #000647;
     color: var(--text-main);
     min-height: 100vh;
     display: flex;
