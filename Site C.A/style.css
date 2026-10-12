@@ -30,7 +30,7 @@ body {
 section h2 {
   text-align: center;
   margin-bottom: 30px;
-  color: #00074b;
+  color: #000641;
   font-size: 35px;
 }
 
@@ -41,7 +41,7 @@ section h2 {
   left: 0;
   width: 100%;
   height: 88px;
-  background: #00063b;
+  background: #000641;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -114,7 +114,7 @@ section h2 {
   z-index: 20;
   padding: 6px 9px;
   color: #fff;
-  background: #00052c;
+  background: #000641;
   border-radius: 7px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -213,7 +213,7 @@ section h2 {
     font-size: 2.5rem;
     margin-bottom: 30px;
     text-align: center;
-    color: #00074b;
+    color: #000641;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -344,10 +344,10 @@ section h2 {
   max-width: 760px;
   margin: 34px auto 0;
   padding: 24px;
-  border: 1px solid rgba(1, 6, 53, .12);
+  border: 1px solid rgba(0, 6, 65, .12);
   border-radius: 16px;
   background: #ffffff;
-  box-shadow: 0 8px 24px rgba(1, 6, 53, .08);
+  box-shadow: 0 8px 24px rgba(0, 6, 65, .08);
   text-align: center;
 }
 
@@ -371,7 +371,7 @@ html[data-theme="dark"] .courses-more p {
   border: 2px solid #F76B00;
   border-radius: 10px;
   background: #F76B00;
-  color: #00074b;
+  color: #000641;
   font-weight: 700;
   line-height: 1.4;
   text-align: center;
@@ -408,7 +408,7 @@ html[data-theme="dark"] .courses-more p {
 
 .card button {
   margin-top: 15px;
-  background: #00074b;
+  background: #000641;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -443,7 +443,7 @@ html[data-theme="dark"] .courses-more p {
 }
 
 .contact-header h2 {
-    color: #00074b; /* Ble ofisyÃ¨l */
+    color: #000641; /* Ble ofisyÃ¨l */
     font-size: 2.6rem;
     font-weight: 800;
     letter-spacing: -0.5px;
@@ -475,7 +475,7 @@ html[data-theme="dark"] .courses-more p {
     background: #ffffff;
     border-radius: 24px; /* Kwen yo pi dous kounye a */
     overflow: hidden;
-    box-shadow: 0 20px 40px rgba(17, 30, 98, 0.04); /* Lonbraj ki baze sou ble ofisyÃ¨l la */
+    box-shadow: 0 20px 40px rgba(0, 6, 65, 0.04); /* Lonbraj ki baze sou ble ofisyÃ¨l la */
     border: 1px solid #e2e8f0;
     margin: 0 auto;
 }
@@ -483,7 +483,7 @@ html[data-theme="dark"] .courses-more p {
 /* --- Pati GÃ²ch (Bwat EnfÃ²masyon an) --- */
 .contact-info-box {
     flex: 1;
-    background: linear-gradient(135deg, #00074b 0%, #00074b 100%); /* KoulÃ¨ ble a rann pi rich */
+    background: linear-gradient(135deg, #000641 0%, #000641 100%); /* KoulÃ¨ ble a rann pi rich */
     color: #ffffff;
     padding: 60px 50px;
     display: flex;
@@ -581,7 +581,7 @@ html[data-theme="dark"] .courses-more p {
 .contact-form-box h3 {
     font-size: 1.7rem;
     font-weight: 700;
-    color: #00074b;
+    color: #000641;
     margin-bottom: 30px;
 }
 
@@ -615,15 +615,15 @@ html[data-theme="dark"] .courses-more p {
 
 .form-group input:focus, 
 .form-group textarea:focus {
-    border-color: #00074b;
+    border-color: #000641;
     background-color: #ffffff;
-    box-shadow: 0 0 0 4px rgba(17, 30, 98, 0.1);
+    box-shadow: 0 0 0 4px rgba(0, 6, 65, 0.1);
 }
 
 /* --- Bouton Envoyer --- */
 .submit-btn {
     width: 100%;
-    background-color: #00074b;
+    background-color: #000641;
     color: #ffffff;
     border: none;
     padding: 16px;
@@ -830,7 +830,7 @@ html[data-theme="dark"] .courses-more p {
     width: 100%;
     min-height: 66px;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-    background: #00074b;
+    background: #000641;
     flex-direction: row;
     justify-content: space-around;
     gap: 4px;
@@ -1199,7 +1199,7 @@ html[data-theme="dark"] .courses-more p {
 
 /* --- TIT PRENSIPAL LA --- */
 .about-content h2 { 
-    color: #00074b; 
+    color: #000641; 
     font-size: 2.8rem; 
     text-align: center; 
     margin-bottom: 50px; 
@@ -1221,7 +1221,7 @@ html[data-theme="dark"] .courses-more p {
 
 /* --- TI SOU-TIT YO --- */
 .about-content h3 { 
-    color: #00074b; /* Pase l an ble pou l pi fÃ¨m */
+    color: #000641; /* Pase l an ble pou l pi fÃ¨m */
     font-size: 1.4rem;
     font-weight: 700;
     margin-top: 35px; 
@@ -1243,7 +1243,7 @@ html[data-theme="dark"] .courses-more p {
     background: #ffffff; 
     padding: 35px; 
     border-radius: 16px; 
-    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.03); /* Lonbraj dous ki baze sou ble a */
+    box-shadow: 0 10px 30px rgba(0, 6, 65, 0.03); /* Lonbraj dous ki baze sou ble a */
     border: 1px solid #e2e8f0;
     /* Tranzisyon pafÃ¨ ki bay yon efÃ¨ dous (Smooth cubic-bezier) */
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1251,7 +1251,7 @@ html[data-theme="dark"] .courses-more p {
 
 .highlight-box:hover {
     transform: translateY(-6px); /* Bwat la monte dous lÃ¨ w pase sou li */
-    box-shadow: 0 20px 40px rgba(17, 30, 98, 0.08);
+    box-shadow: 0 20px 40px rgba(0, 6, 65, 0.08);
     border-color: rgba(247, 107, 0, 0.2); /* Yon ti kras zoranj sou rebÃ² a lÃ¨ w pase sou li */
 }
 
@@ -1342,14 +1342,14 @@ html[data-theme="dark"] .courses-more p {
 .stats-banner {
     width: 100%;
     max-width: 1200px;
-    background-color: #00074b; /* Ble fonse ofisyÃ¨l la */
+    background-color: #000641; /* Ble fonse ofisyÃ¨l la */
     padding: 50px 30px;
     border-radius: 20px; /* Kwen yo byen awondi jan sa ye sou foto a */
     display: flex;
     justify-content: space-around; /* Separe 3 blÃ²k yo pafÃ¨ sou liy lan */
     align-items: center;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 6, 65, 0.15);
 }
 
 /* Chak blÃ²k kontÃ¨ yo */
@@ -1429,7 +1429,7 @@ html[data-theme="dark"] .courses-more p {
 .stats-section, .services-section, .faq-section { padding: 60px 20px; text-align: center; }
 
 /* Stats Counter */
-.stats-container { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px; background: #111E62; color: white; padding: 40px; border-radius: 15px; }
+.stats-container { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px; background: #000641; color: white; padding: 40px; border-radius: 15px; }
 .stat-item h3 { font-size: 2.5rem; margin: 0; color: #F76B00; }
 
 /* Services Grid */
@@ -1476,7 +1476,7 @@ html[data-theme="dark"] .courses-more p {
 /* Titre de la section */
 .faq-section h2 {
     font-size: 2.2rem;
-    color: #00074b;
+    color: #000641;
     margin-bottom: 40px;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -1490,7 +1490,7 @@ html[data-theme="dark"] .courses-more p {
     background: #ffffff;        /* Fond blanc pur */
     padding: 35px;              /* Espace interne */
     border-radius: 24px;        /* Magnifiques grands coins arrondis */
-    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.05); /* LÃ©gÃ¨re ombre bleutÃ©e pro */
+    box-shadow: 0 10px 30px rgba(0, 6, 65, 0.05); /* LÃ©gÃ¨re ombre bleutÃ©e pro */
     border: 1px solid #e2e8f0;  /* Fine bordure de finition */
     margin: 0 auto;
 }
@@ -1520,7 +1520,7 @@ html[data-theme="dark"] .courses-more p {
 .faq-question {
     width: 100%;
     padding: 20px 25px;
-    background: #00074b;        /* Bleu marine officiel */
+    background: #000641;        /* Bleu marine officiel */
     color: #ffffff;
     border: none;
     text-align: left;
@@ -1600,7 +1600,7 @@ html[data-theme="dark"] .courses-more p {
 .remerciement-wrapper { max-width: 700px; margin: auto; }
 
 .btn-deroule {
-  background: #00074b;
+  background: #000641;
   color: #fff;
   border: none;
   padding: 15px 30px;
@@ -1644,7 +1644,7 @@ footer {
 }
 
 .footer-social a {
-  color:#00074b;
+  color:#000641;
   font-size: 28px; /* GwosÃ¨ logo yo */
   transition: 0.3s;
 }
@@ -1697,7 +1697,7 @@ ul li img {
 
 .founders-header h2 {
     font-size: 2.2rem;
-    color: #00074b !important;
+    color: #000641 !important;
     font-weight: 800;
     margin-bottom: 12px;
 }
@@ -1712,7 +1712,7 @@ ul li img {
 .founder-card {
     background: #ffffff !important;
     border-radius: 20px !important;
-    border: 1px solid rgba(17, 30, 98, 0.08) !important;
+    border: 1px solid rgba(0, 6, 65, 0.08) !important;
     box-shadow: 0 10px 30px rgba(0, 76, 255, 0.05) !important;
     width: 100%;
     max-width: 320px;
@@ -1776,7 +1776,7 @@ ul li img {
 
 .founder-info h3 {
     font-size: 1.3rem;
-    color: #00074b !important;
+    color: #000641 !important;
     margin-bottom: 12px;
     font-weight: 700;
 }
@@ -1806,7 +1806,7 @@ ul li img {
 
 .section-title-container h2 {
     font-size: 2.2rem;
-    color: #00074b;
+    color: #000641;
     font-weight: 800;
     margin-bottom: 15px;
     position: relative;
@@ -1849,7 +1849,7 @@ ul li img {
     padding: 40px 30px;
     width: 100%;
     max-width: 360px;
-    border: 1px solid rgba(17, 30, 98, 0.05);
+    border: 1px solid rgba(0, 6, 65, 0.05);
     box-shadow: 0 15px 35px rgba(15, 23, 42, 0.04);
     display: flex;
     flex-direction: column;
@@ -1871,7 +1871,7 @@ ul li img {
     width: 80px;
     height: 80px;
     border-radius: 20px;
-    background: #00074b;
+    background: #000641;
     color: #F76B00;
     display: flex;
     justify-content: center;
@@ -1933,13 +1933,13 @@ ul li img {
 .advantage-card:hover .advantage-badge,
 .advantage-card:active .advantage-badge {
     background: #ffffff;
-    color: #00074b;
-    box-shadow: 0 4px 15px rgba(1, 6, 53, 0.12);
+    color: #000641;
+    box-shadow: 0 4px 15px rgba(0, 6, 65, 0.12);
 }
 
 .advantage-card:hover .advantage-badge i,
 .advantage-card:active .advantage-badge i {
-    color: #00074b;
+    color: #000641;
 }
 
 /* Responsive pour Mobile */
@@ -1968,7 +1968,7 @@ ul li img {
 
 .back-btn {
     display: inline-block;
-    background-color: #00074b;
+    background-color: #000641;
     color: #ffffff;
     padding: 12px 28px;
     border-radius: 8px;
@@ -2003,7 +2003,7 @@ ul li img {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #00074b; /* KoulÃ¨ ofisyÃ¨l antrepriz la */
+    background-color: #000641; /* KoulÃ¨ ofisyÃ¨l antrepriz la */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2145,7 +2145,7 @@ ul li img {
   max-width: min(420px, calc(100vw - 36px));
   padding: 14px 14px 14px 16px;
   color: #fff;
-  background: linear-gradient(135deg, #00052c, #00052c);
+  background: linear-gradient(135deg, #000641, #000641);
   font-size: 0.85rem;
   line-height: 1.35;
   animation: pwa-slide-in 0.35s ease-out;
@@ -2157,7 +2157,7 @@ ul li img {
   place-items: center;
   width: 38px;
   height: 38px;
-  color: #00074b;
+  color: #000641;
   background: #fff;
   border-radius: 12px;
   font-size: 1rem;
@@ -2236,7 +2236,7 @@ ul li img {
 
 #enable-notifications-button {
   bottom: 68px;
-  color: #00074b;
+  color: #000641;
   background: #ffffff;
   border: 1px solid #dbe3f0;
   cursor: pointer;
@@ -2505,7 +2505,7 @@ html[data-theme="dark"] .form-group textarea {
 
 html[data-theme="dark"] .form-group input:focus,
 html[data-theme="dark"] .form-group textarea:focus {
-  background-color: #111e36;
+  background-color: #000641;
 }
 
 html[data-theme="dark"] .content-deroule {
@@ -2513,7 +2513,7 @@ html[data-theme="dark"] .content-deroule {
 }
 
 .highlight-box:hover {
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 20px 40px rgba(17, 30, 98, 0.12);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 20px 40px rgba(0, 6, 65, 0.12);
 }
 
 .service-card:hover {
@@ -2542,13 +2542,13 @@ html[data-theme="dark"] .faq-item:hover {
 .site-footer {
   padding: 0 24px;
   color: #f8f9fa !important;
-  background: #00074b !important;
+  background: #000641 !important;
   text-align: left;
 }
 
 html[data-theme="dark"] .site-footer {
   color: #f8f9fa !important;
-  background: #000322 !important;
+  background: #00031d !important;
 }
 
 html[data-theme="dark"] .site-footer p {
