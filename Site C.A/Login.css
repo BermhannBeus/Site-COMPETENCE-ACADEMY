@@ -17,7 +17,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #070f24 0%, #0d1b3e 100%);
+    background: linear-gradient(135deg, #010635 0%, #010635 100%);
     color: var(--text-main);
     min-height: 100vh;
     display: flex;
@@ -179,6 +179,44 @@ body {
     margin-bottom: 18px;
 }
 
+.signup-password-error {
+    margin-top: 7px;
+    color: #b42318;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.signup-password-error[hidden] {
+    display: none;
+}
+
+.signup-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0 0 18px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.signup-consent input {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: var(--accent-orange);
+}
+
+.signup-consent a {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.signup-consent a:hover {
+    color: var(--accent-orange);
+}
+
 .input-group label {
     display: block;
     font-size: 0.8rem;
@@ -306,6 +344,14 @@ body {
     background: linear-gradient(135deg, var(--accent-orange), #e66d00);
     transform: translateY(-2px);
     box-shadow: 0 14px 25px rgba(255, 122, 0, 0.3);
+}
+
+.btn-submit:disabled,
+.btn-submit:disabled:hover {
+    background: #9aa3b2;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* Social Login Dividers */
