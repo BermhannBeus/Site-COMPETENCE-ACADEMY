@@ -35,6 +35,10 @@ body {
     align-items: center;
 }
 
+.auth-wrapper.signup-layout {
+    max-width: 840px;
+}
+
 .auth-container {
     background: var(--card-bg);
     width: 100%;
@@ -177,6 +181,23 @@ body {
 /* Form Fields */
 .input-group {
     margin-bottom: 18px;
+}
+
+.signup-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 15px;
+}
+
+.signup-grid > .required-fields-note,
+.signup-grid > .signup-course-group,
+.signup-grid > .signup-consent,
+.signup-grid > .btn-submit {
+    grid-column: 1 / -1;
+}
+
+.signup-grid > .input-group {
+    min-width: 0;
 }
 
 .signup-password-error {
@@ -352,6 +373,23 @@ body {
     box-shadow: none;
     cursor: not-allowed;
     transform: none;
+}
+
+@media (max-width: 768px) {
+    .auth-wrapper.signup-layout {
+        max-width: 440px;
+    }
+
+    .signup-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .signup-grid > .required-fields-note,
+    .signup-grid > .signup-course-group,
+    .signup-grid > .signup-consent,
+    .signup-grid > .btn-submit {
+        grid-column: 1;
+    }
 }
 
 /* Social Login Dividers */
