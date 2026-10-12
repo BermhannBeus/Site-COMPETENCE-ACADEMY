@@ -30,7 +30,7 @@ body {
 section h2 {
   text-align: center;
   margin-bottom: 30px;
-  color: #010635;
+  color: #00074b;
   font-size: 35px;
 }
 
@@ -114,7 +114,7 @@ section h2 {
   z-index: 20;
   padding: 6px 9px;
   color: #fff;
-  background: #010635;
+  background: #00074b;
   border-radius: 7px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -151,7 +151,7 @@ section h2 {
 .hero-section {
   position: relative;
   width: 100%;
-  /* Fòse fòma 16:9 Photoshop la sou mobil pou videyo a pa janm taye */
+  /* FÃ²se fÃ²ma 16:9 Photoshop la sou mobil pou videyo a pa janm taye */
   aspect-ratio: 16 / 9; 
   height: auto;
   overflow: hidden;
@@ -164,7 +164,7 @@ section h2 {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Nenpòt aparèy, videyo a ap parèt antye nèt */
+  object-fit: contain; /* NenpÃ²t aparÃ¨y, videyo a ap parÃ¨t antye nÃ¨t */
   z-index: 1;
 }
 
@@ -198,14 +198,14 @@ section h2 {
 
 .historique {
     padding: 60px 20px;
-    background-color: #f5f5ff; /* Yon ti koulè gri trè lejè pou fè l soti sou rès paj la */
+    background-color: #f5f5ff; /* Yon ti koulÃ¨ gri trÃ¨ lejÃ¨ pou fÃ¨ l soti sou rÃ¨s paj la */
     color: #333;
 }
 
-/* Kontenè a pou kenbe tout bagay santre ak pwòp */
+/* KontenÃ¨ a pou kenbe tout bagay santre ak pwÃ²p */
 .historique .container {
-    max-width: 900px; /* Limite lajè tèks la pou li pa twò long pou je a */
-    margin: 0 auto;   /* Santre kontenè a nan paj la */
+    max-width: 900px; /* Limite lajÃ¨ tÃ¨ks la pou li pa twÃ² long pou je a */
+    margin: 0 auto;   /* Santre kontenÃ¨ a nan paj la */
 }
 
 /* Tit la */
@@ -213,21 +213,21 @@ section h2 {
     font-size: 2.5rem;
     margin-bottom: 30px;
     text-align: center;
-    color: #010635;
+    color: #00074b;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 /* Paragraf la */
 .historique p {
-    font-size: 1.1rem;      /* Yon gwosè ki fasil pou li */
+    font-size: 1.1rem;      /* Yon gwosÃ¨ ki fasil pou li */
     line-height: 1.8;       /* Espas ant liy yo pou respire */
-    color: #555;            /* Yon koulè nwa ki pa twò agresif */
-    text-align: justify;    /* Aliyman ki bay yon aspè liv/jounal */
-    margin-bottom: 15px;    /* Espas si ou ta gen lòt paragraf */
+    color: #555;            /* Yon koulÃ¨ nwa ki pa twÃ² agresif */
+    text-align: justify;    /* Aliyman ki bay yon aspÃ¨ liv/jounal */
+    margin-bottom: 15px;    /* Espas si ou ta gen lÃ²t paragraf */
 }
 
-/* Responsivite (pou telefòn) */
+/* Responsivite (pou telefÃ²n) */
 @media (max-width: 768px) {
     html,
     body {
@@ -272,7 +272,7 @@ section h2 {
 }
 
 
-/* Kache tèks HTML la sou mobil paske videyo a gen tèks la deja */
+/* Kache tÃ¨ks HTML la sou mobil paske videyo a gen tÃ¨ks la deja */
 
 .hero-content h1 {
   display: none; 
@@ -292,7 +292,8 @@ section h2 {
 }
 
 .btn-decouvrir:hover {
-  background: #ff8a2d;
+  background: #F76B00;
+  color: #ffffff;
 }
 
 /* ===== 4. HISTORIQUE & TEXTES ===== */
@@ -305,11 +306,25 @@ section h2 {
 }
 
 /* ===== 5. CARDS SYSTEM ===== */
+.courses-section {
+  padding: 2rem 1rem;
+  background: #f4f6ff;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 20px;
   margin-top: 40px;
+}
+
+.courses-section .cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 2.5rem auto 0;
+  padding: 0 0.5rem;
 }
 
 .courses-section .courses-header {
@@ -320,6 +335,7 @@ section h2 {
   max-width: 700px;
   margin: 0 auto;
   padding: 0 16px;
+  color: #555;
   text-align: center;
   line-height: 1.7;
 }
@@ -337,8 +353,13 @@ section h2 {
 
 .courses-more p {
   margin: 0 0 18px;
-  color: #010635;
+  color: #555;
   line-height: 1.7;
+}
+
+html[data-theme="dark"] .courses-section .courses-header p,
+html[data-theme="dark"] .courses-more p {
+  color: #dbe4f0;
 }
 
 .courses-more-link {
@@ -350,7 +371,7 @@ section h2 {
   border: 2px solid #F76B00;
   border-radius: 10px;
   background: #F76B00;
-  color: #010635;
+  color: #00074b;
   font-weight: 700;
   line-height: 1.4;
   text-align: center;
@@ -360,10 +381,10 @@ section h2 {
 
 .courses-more-link:hover,
 .courses-more-link:focus-visible {
-  background: #010635;
+  background: #F76B00;
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(1, 6, 53, .2);
+  box-shadow: 0 6px 18px rgba(247, 107, 0, .25);
 }
 
 .courses-more-link:focus-visible {
@@ -387,7 +408,7 @@ section h2 {
 
 .card button {
   margin-top: 15px;
-  background: #010635;
+  background: #00074b;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -398,22 +419,23 @@ section h2 {
 
 .card button:hover {
   background: #F76B00;
+  color: #ffffff;
 }
 
 /* ==========================================================================
-   STIL POU SECTION CONTACT & WHATSAPP (MODÈN & RESPONSIVE)
+   STIL POU SECTION CONTACT & WHATSAPP (MODÃˆN & RESPONSIVE)
    ========================================================================== */
 
-/* 1. Seksyon Jeneral la (Pase an kolòn pou Tit la ka rete anlè bwat la) */
+/* 1. Seksyon Jeneral la (Pase an kolÃ²n pou Tit la ka rete anlÃ¨ bwat la) */
 .Contact-section {
     padding: 90px 20px;
     background-color: #f8fafc;
     display: flex;
-    flex-direction: column; /* Fòse kontni yo desann anba lòt */
+    flex-direction: column; /* FÃ²se kontni yo desann anba lÃ²t */
     align-items: center;    /* Santre tout bagay nan mitan */
 }
 
-/* --- TIT PRENSIPAL ANLÈ A (SA KI TE MANKE A) --- */
+/* --- TIT PRENSIPAL ANLÃˆ A (SA KI TE MANKE A) --- */
 .contact-header {
     text-align: center;
     margin-bottom: 50px; /* Espas ant tit la ak gwo bwat kontak la */
@@ -421,7 +443,7 @@ section h2 {
 }
 
 .contact-header h2 {
-    color: #010635; /* Ble ofisyèl */
+    color: #00074b; /* Ble ofisyÃ¨l */
     font-size: 2.6rem;
     font-weight: 800;
     letter-spacing: -0.5px;
@@ -434,18 +456,18 @@ section h2 {
     display: block;
     width: 60px;
     height: 4px;
-    background: #F76B00; /* Zoranj ofisyèl */
+    background: #F76B00; /* Zoranj ofisyÃ¨l */
     margin: 15px auto 0 auto;
     border-radius: 2px;
 }
 
 .contact-header p {
-    color: #64748b; /* Gri pwofesyonèl */
+    color: #64748b; /* Gri pwofesyonÃ¨l */
     font-size: 0.95rem;
     line-height: 1.6;
 }
 
-/* 2. Veso Kontenè a (Gwo Bwat la) */
+/* 2. Veso KontenÃ¨ a (Gwo Bwat la) */
 .Contact-container {
     max-width: 1100px;
     width: 100%;
@@ -453,15 +475,15 @@ section h2 {
     background: #ffffff;
     border-radius: 24px; /* Kwen yo pi dous kounye a */
     overflow: hidden;
-    box-shadow: 0 20px 40px rgba(17, 30, 98, 0.04); /* Lonbraj ki baze sou ble ofisyèl la */
+    box-shadow: 0 20px 40px rgba(17, 30, 98, 0.04); /* Lonbraj ki baze sou ble ofisyÃ¨l la */
     border: 1px solid #e2e8f0;
     margin: 0 auto;
 }
 
-/* --- Pati Gòch (Bwat Enfòmasyon an) --- */
+/* --- Pati GÃ²ch (Bwat EnfÃ²masyon an) --- */
 .contact-info-box {
     flex: 1;
-    background: linear-gradient(135deg, #010635 0%, #010635 100%); /* Koulè ble a rann pi rich */
+    background: linear-gradient(135deg, #00074b 0%, #00074b 100%); /* KoulÃ¨ ble a rann pi rich */
     color: #ffffff;
     padding: 60px 50px;
     display: flex;
@@ -550,7 +572,7 @@ section h2 {
     color: white;
 }
 
-/* --- Pati Dwat (Fòm nan) --- */
+/* --- Pati Dwat (FÃ²m nan) --- */
 .contact-form-box {
     flex: 1.2;
     padding: 60px 50px;
@@ -559,7 +581,7 @@ section h2 {
 .contact-form-box h3 {
     font-size: 1.7rem;
     font-weight: 700;
-    color: #010635;
+    color: #00074b;
     margin-bottom: 30px;
 }
 
@@ -593,7 +615,7 @@ section h2 {
 
 .form-group input:focus, 
 .form-group textarea:focus {
-    border-color: #010635;
+    border-color: #00074b;
     background-color: #ffffff;
     box-shadow: 0 0 0 4px rgba(17, 30, 98, 0.1);
 }
@@ -601,7 +623,7 @@ section h2 {
 /* --- Bouton Envoyer --- */
 .submit-btn {
     width: 100%;
-    background-color: #010635;
+    background-color: #00074b;
     color: #ffffff;
     border: none;
     padding: 16px;
@@ -617,14 +639,14 @@ section h2 {
 }
 
 .submit-btn:hover {
-    background-color: #F76B00; /* Pase an zoranj lè w pase sou li pou plis dinamism */
+    background-color: #F76B00; /* Pase an zoranj lÃ¨ w pase sou li pou plis dinamism */
 }
 
 .submit-btn:active {
     transform: scale(0.99);
 }
 
-/* --- Mesaj siksè --- */
+/* --- Mesaj siksÃ¨ --- */
 .success-message {
     margin-top: 20px;
     color: #16a34a;
@@ -652,7 +674,7 @@ section h2 {
 }
 
 /* ==========================================================================
-   RESPONSIVE POU TELEFÒN AK TABLÈT (KORÈK)
+   RESPONSIVE POU TELEFÃ’N AK TABLÃˆT (KORÃˆK)
    ========================================================================== */
 @media (max-width: 991px) {
     .Contact-section {
@@ -704,14 +726,14 @@ section h2 {
         font-size: 2rem;
     }
     .Contact-container {
-        flex-direction: column; /* Bwat yo ap pase anba lòt sou tablèt/mobil */
+        flex-direction: column; /* Bwat yo ap pase anba lÃ²t sou tablÃ¨t/mobil */
         border-radius: 20px;
     }
     .contact-info-box, .contact-form-box {
         padding: 40px 30px;
     }
     .whatsapp-btn {
-        width: 100%; /* Bouton an pran tout lajè a sou mobil pou klike pi fasil */
+        width: 100%; /* Bouton an pran tout lajÃ¨ a sou mobil pou klike pi fasil */
     }
 }
 
@@ -726,11 +748,11 @@ section h2 {
 @media (min-width: 1024px) {
   .hero-section {
     aspect-ratio: auto;
-    height: 100vh; /* Sou PC li ka pran tout wotè ekran an parfe */
+    height: 100vh; /* Sou PC li ka pran tout wotÃ¨ ekran an parfe */
   }
   
   .bg-video {
-    object-fit: cover; /* Ranpli gwo ekran PC yo nèt */
+    object-fit: cover; /* Ranpli gwo ekran PC yo nÃ¨t */
   }
 
   .hero-content h1 {
@@ -808,7 +830,7 @@ section h2 {
     width: 100%;
     min-height: 66px;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-    background: #010635;
+    background: #00074b;
     flex-direction: row;
     justify-content: space-around;
     gap: 4px;
@@ -865,7 +887,7 @@ section h2 {
 }
 
 .custom-list li img {
-  width: 40px;       /* Ou ka ajiste gwosè a isit la */
+  width: 40px;       /* Ou ka ajiste gwosÃ¨ a isit la */
   height: 40px;
   margin-right: 10px;
   object-fit: contain;
@@ -883,10 +905,10 @@ section h2 {
 
 
 /* ==========================================================================
-   CSS HERO SLIDER FINAL - 16:9 RESPONSIVE (SANS ZOOM & ULTRA CENTRÉ)
+   CSS HERO SLIDER FINAL - 16:9 RESPONSIVE (SANS ZOOM & ULTRA CENTRÃ‰)
    ========================================================================== */
 
-/* 1. GWO SEKSYON HERO A (Fòse fòma 16:9 san koulè ble sekirite a) */
+/* 1. GWO SEKSYON HERO A (FÃ²se fÃ²ma 16:9 san koulÃ¨ ble sekirite a) */
 .hero-section {
     position: relative;
     width: 100%;
@@ -919,13 +941,13 @@ section h2 {
     z-index: 1;
 }
 
-/* Lè slide la aktif */
+/* LÃ¨ slide la aktif */
 .slide.active {
     opacity: 1;
     z-index: 2;
 }
 
-/* 4. FÒSE IMAJ TAG <img> YO REYALIZE FÒMA 16:9 SANS DEFÒMASYON */
+/* 4. FÃ’SE IMAJ TAG <img> YO REYALIZE FÃ’MA 16:9 SANS DEFÃ’MASYON */
 .slide-img {
     position: absolute;
     top: 0;
@@ -937,7 +959,7 @@ section h2 {
     z-index: 1;
 }
 
-/* 5. VESO TÈKS AK BOUTON AN (SANTRE NET SOU DESKTOP/TABLET) */
+/* 5. VESO TÃˆKS AK BOUTON AN (SANTRE NET SOU DESKTOP/TABLET) */
 .slide-info {
     position: absolute;
     top: 50%;
@@ -953,7 +975,7 @@ section h2 {
     display: flex;
     flex-direction: column;
     align-items: center; /* Santraj orizontal pou tout kontni an */
-    justify-content: center; /* Santraj vètikal */
+    justify-content: center; /* Santraj vÃ¨tikal */
     gap: 20px;
     
     opacity: 0;
@@ -964,7 +986,7 @@ section h2 {
     opacity: 1;
 }
 
-/* STIL TÈKS YO AK LONBRAJ SOLID */
+/* STIL TÃˆKS YO AK LONBRAJ SOLID */
 .slide-info h2 {
     font-size: 3rem;
     font-weight: 800;
@@ -972,7 +994,7 @@ section h2 {
     text-transform: uppercase;
     margin: 0;
     text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
-    text-align: center; /* Fòse tit la rete nan mitan */
+    text-align: center; /* FÃ²se tit la rete nan mitan */
 }
 
 .slide-info p {
@@ -982,7 +1004,7 @@ section h2 {
     max-width: 650px;
     margin: 0;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-    text-align: center; /* Fòse paragraf la rete nan mitan */
+    text-align: center; /* FÃ²se paragraf la rete nan mitan */
 }
 
 /* 6. DESIGN BOUTON INSCRIPTION AN */
@@ -992,7 +1014,7 @@ section h2 {
     justify-content: center;
     gap: 12px;
     padding: 15px 40px;
-    background-color: #F76B00; /* Zoranj ofisyèl */
+    background-color: #F76B00; /* Zoranj ofisyÃ¨l */
     color: #ffffff;
     font-size: 1.2rem;
     font-weight: 800;
@@ -1010,10 +1032,10 @@ section h2 {
 }
 
 .btn-decouvrir:hover {
-    background-color: #ffffff;
-    color: #010635;
+    background-color: #F76B00;
+    color: #ffffff;
     transform: scale(1.03);
-    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 25px rgba(247, 107, 0, 0.4);
 }
 
 .btn-decouvrir i {
@@ -1038,7 +1060,7 @@ section h2 {
     box-shadow: 0 0 10px rgba(247, 107, 0, 0.8);
 }
 
-/* Overlay transparan nèt */
+/* Overlay transparan nÃ¨t */
 .video-overlay {
     position: absolute;
     top: 0;
@@ -1060,19 +1082,19 @@ section h2 {
 
 
 /* ==========================================================================
-   BLÒK RESPONSIVE FORCE - SANTRAJ ABSOLI (BRUTAL FORCE) SOU MOBIL
+   BLÃ’K RESPONSIVE FORCE - SANTRAJ ABSOLI (BRUTAL FORCE) SOU MOBIL
    ========================================================================== */
 @media (max-width: 768px) {
     
-    /* 1. Fòse seksyon an gen yon bèl wotè vètikal pwofesyonèl */
+    /* 1. FÃ²se seksyon an gen yon bÃ¨l wotÃ¨ vÃ¨tikal pwofesyonÃ¨l */
     .hero-section {
         aspect-ratio: auto !important;
-        height: 70vh !important; /* Prereglaj wotè pafè pou mobil */
-        min-height: 500px !important; /* Anpeche l twò kout sou ti telefòn */
+        height: 70vh !important; /* Prereglaj wotÃ¨ pafÃ¨ pou mobil */
+        min-height: 500px !important; /* Anpeche l twÃ² kout sou ti telefÃ²n */
         background-color: #000000 !important;
     }
 
-    /* 2. Asire w imaj yo pran tout kò a */
+    /* 2. Asire w imaj yo pran tout kÃ² a */
     .hero-slider, .slide, .slide-img {
         position: absolute !important;
         top: 0 !important;
@@ -1081,7 +1103,7 @@ section h2 {
         height: 100% !important;
     }
 
-    /* 3. KRAZE ANCIEN SANTRAJ LA: Nou fòse veso a pran tout espas la */
+    /* 3. KRAZE ANCIEN SANTRAJ LA: Nou fÃ²se veso a pran tout espas la */
     .slide-info {
         position: absolute !important;
         top: 0 !important;
@@ -1090,7 +1112,7 @@ section h2 {
         height: 100% !important;
         max-width: 100% !important;
         
-        /* Nou anile fòmil transform an nèt paske se li JS la ka ap bloke */
+        /* Nou anile fÃ²mil transform an nÃ¨t paske se li JS la ka ap bloke */
         transform: none !important; 
         margin: 0 !important;
         right: 0 !important;
@@ -1098,16 +1120,16 @@ section h2 {
         box-sizing: border-box !important;
         overflow: hidden !important;
         
-        /* Nou fòse Flexbox pran kontwòl sou tout wotè 100% an pou l mete l nan mitan sant */
+        /* Nou fÃ²se Flexbox pran kontwÃ²l sou tout wotÃ¨ 100% an pou l mete l nan mitan sant */
         display: flex !important;
         flex-direction: column !important;
-        justify-content: center !important; /* Sa ap fòse tèks la desann nan mitan nèt vètikalman */
+        justify-content: center !important; /* Sa ap fÃ²se tÃ¨ks la desann nan mitan nÃ¨t vÃ¨tikalman */
         align-items: center !important;     /* Santre orizontalman */
         gap: 15px !important;
         background: transparent !important;
     }
 
-    /* 4. Tit ak Paragraf yo ap rete nan mitan kòrèkteman */
+    /* 4. Tit ak Paragraf yo ap rete nan mitan kÃ²rÃ¨kteman */
     .slide-info h2 {
         font-size: 1.6rem !important;
         line-height: 1.3 !important;
@@ -1129,7 +1151,7 @@ section h2 {
         max-width: 320px !important;
     }
 
-    /* 5. Bouton an k ap detache pafè anba */
+    /* 5. Bouton an k ap detache pafÃ¨ anba */
     .btn-decouvrir {
         box-sizing: border-box !important;
         width: min(100%, calc(100vw - 32px)) !important;
@@ -1160,16 +1182,16 @@ section h2 {
 
 
 /* ==========================================================================
-   ESTIL POU SEKSYON À PROPOS / HISTORIQUE (MODÈN & RESPONSIVE)
+   ESTIL POU SEKSYON Ã€ PROPOS / HISTORIQUE (MODÃˆN & RESPONSIVE)
    ========================================================================== */
 
 .about-section { 
     padding: 100px 20px; 
-    background: #f8fafc; /* Gri fre, pwòp epi repozan pou je */
+    background: #f8fafc; /* Gri fre, pwÃ²p epi repozan pou je */
 }
 
 .about-content { 
-    max-width: 1100px; /* Laji ti kras pou grid la ka respire nèt */
+    max-width: 1100px; /* Laji ti kras pou grid la ka respire nÃ¨t */
     margin: 0 auto; 
     line-height: 1.8; 
     color: #334155; 
@@ -1177,7 +1199,7 @@ section h2 {
 
 /* --- TIT PRENSIPAL LA --- */
 .about-content h2 { 
-    color: #010635; 
+    color: #00074b; 
     font-size: 2.8rem; 
     text-align: center; 
     margin-bottom: 50px; 
@@ -1186,20 +1208,20 @@ section h2 {
     position: relative;
 }
 
-/* Ti liy dekoratif anba tit la pou l fè sit la parèt pi pwofesyonèl */
+/* Ti liy dekoratif anba tit la pou l fÃ¨ sit la parÃ¨t pi pwofesyonÃ¨l */
 .about-content h2::after {
     content: '';
     display: block;
     width: 60px;
     height: 4px;
-    background: #F76B00; /* Zoranj ofisyèl */
+    background: #F76B00; /* Zoranj ofisyÃ¨l */
     margin: 15px auto 0 auto;
     border-radius: 2px;
 }
 
 /* --- TI SOU-TIT YO --- */
 .about-content h3 { 
-    color: #010635; /* Pase l an ble pou l pi fèm */
+    color: #00074b; /* Pase l an ble pou l pi fÃ¨m */
     font-size: 1.4rem;
     font-weight: 700;
     margin-top: 35px; 
@@ -1223,14 +1245,14 @@ section h2 {
     border-radius: 16px; 
     box-shadow: 0 10px 30px rgba(17, 30, 98, 0.03); /* Lonbraj dous ki baze sou ble a */
     border: 1px solid #e2e8f0;
-    /* Tranzisyon pafè ki bay yon efè dous (Smooth cubic-bezier) */
+    /* Tranzisyon pafÃ¨ ki bay yon efÃ¨ dous (Smooth cubic-bezier) */
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .highlight-box:hover {
-    transform: translateY(-6px); /* Bwat la monte dous lè w pase sou li */
+    transform: translateY(-6px); /* Bwat la monte dous lÃ¨ w pase sou li */
     box-shadow: 0 20px 40px rgba(17, 30, 98, 0.08);
-    border-color: rgba(247, 107, 0, 0.2); /* Yon ti kras zoranj sou rebò a lè w pase sou li */
+    border-color: rgba(247, 107, 0, 0.2); /* Yon ti kras zoranj sou rebÃ² a lÃ¨ w pase sou li */
 }
 
 /* --- LIS AK IMAJ YO (ALIGNEMENT) --- */
@@ -1242,7 +1264,7 @@ section h2 {
 
 .custom-list li {
     display: flex;          
-    align-items: center;    /* Santre imaj la ak tèks la nèt sou menm liy */
+    align-items: center;    /* Santre imaj la ak tÃ¨ks la nÃ¨t sou menm liy */
     margin-bottom: 18px;
     font-size: 0.98rem;
     color: #475569;
@@ -1253,11 +1275,11 @@ section h2 {
     height: 32px;
     margin-right: 15px;
     object-fit: contain;
-    flex-shrink: 0;         /* Anpeche imaj la kraze oswa deformation si tèks la long */
+    flex-shrink: 0;         /* Anpeche imaj la kraze oswa deformation si tÃ¨ks la long */
 }
 
 /* ==========================================================================
-   RESPONSIVE (POU MOBIL & TABLÈT)
+   RESPONSIVE (POU MOBIL & TABLÃˆT)
    ========================================================================== */
 @media (max-width: 991px) {
     .about-section {
@@ -1268,7 +1290,7 @@ section h2 {
         font-size: 2.2rem;
     }
     
-    /* Grid la tounen yon sèl kolòn sou tablèt ak mobil pou anyen pa janm kwense */
+    /* Grid la tounen yon sÃ¨l kolÃ²n sou tablÃ¨t ak mobil pou anyen pa janm kwense */
     .about-grid { 
         grid-template-columns: 1fr; 
         gap: 25px; 
@@ -1307,7 +1329,7 @@ section h2 {
    DESIGN AK ANIMASYON SEKSYON STATISTIK (COMPETENCE ACADEMY)
    ========================================================================== */
 
-/* Fond jeneral dèyè bann nan (ti gri/ble trè klè ki sou foto a) */
+/* Fond jeneral dÃ¨yÃ¨ bann nan (ti gri/ble trÃ¨ klÃ¨ ki sou foto a) */
 .stats-section {
     width: 100%;
     padding: 60px 20px;
@@ -1320,17 +1342,17 @@ section h2 {
 .stats-banner {
     width: 100%;
     max-width: 1200px;
-    background-color: #010635; /* Ble fonse ofisyèl la */
+    background-color: #00074b; /* Ble fonse ofisyÃ¨l la */
     padding: 50px 30px;
     border-radius: 20px; /* Kwen yo byen awondi jan sa ye sou foto a */
     display: flex;
-    justify-content: space-around; /* Separe 3 blòk yo pafè sou liy lan */
+    justify-content: space-around; /* Separe 3 blÃ²k yo pafÃ¨ sou liy lan */
     align-items: center;
     text-align: center;
     box-shadow: 0 10px 30px rgba(17, 30, 98, 0.15);
 }
 
-/* Chak blòk kontè yo */
+/* Chak blÃ²k kontÃ¨ yo */
 .stat-item {
     flex: 1;
 }
@@ -1344,13 +1366,13 @@ section h2 {
     font-family: 'Poppins', sans-serif;
     display: inline-block;
     
-    /* Animasyon kwasans lè paj la louvri */
+    /* Animasyon kwasans lÃ¨ paj la louvri */
     animation: pulseCounter 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Ti tèks anba chif yo */
+/* Ti tÃ¨ks anba chif yo */
 .stat-text {
-    color: #ffffff; /* Tèks an blan */
+    color: #ffffff; /* TÃ¨ks an blan */
     font-size: 1rem;
     font-weight: 400;
     margin: 0;
@@ -1376,7 +1398,7 @@ section h2 {
    ========================================================================== */
 @media (max-width: 768px) {
     .stats-banner {
-        flex-direction: column; /* Pase an kolòn sou mobil pou yo pa kwense */
+        flex-direction: column; /* Pase an kolÃ²n sou mobil pou yo pa kwense */
         gap: 40px;
         padding: 40px 20px;
     }
@@ -1421,17 +1443,17 @@ section h2 {
 .faq-box, 
 .accordion-item,
 .faq-container > div { 
-    border-radius: 8px;    /* Bay ti kwen yo yon bèl fòm yon ti jan won */
+    border-radius: 8px;    /* Bay ti kwen yo yon bÃ¨l fÃ²m yon ti jan won */
     margin-bottom: 15px;   /* Mete yon ti espas ant chak bwat kesyon */
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02); /* Yon ti lonbraj trè lejè pou rann li pi dous */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02); /* Yon ti lonbraj trÃ¨ lejÃ¨ pou rann li pi dous */
 }
 
-/* Si ou gen bouton oswa tèt kesyon yo ki gen kòlè ble a */
+/* Si ou gen bouton oswa tÃ¨t kesyon yo ki gen kÃ²lÃ¨ ble a */
 
 .faq-trigger,
 .accordion-title {
-    padding: 18px 25px;    /* Ogmante espas andedan an pou tèks la respire */
+    padding: 18px 25px;    /* Ogmante espas andedan an pou tÃ¨ks la respire */
     font-size: 1.05rem;    /* Rann ekriti a yon ti jan pi vizib */
     display: flex;
     align-items: center;
@@ -1442,7 +1464,7 @@ section h2 {
    SECTION FAQ MODERN & PREMIUM (COMPETENCE ACADEMY)
    ========================================================================== */
 
-/* Arrière-plan global de la section */
+/* ArriÃ¨re-plan global de la section */
 .faq-section {
     padding: 80px 20px;
     background-color: #f8fafc; /* Couleur de fond douce */
@@ -1454,7 +1476,7 @@ section h2 {
 /* Titre de la section */
 .faq-section h2 {
     font-size: 2.2rem;
-    color: #010635;
+    color: #00074b;
     margin-bottom: 40px;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -1463,19 +1485,19 @@ section h2 {
 
 /* Grand bloc blanc arrondi qui centre et cadre la FAQ sur laptop */
 .faq-container {
-    max-width: 850px;           /* Largeur idéale pour éviter l'effet étiré */
+    max-width: 850px;           /* Largeur idÃ©ale pour Ã©viter l'effet Ã©tirÃ© */
     width: 100%;
     background: #ffffff;        /* Fond blanc pur */
     padding: 35px;              /* Espace interne */
     border-radius: 24px;        /* Magnifiques grands coins arrondis */
-    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.05); /* Légère ombre bleutée pro */
+    box-shadow: 0 10px 30px rgba(17, 30, 98, 0.05); /* LÃ©gÃ¨re ombre bleutÃ©e pro */
     border: 1px solid #e2e8f0;  /* Fine bordure de finition */
     margin: 0 auto;
 }
 
 /* Style de chaque conteneur de question (les lignes internes) */
 .faq-item {
-    background: #f8fafc;        /* Fond légèrement grisé pour contraster */
+    background: #f8fafc;        /* Fond lÃ©gÃ¨rement grisÃ© pour contraster */
     margin-bottom: 16px;        /* Espace entre les blocs */
     border-radius: 14px;        /* Coins arrondis pour chaque ligne */
     overflow: hidden;
@@ -1483,14 +1505,14 @@ section h2 {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Supprime la marge sur la toute dernière question */
+/* Supprime la marge sur la toute derniÃ¨re question */
 .faq-item:last-child {
     margin-bottom: 0;
 }
 
 /* Effet interactif au survol de la souris */
 .faq-item:hover {
-    transform: translateX(4px); /* Léger glissement vers la droite très fluide */
+    transform: translateX(4px); /* LÃ©ger glissement vers la droite trÃ¨s fluide */
     background: #f1f5f9;
 }
 
@@ -1498,7 +1520,7 @@ section h2 {
 .faq-question {
     width: 100%;
     padding: 20px 25px;
-    background: #010635;        /* Bleu marine officiel */
+    background: #00074b;        /* Bleu marine officiel */
     color: #ffffff;
     border: none;
     text-align: left;
@@ -1516,7 +1538,7 @@ section h2 {
     background: #F76B00;        /* Devient un tout petit peu plus clair au survol */
 }
 
-/* Création automatique de l'indicateur dynamique (+) en orange */
+/* CrÃ©ation automatique de l'indicateur dynamique (+) en orange */
 
 .faq-question::after {
     content: '\2b';            /* Code du symbole Plus (+) */
@@ -1528,11 +1550,11 @@ section h2 {
 /* Animation de l'indicateur lorsque la question est active (ouverte) */
 
 .faq-item.active .faq-question::after {
-    transform: rotate(45deg);   /* Fait pivoter le (+) pour créer un (x) */
+    transform: rotate(45deg);   /* Fait pivoter le (+) pour crÃ©er un (x) */
     color: #ffff;             /* Change en rouge doux pour indiquer la fermeture */
 }
 
-/* Zone de la réponse (cachée par défaut, ouverte via votre JS) */
+/* Zone de la rÃ©ponse (cachÃ©e par dÃ©faut, ouverte via votre JS) */
 .faq-answer {
     padding: 22px 25px;
     display: none;
@@ -1543,7 +1565,7 @@ section h2 {
     border-top: 1px solid #e2e8f0;
 }
 
-/* Affiche la réponse lorsque la classe .active est appliquée */
+/* Affiche la rÃ©ponse lorsque la classe .active est appliquÃ©e */
 .faq-item.active .faq-answer {
     display: block;
     animation: fadeIn 0.4s ease;
@@ -1555,7 +1577,7 @@ section h2 {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Ajustements pour les écrans de téléphones */
+/* Ajustements pour les Ã©crans de tÃ©lÃ©phones */
 @media (max-width: 768px) {
     .faq-container {
         padding: 20px;
@@ -1578,7 +1600,7 @@ section h2 {
 .remerciement-wrapper { max-width: 700px; margin: auto; }
 
 .btn-deroule {
-  background: #010635;
+  background: #00074b;
   color: #fff;
   border: none;
   padding: 15px 30px;
@@ -1603,13 +1625,13 @@ section h2 {
   border: 1px solid #ddd;
 }
 
-/* Klas pou montre kontni an lè nou klike */
+/* Klas pou montre kontni an lÃ¨ nou klike */
 .content-deroule.show { display: block; }
 
 footer {
   text-align: center;
   padding: 30px 20px;
-  background: #e3e3e3; /* Koulè background footer la */
+  background: #e3e3e3; /* KoulÃ¨ background footer la */
   color: white;
 
 }
@@ -1622,8 +1644,8 @@ footer {
 }
 
 .footer-social a {
-  color:#010635;
-  font-size: 28px; /* Gwosè logo yo */
+  color:#00074b;
+  font-size: 28px; /* GwosÃ¨ logo yo */
   transition: 0.3s;
 }
 
@@ -1633,7 +1655,7 @@ footer {
 }
 
 
-/* Fòse chak eleman nan lis la parèt sou yon sèl liy dwat */
+/* FÃ²se chak eleman nan lis la parÃ¨t sou yon sÃ¨l liy dwat */
 
 .contact-container ul li, 
 .courses-section ul li, 
@@ -1645,7 +1667,7 @@ ul li {
     list-style: none;       
 }
 
-/* Kontwole gwosè ti logo a pou l pa twò gwo ni twò piti */
+/* Kontwole gwosÃ¨ ti logo a pou l pa twÃ² gwo ni twÃ² piti */
 
 .contact-container ul li img, 
 .courses-section ul li img, 
@@ -1675,7 +1697,7 @@ ul li img {
 
 .founders-header h2 {
     font-size: 2.2rem;
-    color: #010635 !important;
+    color: #00074b !important;
     font-weight: 800;
     margin-bottom: 12px;
 }
@@ -1707,12 +1729,12 @@ ul li img {
     box-shadow: 0 15px 35px rgba(247, 107, 0, 0.1) !important;
 }
 
-/* KONTÈNÈ FOTO A */
+/* KONTÃˆNÃˆ FOTO A */
 .founder-img-wrapper {
-    position: relative !important; /* Fixe repè a pou bouton an */
+    position: relative !important; /* Fixe repÃ¨ a pou bouton an */
     width: 140px;
     height: 140px;
-    margin-bottom: 35px; /* Bay plis espas pou bouton an ka chita pafè */
+    margin-bottom: 35px; /* Bay plis espas pou bouton an ka chita pafÃ¨ */
     display: inline-block;
 }
 
@@ -1725,14 +1747,14 @@ ul li img {
     display: block;
 }
 
-/* REKREYASYON BOUTON BADGE LA (KORÈK NET) */
+/* REKREYASYON BOUTON BADGE LA (KORÃˆK NET) */
 .founder-card .badge-star {
     position: absolute !important;
-    bottom: -15px !important; /* Desann li pou l poze mwatye sou foto a mwatye deyò */
+    bottom: -15px !important; /* Desann li pou l poze mwatye sou foto a mwatye deyÃ² */
     left: 50% !important;
     transform: translateX(-50%) !important;
-    background-color: #F76B00 !important; /* Fòse bèl koulè orange lan */
-    color: #ffffff !important; /* Fòse tèks la ekri an blan */
+    background-color: #F76B00 !important; /* FÃ²se bÃ¨l koulÃ¨ orange lan */
+    color: #ffffff !important; /* FÃ²se tÃ¨ks la ekri an blan */
     padding: 6px 18px !important;
     border-radius: 50px !important;
     font-weight: 700 !important;
@@ -1743,7 +1765,7 @@ ul li img {
     gap: 6px !important;
     box-shadow: 0 4px 12px rgba(247, 107, 0, 0.4) !important;
     white-space: nowrap !important;
-    z-index: 99 !important; /* Mete l anlè nèt pou anyen pa kache l */
+    z-index: 99 !important; /* Mete l anlÃ¨ nÃ¨t pou anyen pa kache l */
 }
 
 /* Zetwal blan anndan bouton an */
@@ -1754,7 +1776,7 @@ ul li img {
 
 .founder-info h3 {
     font-size: 1.3rem;
-    color: #010635 !important;
+    color: #00074b !important;
     margin-bottom: 12px;
     font-weight: 700;
 }
@@ -1784,7 +1806,7 @@ ul li img {
 
 .section-title-container h2 {
     font-size: 2.2rem;
-    color: #010635;
+    color: #00074b;
     font-weight: 800;
     margin-bottom: 15px;
     position: relative;
@@ -1792,7 +1814,7 @@ ul li img {
     letter-spacing: -0.5px;
 }
 
-/* Ligne décorative moderne sous le titre */
+/* Ligne dÃ©corative moderne sous le titre */
 
 .section-title-container h2::after {
     content: '';
@@ -1844,13 +1866,13 @@ ul li img {
     box-shadow: 0 25px 50px rgba(247, 107, 0, 0.08);
 }
 
-/* Conteneur de l'icône */
+/* Conteneur de l'icÃ´ne */
 .advantage-icon-wrapper {
     width: 80px;
     height: 80px;
     border-radius: 20px;
-    background: #010635;
-    color:#F76B00;
+    background: #00074b;
+    color: #F76B00;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1859,10 +1881,22 @@ ul li img {
     transition: all 0.4s ease;
 }
 
-.advantage-card:hover .advantage-icon-wrapper {
-    background: var(--academy-blue);
-    color: #ffffff;
+.advantage-icon-wrapper i {
+    color: #F76B00;
+    transition: color 0.4s ease, transform 0.4s ease;
+}
+
+.advantage-card:hover .advantage-icon-wrapper,
+.advantage-card:active .advantage-icon-wrapper {
+    background: transparent;
+    box-shadow: none;
+    color: #F76B00;
     transform: rotate(10deg);
+}
+
+.advantage-card:hover .advantage-icon-wrapper i,
+.advantage-card:active .advantage-icon-wrapper i {
+    color: #F76B00;
 }
 
 .advantage-card h3 {
@@ -1896,10 +1930,16 @@ ul li img {
     transition: all 0.3s ease;
 }
 
-.advantage-card:hover .advantage-badge {
-    background: var(--academy-orange);
-    color: #ffffff;
-    box-shadow: 0 4px 15px rgba(247, 107, 0, 0.3);
+.advantage-card:hover .advantage-badge,
+.advantage-card:active .advantage-badge {
+    background: #ffffff;
+    color: #00074b;
+    box-shadow: 0 4px 15px rgba(1, 6, 53, 0.12);
+}
+
+.advantage-card:hover .advantage-badge i,
+.advantage-card:active .advantage-badge i {
+    color: #00074b;
 }
 
 /* Responsive pour Mobile */
@@ -1928,7 +1968,7 @@ ul li img {
 
 .back-btn {
     display: inline-block;
-    background-color: #010635;
+    background-color: #00074b;
     color: #ffffff;
     padding: 12px 28px;
     border-radius: 8px;
@@ -1963,7 +2003,7 @@ ul li img {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #010635; /* Koulè ofisyèl antrepriz la */
+    background-color: #00074b; /* KoulÃ¨ ofisyÃ¨l antrepriz la */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2034,7 +2074,7 @@ ul li img {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: #ff7a00; /* Akasan zoranj ofisyèl la */
+    background: #ff7a00; /* Akasan zoranj ofisyÃ¨l la */
     border-radius: 4px;
     animation: goodLockProgress 1.4s infinite cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -2062,10 +2102,10 @@ ul li img {
 
 
 /* ==========================================================================
-   KOREKSYON: SANTRAJ LYEN YO SÈLMAN SOU MOBIL (PA SOU LAPTOP)
+   KOREKSYON: SANTRAJ LYEN YO SÃˆLMAN SOU MOBIL (PA SOU LAPTOP)
    ========================================================================== */
 
-/* Kòd sa a ap egzekite SÈLMAN si ekran an pi piti pase 991px (Telefòn ak Tablèt) */
+/* KÃ²d sa a ap egzekite SÃˆLMAN si ekran an pi piti pase 991px (TelefÃ²n ak TablÃ¨t) */
 @media (max-width: 991px) {
     
     .navbar-menu-overlay, 
@@ -2105,7 +2145,7 @@ ul li img {
   max-width: min(420px, calc(100vw - 36px));
   padding: 14px 14px 14px 16px;
   color: #fff;
-  background: linear-gradient(135deg, #010635, #010635);
+  background: linear-gradient(135deg, #00074b, #00074b);
   font-size: 0.85rem;
   line-height: 1.35;
   animation: pwa-slide-in 0.35s ease-out;
@@ -2117,7 +2157,7 @@ ul li img {
   place-items: center;
   width: 38px;
   height: 38px;
-  color: #010635;
+  color: #00074b;
   background: #fff;
   border-radius: 12px;
   font-size: 1rem;
@@ -2196,7 +2236,7 @@ ul li img {
 
 #enable-notifications-button {
   bottom: 68px;
-  color: #010635;
+  color: #00074b;
   background: #ffffff;
   border: 1px solid #dbe3f0;
   cursor: pointer;
@@ -2508,7 +2548,7 @@ html[data-theme="dark"] .faq-item:hover {
 
 html[data-theme="dark"] .site-footer {
   color: #f8f9fa !important;
-  background: #010635 !important;
+  background: #00074b !important;
 }
 
 html[data-theme="dark"] .site-footer p {
