@@ -1,6 +1,6 @@
 :root {
-  --academy-blue: #111e62;
-  --academy-dark-blue: #0b164d;
+  --academy-blue: #000641;
+  --academy-dark-blue: #000641;
   --academy-yellow: #ffc107;
   --academy-orange: #f76b00;
   --page-bg: #f5f5f5;
@@ -51,7 +51,7 @@ button { font: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #111e62;
+  background: #000641;
   box-shadow: 0 4px 18px rgba(7, 15, 36, 0.18);
 }
 
@@ -222,14 +222,14 @@ button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
 .certificate-letterhead { display: flex; align-items: center; justify-content: center; gap: 16px; text-align: center; }
 .certificate-logo { width: 72px; height: 72px; flex: 0 0 72px; object-fit: contain; }
 .certificate-institution { min-width: 0; }
-.certificate-institution h2 { margin: 0 0 7px; color: #111e62; font-size: clamp(1.1rem, 4vw, 1.55rem); letter-spacing: 0.035em; }
+.certificate-institution h2 { margin: 0 0 7px; color: #000641; font-size: clamp(1.1rem, 4vw, 1.55rem); letter-spacing: 0.035em; }
 .certificate-institution p { margin: 3px 0; color: #475672; font-size: 0.72rem; line-height: 1.4; }
 .certificate-institution p span { color: #f07800; }
-.certificate-divider { height: 5px; margin: 14px 0 20px; border-top: 3px solid #111e62; border-bottom: 1px solid #f07800; }
+.certificate-divider { height: 5px; margin: 14px 0 20px; border-top: 3px solid #000641; border-bottom: 1px solid #f07800; }
 .certificate-student { display: flex; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid #dce5f0; }
-.certificate-avatar { width: 48px; height: 48px; display: grid; flex: 0 0 48px; place-items: center; border-radius: 50%; background: #111e62; color: #fff; font-size: 1.2rem; }
+.certificate-avatar { width: 48px; height: 48px; display: grid; flex: 0 0 48px; place-items: center; border-radius: 50%; background: #000641; color: #fff; font-size: 1.2rem; }
 .certificate-student-info { min-width: 0; flex: 1; }
-.certificate-student-info h3 { margin: 0; overflow-wrap: anywhere; color: #111e62; font-size: 1.05rem; }
+.certificate-student-info h3 { margin: 0; overflow-wrap: anywhere; color: #000641; font-size: 1.05rem; }
 .certificate-student-info p { margin: 3px 0 0; color: #687895; font-size: 0.82rem; }
 .certificate-status { flex: 0 0 auto; padding: 8px 12px; border-radius: 20px; background: #fff0e5; color: #b64800; font-size: 0.72rem; font-weight: 800; text-align: center; }
 .certificate-status.is-validated { background: #e5f8ef; color: #16834d; }
@@ -237,11 +237,11 @@ button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
 .certificate-summary-card { min-width: 0; padding: 16px; border: 1px solid #e0e8f2; border-radius: 14px; background: #f7f9fc; }
 .certificate-summary-card h4 { margin: 0 0 12px; color: #63738e; font-size: 0.75rem; letter-spacing: 0.04em; }
 .certificate-progress { height: 9px; margin-bottom: 7px; overflow: hidden; border-radius: 20px; background: #dfe6ef; }
-.certificate-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: #111e62; }
+.certificate-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: #000641; }
 .certificate-summary-card > strong { color: #243865; font-size: 0.75rem; }
 .certificate-average-card { text-align: center; }
 .certificate-average { display: flex; align-items: baseline; justify-content: center; gap: 3px; margin: -5px 0 2px; }
-.certificate-average strong { color: #111e62; font-size: 2.1rem; }
+.certificate-average strong { color: #000641; font-size: 2.1rem; }
 .certificate-average span { color: #8493aa; font-weight: 800; }
 .certificate-summary-card .certificate-mention { color: #f07800; }
 .certificate-modules { margin-top: 18px; overflow: hidden; border: 1px solid #e0e8f2; border-radius: 12px; }
@@ -336,7 +336,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
   --shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
 }
 
-[data-theme="dark"] .quiz-header { background: #111e62; }
+[data-theme="dark"] .quiz-header { background: #000641; }
 [data-theme="dark"] .secondary-button { border-color: var(--academy-orange); color: #fff; }
 [data-theme="dark"] .option-button { background: #292d43; }
 [data-theme="dark"] .option-button:hover,
