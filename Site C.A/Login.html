@@ -77,7 +77,7 @@
                     </div>
                     <h2>Créer un Compte</h2>
                 </div>
-                <form onsubmit="handleLoginOrSignup(event, 'signup')">
+                <form class="signup-grid" onsubmit="handleLoginOrSignup(event, 'signup')">
                     <p class="required-fields-note">Tous les champs sont obligatoires.</p>
                     <div class="input-group">
                         <label for="signupName">Nom complet pour le certificat</label>
@@ -91,7 +91,13 @@
                         </div>
                     </div>
                     <div class="input-group">
-                        <label>Email</label>
+                        <label for="signupLocation">Ville et pays</label>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="signupLocation" placeholder="Ville, pays" maxlength="100" autocomplete="address-level2" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="signupEmail">Email</label>
                         <div class="input-field-wrapper">
                             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                             <input type="email" id="signupEmail" placeholder="votre.email@academy.com" required>
@@ -101,27 +107,6 @@
                         <label for="signupPhone">Numéro de téléphone</label>
                         <div class="input-field-wrapper">
                             <input type="tel" id="signupPhone" placeholder="+509 0000 0000" maxlength="30" autocomplete="tel" required>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="signupLocation">Ville et pays</label>
-                        <div class="input-field-wrapper">
-                            <input type="text" id="signupLocation" placeholder="Ville, pays" maxlength="100" autocomplete="address-level2" required>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="signupCourse">Formation choisie</label>
-                        <div class="input-field-wrapper">
-                            <select id="signupCourse" required>
-                                <option value="" selected disabled>Choisissez une formation</option>
-                                <option value="bureautique">Informatique Bureautique</option>
-                                <option value="photographie">Photographie</option>
-                                <option value="design">Design Graphic</option>
-                                <option value="videographie">Vidéographie</option>
-                                <option value="montage">Montage Vidéo</option>
-                                <option value="quickbooks">QuickBooks</option>
-                                <option value="surveillance">Surveillance</option>
-                            </select>
                         </div>
                     </div>
                     <div class="input-group">
@@ -144,6 +129,21 @@
                             </button>
                         </div>
                         <p id="signupPasswordError" class="signup-password-error" role="alert" hidden>Les mots de passe ne correspondent pas.</p>
+                    </div>
+                    <div class="input-group signup-course-group">
+                        <label for="signupCourse">Formation choisie</label>
+                        <div class="input-field-wrapper">
+                            <select id="signupCourse" required>
+                                <option value="" selected disabled>Choisissez une formation</option>
+                                <option value="bureautique">Informatique Bureautique</option>
+                                <option value="photographie">Photographie</option>
+                                <option value="design">Design Graphic</option>
+                                <option value="videographie">Vidéographie</option>
+                                <option value="montage">Montage Vidéo</option>
+                                <option value="quickbooks">QuickBooks</option>
+                                <option value="surveillance">Surveillance</option>
+                            </select>
+                        </div>
                     </div>
                     <label class="signup-consent">
                         <input type="checkbox" id="signupConsent" required>
@@ -420,6 +420,7 @@
         function switchView(viewType) {
             const loginForm = document.getElementById('loginForm');
             const signupForm = document.getElementById('signupForm');
+            const authWrapper = document.querySelector('.auth-wrapper');
             const forgotForm = document.getElementById('forgotForm');
             const resetCodeForm = document.getElementById('resetCodeForm');
             const profileView = document.getElementById('profileView');
@@ -427,6 +428,7 @@
             const certificateProfileForm = document.getElementById('certificateProfileForm');
             const loginSessionNotice = document.getElementById('loginSessionNotice');
             if (viewType !== 'login' && loginSessionNotice) loginSessionNotice.hidden = true;
+            if (authWrapper) authWrapper.classList.toggle('signup-layout', viewType === 'signup');
 
             if (loginForm) loginForm.classList.remove('active');
             if (signupForm) signupForm.classList.remove('active');
