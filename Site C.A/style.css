@@ -30,7 +30,7 @@ body {
 section h2 {
   text-align: center;
   margin-bottom: 30px;
-  color: #111E62;
+  color: #010635;
   font-size: 35px;
 }
 
@@ -41,7 +41,7 @@ section h2 {
   left: 0;
   width: 100%;
   height: 88px;
-  background: #010635;
+  background: #000320;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -114,7 +114,7 @@ section h2 {
   z-index: 20;
   padding: 6px 9px;
   color: #fff;
-  background: #0a123a;
+  background: #010635;
   border-radius: 7px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -213,7 +213,7 @@ section h2 {
     font-size: 2.5rem;
     margin-bottom: 30px;
     text-align: center;
-    color: #01037a;
+    color: #010635;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -328,7 +328,7 @@ section h2 {
 
 .card button {
   margin-top: 15px;
-  background: #111E62;
+  background: #010635;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -362,7 +362,7 @@ section h2 {
 }
 
 .contact-header h2 {
-    color: #111E62; /* Ble ofisyèl */
+    color: #010635; /* Ble ofisyèl */
     font-size: 2.6rem;
     font-weight: 800;
     letter-spacing: -0.5px;
@@ -402,7 +402,7 @@ section h2 {
 /* --- Pati Gòch (Bwat Enfòmasyon an) --- */
 .contact-info-box {
     flex: 1;
-    background: linear-gradient(135deg, #111E62 0%, #0a123a 100%); /* Koulè ble a rann pi rich */
+    background: linear-gradient(135deg, #010635 0%, #010635 100%); /* Koulè ble a rann pi rich */
     color: #ffffff;
     padding: 60px 50px;
     display: flex;
@@ -500,7 +500,7 @@ section h2 {
 .contact-form-box h3 {
     font-size: 1.7rem;
     font-weight: 700;
-    color: #111E62;
+    color: #010635;
     margin-bottom: 30px;
 }
 
@@ -534,7 +534,7 @@ section h2 {
 
 .form-group input:focus, 
 .form-group textarea:focus {
-    border-color: #111E62;
+    border-color: #010635;
     background-color: #ffffff;
     box-shadow: 0 0 0 4px rgba(17, 30, 98, 0.1);
 }
@@ -542,7 +542,7 @@ section h2 {
 /* --- Bouton Envoyer --- */
 .submit-btn {
     width: 100%;
-    background-color: #111E62;
+    background-color: #010635;
     color: #ffffff;
     border: none;
     padding: 16px;
@@ -749,7 +749,7 @@ section h2 {
     width: 100%;
     min-height: 66px;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-    background: #0a192f;
+    background: #010635;
     flex-direction: row;
     justify-content: space-around;
     gap: 4px;
@@ -952,7 +952,7 @@ section h2 {
 
 .btn-decouvrir:hover {
     background-color: #ffffff;
-    color: #111E62;
+    color: #010635;
     transform: scale(1.03);
     box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
 }
@@ -1118,7 +1118,7 @@ section h2 {
 
 /* --- TIT PRENSIPAL LA --- */
 .about-content h2 { 
-    color: #111E62; 
+    color: #010635; 
     font-size: 2.8rem; 
     text-align: center; 
     margin-bottom: 50px; 
@@ -1140,7 +1140,7 @@ section h2 {
 
 /* --- TI SOU-TIT YO --- */
 .about-content h3 { 
-    color: #111E62; /* Pase l an ble pou l pi fèm */
+    color: #010635; /* Pase l an ble pou l pi fèm */
     font-size: 1.4rem;
     font-weight: 700;
     margin-top: 35px; 
@@ -1261,7 +1261,7 @@ section h2 {
 .stats-banner {
     width: 100%;
     max-width: 1200px;
-    background-color: #111E62; /* Ble fonse ofisyèl la */
+    background-color: #010635; /* Ble fonse ofisyèl la */
     padding: 50px 30px;
     border-radius: 20px; /* Kwen yo byen awondi jan sa ye sou foto a */
     display: flex;
@@ -1395,7 +1395,7 @@ section h2 {
 /* Titre de la section */
 .faq-section h2 {
     font-size: 2.2rem;
-    color: #111E62;
+    color: #010635;
     margin-bottom: 40px;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -1439,7 +1439,7 @@ section h2 {
 .faq-question {
     width: 100%;
     padding: 20px 25px;
-    background: #111E62;        /* Bleu marine officiel */
+    background: #010635;        /* Bleu marine officiel */
     color: #ffffff;
     border: none;
     text-align: left;
@@ -1519,7 +1519,7 @@ section h2 {
 .remerciement-wrapper { max-width: 700px; margin: auto; }
 
 .btn-deroule {
-  background: #111E62;
+  background: #010635;
   color: #fff;
   border: none;
   padding: 15px 30px;
@@ -1563,7 +1563,7 @@ footer {
 }
 
 .footer-social a {
-  color:#111E62;
+  color:#010635;
   font-size: 28px; /* Gwosè logo yo */
   transition: 0.3s;
 }
@@ -1616,7 +1616,7 @@ ul li img {
 
 .founders-header h2 {
     font-size: 2.2rem;
-    color: #111E62 !important;
+    color: #010635 !important;
     font-weight: 800;
     margin-bottom: 12px;
 }
@@ -1695,7 +1695,7 @@ ul li img {
 
 .founder-info h3 {
     font-size: 1.3rem;
-    color: #111E62 !important;
+    color: #010635 !important;
     margin-bottom: 12px;
     font-weight: 700;
 }
@@ -1725,7 +1725,7 @@ ul li img {
 
 .section-title-container h2 {
     font-size: 2.2rem;
-    color: #111E62;
+    color: #010635;
     font-weight: 800;
     margin-bottom: 15px;
     position: relative;
@@ -1790,7 +1790,7 @@ ul li img {
     width: 80px;
     height: 80px;
     border-radius: 20px;
-    background: #111E62;
+    background: #010635;
     color:#F76B00;
     display: flex;
     justify-content: center;
@@ -1869,7 +1869,7 @@ ul li img {
 
 .back-btn {
     display: inline-block;
-    background-color: #01046b;
+    background-color: #010635;
     color: #ffffff;
     padding: 12px 28px;
     border-radius: 8px;
@@ -1904,7 +1904,7 @@ ul li img {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #0d1b3e; /* Koulè ofisyèl antrepriz la */
+    background-color: #010635; /* Koulè ofisyèl antrepriz la */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2046,7 +2046,7 @@ ul li img {
   max-width: min(420px, calc(100vw - 36px));
   padding: 14px 14px 14px 16px;
   color: #fff;
-  background: linear-gradient(135deg, #111e62, #1c3181);
+  background: linear-gradient(135deg, #010635, #010635);
   font-size: 0.85rem;
   line-height: 1.35;
   animation: pwa-slide-in 0.35s ease-out;
@@ -2058,7 +2058,7 @@ ul li img {
   place-items: center;
   width: 38px;
   height: 38px;
-  color: #111e62;
+  color: #010635;
   background: #fff;
   border-radius: 12px;
   font-size: 1rem;
@@ -2137,7 +2137,7 @@ ul li img {
 
 #enable-notifications-button {
   bottom: 68px;
-  color: #111e62;
+  color: #010635;
   background: #ffffff;
   border: 1px solid #dbe3f0;
   cursor: pointer;
@@ -2307,7 +2307,7 @@ ul li img {
 }
 
 html[data-theme="dark"] body {
-  background: #0b1220;
+  background: #0b0c0e;
   color: #e2e8f0;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
@@ -2318,7 +2318,7 @@ html[data-theme="dark"] .stats-section,
 html[data-theme="dark"] .Contact-section,
 html[data-theme="dark"] .faq-section,
 html[data-theme="dark"] footer {
-  background-color: #0f172a !important;
+  background-color: #0b0c0e !important;
 }
 
 html[data-theme="dark"] .historique,
@@ -2443,7 +2443,7 @@ html[data-theme="dark"] .faq-item:hover {
 .site-footer {
   padding: 0 24px;
   color: #f8f9fa !important;
-  background: #010635 !important;
+  background: #000320 !important;
   text-align: left;
 }
 
