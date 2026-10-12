@@ -2555,6 +2555,94 @@ html[data-theme="dark"] .site-footer p {
   color: #f8f9fa !important;
 }
 
+html[data-theme="dark"] .courses-section,
+body.dark-mode .courses-section,
+body.dark-theme .courses-section,
+.dark-mode .courses-section,
+.dark-theme .courses-section,
+.courses-section.dark-mode,
+.courses-section.dark-theme {
+  background-color: #0b0c0e;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .courses-section .courses-header h2,
+html[data-theme="dark"] .courses-section .courses-header p,
+html[data-theme="dark"] .courses-section .courses-more p,
+body.dark-mode .courses-section .courses-header h2,
+body.dark-mode .courses-section .courses-header p,
+body.dark-mode .courses-section .courses-more p,
+body.dark-theme .courses-section .courses-header h2,
+body.dark-theme .courses-section .courses-header p,
+body.dark-theme .courses-section .courses-more p,
+.dark-mode .courses-section .courses-header h2,
+.dark-mode .courses-section .courses-header p,
+.dark-mode .courses-section .courses-more p,
+.dark-theme .courses-section .courses-header h2,
+.dark-theme .courses-section .courses-header p,
+.dark-theme .courses-section .courses-more p,
+.courses-section.dark-mode .courses-header h2,
+.courses-section.dark-mode .courses-header p,
+.courses-section.dark-mode .courses-more p,
+.courses-section.dark-theme .courses-header h2,
+.courses-section.dark-theme .courses-header p,
+.courses-section.dark-theme .courses-more p {
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .courses-section .card,
+body.dark-mode .courses-section .card,
+body.dark-theme .courses-section .card,
+.dark-mode .courses-section .card,
+.dark-theme .courses-section .card,
+.courses-section.dark-mode .card,
+.courses-section.dark-theme .card {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.035) 52%,
+    rgba(255, 255, 255, 0.1)
+  ) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 40px rgba(0, 0, 0, 0.25) !important;
+}
+
+html[data-theme="dark"] .courses-section .card h3,
+html[data-theme="dark"] .courses-section .card p,
+body.dark-mode .courses-section .card h3,
+body.dark-mode .courses-section .card p,
+body.dark-theme .courses-section .card h3,
+body.dark-theme .courses-section .card p,
+.dark-mode .courses-section .card h3,
+.dark-mode .courses-section .card p,
+.dark-theme .courses-section .card h3,
+.dark-theme .courses-section .card p,
+.courses-section.dark-mode .card h3,
+.courses-section.dark-mode .card p,
+.courses-section.dark-theme .card h3,
+.courses-section.dark-theme .card p {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .courses-section .courses-more,
+body.dark-mode .courses-section .courses-more,
+body.dark-theme .courses-section .courses-more,
+.dark-mode .courses-section .courses-more,
+.dark-theme .courses-section .courses-more,
+.courses-section.dark-mode .courses-more,
+.courses-section.dark-theme .courses-more {
+  background-color: rgba(15, 23, 42, 0.55);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.035) 52%,
+    rgba(255, 255, 255, 0.1)
+  );
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
 .site-footer-main,
 .site-footer-bottom {
   width: min(1200px, 100%);
