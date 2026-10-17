@@ -1058,19 +1058,23 @@ app.post('/api/admin/request-otp', adminOtpRequestLimiter, async (req, res) => {
     }
 
     const code = String(crypto.randomInt(100000, 1000000));
+    const linkToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = now + ADMIN_OTP_TTL_MS;
     const codeHash = crypto.createHmac('sha256', ADMIN_JWT_SECRET)
         .update(`${email}:${code}`)
         .digest();
-    adminOtpChallenges.set(email, { codeHash, expiresAt, attempts: 0 });
+    const linkHash = crypto.createHmac('sha256', ADMIN_JWT_SECRET)
+        .update(`${email}:${linkToken}`)
+        .digest();
+    adminOtpChallenges.set(email, { codeHash, linkHash, expiresAt, attempts: 0 });
     adminOtpLastSentAt.set(email, now);
 
-    const adminPageUrl = getFrontendUrl('/Gestion%20Acces%20Cours.html');
+    const adminPageUrl = getFrontendUrl('/Gestion%20Acces%20Cours.html', { adminToken: linkToken });
     try {
         await sendEmail({
             to: email,
             subject: 'Votre code temporaire d’administration - Competence Academy',
-            text: `Votre code de confirmation est ${code}. Il expire dans 2 minutes.\n\nAccéder à la page d’administration : ${adminPageUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
+            text: `Votre code de confirmation est ${code}. Il expire dans 2 minutes.\n\nOuvrir l’administration et valider automatiquement le code : ${adminPageUrl}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.`,
             html: `
                 <div style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#000641">
                     <div style="max-width:520px;margin:0 auto;padding:32px;border:1px solid #dbe3ee;border-radius:16px;background:#fff">
@@ -1083,7 +1087,7 @@ app.post('/api/admin/request-otp', adminOtpRequestLimiter, async (req, res) => {
                             <p style="margin:12px 0 0;color:#64748b;font-size:12px">Sélectionnez le code pour le copier.</p>
                         </div>
                         <p style="margin:0 0 24px;text-align:center">
-                            <a href="${adminPageUrl}" style="display:inline-block;padding:13px 22px;border-radius:8px;background:#000641;color:#fff;font-weight:bold;text-decoration:none">Ouvrir l’administration</a>
+                            <a href="${adminPageUrl}" style="display:inline-block;padding:13px 22px;border-radius:8px;background:#000641;color:#fff;font-weight:bold;text-decoration:none">Ouvrir l’administration et valider le code</a>
                         </p>
                         <p style="margin:0;color:#64748b;font-size:12px;line-height:1.5">Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.</p>
                     </div>
@@ -1096,6 +1100,52 @@ app.post('/api/admin/request-otp', adminOtpRequestLimiter, async (req, res) => {
     }
 
     return res.json({ success: true, expiresAt });
+});
+
+app.post('/api/admin/verify-link', adminOtpVerifyLimiter, (req, res) => {
+    const linkToken = String(req.body?.token || '').trim();
+    if (!/^[a-f0-9]{64}$/i.test(linkToken)) {
+        return res.status(401).json({ success: false, message: 'Lien expiré ou invalide. Demandez un nouveau code.' });
+    }
+
+    const now = Date.now();
+    let matchedEmail = '';
+    let matchedChallenge;
+    for (const [email, challenge] of adminOtpChallenges) {
+        if (challenge.expiresAt <= now) {
+            adminOtpChallenges.delete(email);
+            continue;
+        }
+        if (!challenge.linkHash || challenge.linkHash.length !== 32) continue;
+        const emailHash = crypto.createHmac('sha256', ADMIN_JWT_SECRET)
+            .update(`${email}:${linkToken}`)
+            .digest();
+        if (crypto.timingSafeEqual(emailHash, challenge.linkHash)) {
+            matchedEmail = email;
+            matchedChallenge = challenge;
+            break;
+        }
+    }
+    if (!matchedChallenge || !isAllowedAdminEmail(matchedEmail)) {
+        return res.status(401).json({ success: false, message: 'Lien expiré ou déjà utilisé. Demandez un nouveau code.' });
+    }
+
+    adminOtpChallenges.delete(matchedEmail);
+    const token = jwt.sign(
+        { email: matchedEmail, role: 'admin', purpose: 'admin-session' },
+        ADMIN_JWT_SECRET,
+        {
+            expiresIn: ADMIN_JWT_EXPIRES_IN,
+            issuer: 'competence-academy',
+            audience: 'competence-academy-admin'
+        }
+    );
+    return res.json({
+        success: true,
+        token,
+        expiresIn: 60 * 60,
+        email: matchedEmail
+    });
 });
 
 app.post('/api/admin/verify-otp', adminOtpVerifyLimiter, (req, res) => {
@@ -1263,6 +1313,43 @@ app.post('/api/admin/accounts/:id/disconnect', requireCourseAdmin, async (req, r
         console.error('Admin account disconnect error:', error);
         return res.status(500).json({ success: false, message: 'Impossible de fermer la session de ce compte.' });
     }
+});
+
+app.delete('/api/admin/accounts/:id', requireCourseAdmin, async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Identifiant de compte invalide.' });
+    }
+
+    let account;
+    let mongoSession;
+    try {
+        mongoSession = await mongoose.startSession();
+        await mongoSession.withTransaction(async () => {
+            account = await User.findById(req.params.id)
+                .select('_id email')
+                .session(mongoSession);
+            if (!account) return;
+
+            await ResetCode.deleteMany({ email: account.email }, { session: mongoSession });
+            await CourseProgress.deleteMany({ userId: account._id }, { session: mongoSession });
+            await VideoWatchSession.deleteMany({ userId: account._id }, { session: mongoSession });
+            await CourseEnrollmentAccess.deleteMany({ userId: account._id }, { session: mongoSession });
+            await AccessConfirmation.deleteMany({ userId: account._id }, { session: mongoSession });
+            await User.deleteOne({ _id: account._id }, { session: mongoSession });
+        });
+    } catch (error) {
+        console.error('Admin account deletion error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de supprimer ce compte. Aucun changement n’a été confirmé.' });
+    } finally {
+        if (mongoSession) await mongoSession.endSession();
+    }
+
+    if (!account) return res.status(404).json({ success: false, message: 'Compte utilisateur introuvable.' });
+    io.in(String(account._id)).disconnectSockets(true);
+    return res.json({
+        success: true,
+        message: 'Compte supprimé. Les paiements et les résultats sont conservés ; cette adresse e-mail peut être réinscrite.'
+    });
 });
 
 const createStudentResultCode = () => `CA-RESULT-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
