@@ -15,7 +15,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
-const Stripe = require('stripe');
 
 let stripeClient;
 
@@ -443,6 +442,10 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             process.env.STRIPE_WEBHOOK_SECRET
         );
     } catch (error) {
+        if (error.code === 'STRIPE_NOT_CONFIGURED') {
+            console.error('Stripe webhook unavailable:', error.message);
+            return res.status(503).json({ success: false, message: 'Le traitement Stripe est temporairement indisponible.' });
+        }
         console.error('Stripe webhook signature verification failed:', error.message);
         return res.status(400).json({ success: false, message: 'Signature Stripe invalide.' });
     }
@@ -695,11 +698,6 @@ const accessConfirmationSchema = new mongoose.Schema({
     attempts: { type: Number, default: 0 },
     expiresAt: { type: Date, required: true, index: { expires: 0 } }
 }, { timestamps: true });
-const registrationSettingSchema = new mongoose.Schema({
-    _id: { type: String, default: 'account-registration' },
-    registrationOpen: { type: Boolean, default: true }
-}, { versionKey: false });
-
 const User = mongoose.model('User', userSchema);
 const ResetCode = mongoose.model('ResetCode', resetCodeSchema);
 const CourseProgress = mongoose.model('CourseProgress', courseProgressSchema);
@@ -708,13 +706,6 @@ const CourseEnrollmentAccess = mongoose.model('CourseEnrollmentAccess', courseAc
 const CoursePrice = mongoose.model('CoursePrice', coursePriceSchema);
 const CoursePayment = mongoose.model('CoursePayment', coursePaymentSchema);
 const AccessConfirmation = mongoose.model('AccessConfirmation', accessConfirmationSchema);
-const RegistrationSetting = mongoose.model('RegistrationSetting', registrationSettingSchema);
-const getRegistrationOpen = async () => {
-    const setting = await RegistrationSetting.findById('account-registration')
-        .select('registrationOpen')
-        .lean();
-    return setting?.registrationOpen !== false;
-};
 const studentResultSchema = new mongoose.Schema({
     accessCodeHash: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
@@ -782,7 +773,18 @@ const getStripeClient = () => {
         error.code = 'STRIPE_NOT_CONFIGURED';
         throw error;
     }
-    if (!stripeClient) stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+    if (!stripeClient) {
+        let Stripe;
+        try {
+            Stripe = require('stripe');
+        } catch (cause) {
+            const error = new Error('Le SDK Stripe est absent du déploiement. Installez les dépendances depuis package.json.');
+            error.code = 'STRIPE_NOT_CONFIGURED';
+            error.cause = cause;
+            throw error;
+        }
+        stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+    }
     return stripeClient;
 };
 
@@ -1188,49 +1190,78 @@ const requireCourseAdmin = (req, res, next) => {
     }
 };
 
-app.get('/api/signup/status', async (req, res) => {
-    try {
-        res.set('Cache-Control', 'no-store');
-        return res.json({ success: true, registrationOpen: await getRegistrationOpen() });
-    } catch (error) {
-        console.error('Signup status lookup error:', error);
-        return res.status(500).json({ success: false, message: 'Impossible de vérifier si les inscriptions sont ouvertes.' });
+app.get('/api/admin/accounts', requireCourseAdmin, async (req, res) => {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
+    const search = String(req.query.search || '').trim().slice(0, 100);
+    const filter = {};
+    if (search) {
+        const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        filter.$or = [
+            { name: { $regex: escapedSearch, $options: 'i' } },
+            { email: { $regex: escapedSearch, $options: 'i' } }
+        ];
     }
-});
 
-app.get('/api/admin/account-registration', requireCourseAdmin, async (req, res) => {
     try {
-        const [registrationOpen, accountCount] = await Promise.all([
-            getRegistrationOpen(),
-            User.countDocuments({})
+        const [accountCount, accounts] = await Promise.all([
+            User.countDocuments(filter),
+            User.find(filter)
+                .select('name email registeredCourse isLoggedIn activeSessionExpiresAt activeSessionTokenExpiresAt createdAt')
+                .sort({ createdAt: -1, _id: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean()
         ]);
-        return res.json({ success: true, registrationOpen, accountCount });
-    } catch (error) {
-        console.error('Admin account registration lookup error:', error);
-        return res.status(500).json({ success: false, message: 'Impossible de charger la gestion des comptes.' });
-    }
-});
-
-app.put('/api/admin/account-registration', requireCourseAdmin, async (req, res) => {
-    if (typeof req.body?.registrationOpen !== 'boolean') {
-        return res.status(400).json({ success: false, message: 'Indiquez si les inscriptions doivent être ouvertes ou fermées.' });
-    }
-
-    try {
-        const setting = await RegistrationSetting.findByIdAndUpdate(
-            'account-registration',
-            { $set: { registrationOpen: req.body.registrationOpen } },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
-        ).select('registrationOpen');
-        const accountCount = await User.countDocuments({});
+        const now = Date.now();
         return res.json({
             success: true,
-            registrationOpen: setting.registrationOpen,
-            accountCount
+            accountCount,
+            page,
+            pages: Math.max(1, Math.ceil(accountCount / limit)),
+            accounts: accounts.map((account) => ({
+                id: String(account._id),
+                name: account.name,
+                email: account.email,
+                registeredCourse: account.registeredCourse,
+                createdAt: account.createdAt,
+                isLoggedIn: account.isLoggedIn === true
+                    && Boolean(account.activeSessionExpiresAt)
+                    && account.activeSessionExpiresAt.getTime() > now
+                    && (!account.activeSessionTokenExpiresAt || account.activeSessionTokenExpiresAt.getTime() > now)
+            }))
         });
     } catch (error) {
-        console.error('Admin account registration update error:', error);
-        return res.status(500).json({ success: false, message: 'Impossible de modifier l’ouverture des inscriptions.' });
+        console.error('Admin account list error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de charger la liste des comptes.' });
+    }
+});
+
+app.post('/api/admin/accounts/:id/disconnect', requireCourseAdmin, async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Identifiant de compte invalide.' });
+    }
+
+    try {
+        const user = await User.findByIdAndUpdate(req.params.id, {
+            $inc: { tokenVersion: 1 },
+            $set: {
+                isLoggedIn: false,
+                activeSessionId: null,
+                activeSessionExpiresAt: null,
+                activeSessionTokenExpiresAt: null
+            }
+        }).select('_id name email');
+        if (!user) return res.status(404).json({ success: false, message: 'Compte utilisateur introuvable.' });
+
+        io.in(String(user._id)).disconnectSockets(true);
+        return res.json({
+            success: true,
+            message: 'La session a été fermée. Le compte existe toujours et peut se reconnecter immédiatement.'
+        });
+    } catch (error) {
+        console.error('Admin account disconnect error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de fermer la session de ce compte.' });
     }
 });
 
@@ -1493,13 +1524,6 @@ app.post('/api/results/verify', async (req, res) => {
 // 1. Route d’inscription
 app.post('/api/signup', authLimiter, async (req, res) => {
     try {
-        if (!await getRegistrationOpen()) {
-            return res.status(403).json({
-                success: false,
-                message: 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.'
-            });
-        }
-
         const name = String(req.body?.name || '').trim();
         const email = sanitizeEmail(req.body?.email);
         const password = String(req.body?.password || '');
@@ -1642,12 +1666,6 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
             ? String(payload.picture).slice(0, 2048)
             : '';
         if (!user) {
-            if (!await getRegistrationOpen()) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.'
-                });
-            }
             user = await User.create({ name, email, googleId, avatarUrl: googleAvatarUrl });
         } else {
             let profileChanged = false;
@@ -2680,4 +2698,3 @@ startServer().catch((error) => {
     console.error('Server startup failed:', error.message);
     process.exit(1);
 });
-
