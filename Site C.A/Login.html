@@ -79,6 +79,7 @@
                 </div>
                 <form class="signup-grid" onsubmit="handleLoginOrSignup(event, 'signup')">
                     <p class="required-fields-note">Tous les champs sont obligatoires.</p>
+                    <p id="signupRegistrationStatus" class="access-confirmation-error" role="status" aria-live="polite" hidden></p>
                     <div class="input-group">
                         <label for="signupName">Nom complet pour le certificat</label>
                         <div class="input-field-wrapper">
@@ -211,7 +212,7 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm2.1-7.75-.9.92A3 3 0 0 0 13 12.5V13h-2v-1a4 4 0 0 1 1.2-2.8l1.2-1.22A1.98 1.98 0 0 0 14 6.5a2 2 0 0 0-4 0H8a4 4 0 1 1 8 0 3.9 3.9 0 0 1-.9 2.75z"/></svg>
                     </div>
                     <h2>En attente de confirmation</h2>
-                    <p id="accessConfirmationMessage" class="access-confirmation-message" role="status">Votre demande de connexion a été envoyée à l’administration. Attendez le code, puis saisissez-le ci-dessous.</p>
+                    <p id="accessConfirmationMessage" class="access-confirmation-message" role="status">Un code de confirmation sera envoyé à votre adresse e-mail. Saisissez-le ci-dessous.</p>
                 </div>
                 <form onsubmit="confirmAccessCode(event)">
                     <div class="input-group">
@@ -717,6 +718,32 @@
             signupPasswordConfirm.addEventListener('input', validateSignupPasswordConfirmation);
             signupConsent.addEventListener('change', updateSignupSubmitState);
             updateSignupSubmitState();
+            const signupForm = document.querySelector('.signup-grid');
+            const signupRegistrationStatus = document.getElementById('signupRegistrationStatus');
+            const signupControls = Array.from(signupForm.querySelectorAll('input, select, button'));
+            const updateSignupAvailability = async () => {
+                signupControls.forEach(control => { control.disabled = true; });
+                try {
+                    const response = await fetch(`${API_BASE_URL}/signup/status`, { cache: 'no-store' });
+                    const data = await response.json();
+                    if (!response.ok || !data.success || typeof data.registrationOpen !== 'boolean') {
+                        throw new Error(data.message || 'Impossible de vérifier les inscriptions.');
+                    }
+                    if (data.registrationOpen) {
+                        signupRegistrationStatus.hidden = true;
+                        signupControls.forEach(control => { control.disabled = false; });
+                        updateSignupSubmitState();
+                    } else {
+                        signupRegistrationStatus.textContent = 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.';
+                        signupRegistrationStatus.hidden = false;
+                    }
+                } catch (error) {
+                    console.error('Impossible de vérifier si les inscriptions sont ouvertes:', error);
+                    signupRegistrationStatus.textContent = 'Impossible de vérifier l’ouverture des inscriptions. Réessayez plus tard.';
+                    signupRegistrationStatus.hidden = false;
+                }
+            };
+            updateSignupAvailability();
 
             if (window.location.protocol === 'file:') {
                 document.querySelector('.divider').hidden = true;
@@ -738,7 +765,7 @@
             if (pendingChallengeId) {
                 showAccessConfirmation(
                     pendingChallengeId,
-                    'Votre demande de connexion a déjà été envoyée à l’administration. Le code expire après 20 minutes; saisissez celui qu’elle vous a transmis.'
+                    'Un code de confirmation a été envoyé à votre adresse e-mail. Il expire après 20 minutes; saisissez-le ci-dessous.'
                 );
             } else {
                 switchView('login');
