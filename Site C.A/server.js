@@ -1580,6 +1580,32 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
     }
 });
 
+app.post('/api/contact', async (req, res) => {
+    const name = String(req.body?.name || '').trim();
+    const email = sanitizeEmail(req.body?.email);
+    const message = String(req.body?.message || '').trim();
+    if (!name || name.length > 100 || !email || email.length > 254
+        || !/^\S+@\S+\.\S+$/.test(email) || !message || message.length > 5000) {
+        return res.status(400).json({ success: false, message: 'Veuillez vérifier les champs du formulaire.' });
+    }
+
+    try {
+        await sendEmail({
+            to: getAdminNotificationEmails(),
+            subject: 'Nouveau message depuis le formulaire de contact',
+            text: `Nom : ${name}\nEmail : ${email}\n\nMessage :\n${message}`
+        });
+        return res.json({ success: true, message: 'Message envoyé avec succès !' });
+    } catch (error) {
+        console.error('Contact form email error:', error);
+        const status = error.code === 'EMAIL_DELIVERY_FAILED' ? 503 : 500;
+        return res.status(status).json({
+            success: false,
+            message: 'Impossible d’envoyer votre message pour le moment. Veuillez réessayer plus tard.'
+        });
+    }
+});
+
 // 4. Route de demande d’un code de récupération (envoi du code à 6 chiffres)
 app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
     const email = sanitizeEmail(req.body?.email);
