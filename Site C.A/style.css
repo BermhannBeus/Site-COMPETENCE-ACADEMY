@@ -3476,3 +3476,51 @@ min-width: 0;
     padding: 1rem;
   }
 }
+
+.historique .about-content {
+  width: min(100%, 900px);
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.historique .about-content > p.section-intro,
+.vision-section > p.section-intro,
+body > section.vision-section > p.section-intro {
+  width: min(100%, 760px);
+  margin: 0 auto 1rem;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.historique .about-content > h3 {
+  width: min(100%, 760px);
+  margin: 2rem auto 1rem;
+  text-align: left;
+}
+
+.historique .about-content > .history-points {
+  width: min(100%, 760px);
+  margin: 0 auto 1.5rem;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.vision-section .vision-commitments-title {
+  width: min(100%, 760px);
+  margin: 2rem auto 1rem;
+  text-align: center;
+}
+
+.vision-section .vision-commitments {
+  width: min(100%, 760px);
+}
+
+.vision-section .vision-commitments li span {
+  min-width: 0;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.vision-section .vision-call-to-action {
+  width: min(100%, 760px);
+}
