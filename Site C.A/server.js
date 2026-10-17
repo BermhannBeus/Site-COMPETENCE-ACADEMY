@@ -1592,8 +1592,40 @@ app.post('/api/contact', async (req, res) => {
     try {
         await sendEmail({
             to: getAdminNotificationEmails(),
-            subject: 'Nouveau message depuis le formulaire de contact',
-            text: `Nom : ${name}\nEmail : ${email}\n\nMessage :\n${message}`
+            subject: 'Nouveau message de contact | Competence Academy',
+            text: `Nouveau message depuis le formulaire de contact\n\nNom : ${name}\nEmail : ${email}\n\nMessage :\n${message}\n\nCompetence Academy — Formation pratique et professionnelle`,
+            html: `
+                <div style="margin:0;background:#f3f6fb;padding:28px 12px;font-family:Arial,sans-serif;color:#000641;">
+                    <div style="max-width:600px;margin:0 auto;border:1px solid #dbe3ee;border-radius:14px;background:#ffffff;overflow:hidden;">
+                        <div style="height:5px;background:#f76b00;"></div>
+                        <div style="padding:22px 24px;background:#000641;color:#ffffff;text-align:center;">
+                            <div style="font-size:20px;font-weight:800;letter-spacing:1px;">COMPETENCE ACADEMY</div>
+                            <div style="margin-top:6px;color:#dbe4f0;font-size:13px;">Nouveau message depuis le formulaire de contact</div>
+                        </div>
+                        <div style="padding:24px;">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+                                <tr>
+                                    <td style="padding:0 0 14px;color:#64748b;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Nom</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0 0 20px;color:#1e293b;font-size:15px;line-height:1.5;">${escapeHtml(name)}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0 0 14px;color:#64748b;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Adresse e-mail</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0 0 20px;font-size:15px;line-height:1.5;"><a href="mailto:${escapeHtml(email)}" style="color:#000641;text-decoration:underline;">${escapeHtml(email)}</a></td>
+                                </tr>
+                            </table>
+                            <div style="padding:16px;border:1px solid #dbe3ee;border-left:4px solid #f76b00;border-radius:10px;background:#f8fafc;">
+                                <div style="margin-bottom:10px;color:#64748b;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Message</div>
+                                <div style="color:#334155;font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(message)}</div>
+                            </div>
+                        </div>
+                        <div style="padding:14px 20px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;text-align:center;">Competence Academy — Formation pratique et professionnelle</div>
+                    </div>
+                </div>
+            `
         });
         return res.json({ success: true, message: 'Message envoyé avec succès !' });
     } catch (error) {
