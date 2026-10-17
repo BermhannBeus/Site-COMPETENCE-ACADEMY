@@ -9,9 +9,9 @@
     <style>
         :root {
             color-scheme: light;
-            --academy-blue: #111e62;
+            --academy-blue: #000641;
             --academy-orange: #f76b00;
-            --ink: #1e293b;
+            --ink: #000641;
             --muted: #64748b;
             --line: #dbe3ee;
             --page: #f3f6fb;
@@ -159,6 +159,8 @@
         <div class="admin-tabs" role="tablist" aria-label="Sections de gestion admin" hidden>
             <button id="resultsTab" class="admin-tab" type="button" role="tab" aria-selected="true" aria-controls="resultsPanel" tabindex="0"><i class="fas fa-graduation-cap" aria-hidden="true"></i> Résultats &amp; Bulletins</button>
             <button id="accessTab" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="accessPanel" tabindex="-1"><i class="fas fa-key" aria-hidden="true"></i> Gestion des Accès</button>
+            <button id="paymentsTab" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="paymentsPanel" tabindex="-1"><i class="fas fa-credit-card" aria-hidden="true"></i> Paiements &amp; Tarifs</button>
+            <button id="accountsTab" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="accountsPanel" tabindex="-1"><i class="fas fa-users" aria-hidden="true"></i> Gestion des comptes</button>
             <button id="quizTab" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="quizPanel" tabindex="-1"><i class="fas fa-question-circle" aria-hidden="true"></i> Banque de Quiz</button>
         </div>
         <button id="adminLogout" class="admin-logout" type="button" hidden><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Se déconnecter</button>
@@ -230,6 +232,20 @@
         </section>
         </div>
 
+        <div id="accountsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="accountsTab" hidden>
+            <section class="panel" aria-labelledby="accountRegistrationTitle">
+                <div class="section-heading"><i class="fa-solid fa-users" aria-hidden="true"></i><h2 id="accountRegistrationTitle">Gestion des créations de comptes</h2></div>
+                <p class="muted">Ouvrez ou fermez la création de nouveaux comptes sur le site. Les comptes existants restent accessibles.</p>
+                <p id="accountRegistrationStatus" class="quiz-bank-status" role="status" aria-live="polite">Chargement du statut…</p>
+                <p class="student-summary">Nombre de comptes créés : <strong id="accountCount">—</strong></p>
+                <div class="actions">
+                    <button id="toggleAccountRegistration" class="danger" type="button" disabled><i class="fa-solid fa-lock" aria-hidden="true"></i> Fermer les inscriptions</button>
+                    <button id="refreshAccountRegistration" class="secondary" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Actualiser</button>
+                </div>
+                <div id="accountRegistrationNotice" class="notice" role="status" hidden></div>
+            </section>
+        </div>
+
         <div id="resultsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="resultsTab" hidden>
         <section class="panel" aria-labelledby="studentResultsTitle">
             <div class="section-heading"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><h2 id="studentResultsTitle">Résultats des étudiants</h2></div>
@@ -267,6 +283,39 @@
             <h3 style="margin-top:24px;">Bulletins enregistrés</h3>
             <div class="actions"><button id="refreshResults" class="secondary" type="button"><i class="fa-solid fa-rotate"></i> Actualiser les bulletins</button></div>
             <div id="resultList" class="access-list" aria-live="polite"></div>
+        </section>
+        </div>
+
+        <div id="paymentsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="paymentsTab" hidden>
+        <section class="panel" aria-labelledby="coursePricesTitle">
+            <div class="section-heading"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i><h2 id="coursePricesTitle">Tarifs des formations — gourdes haïtiennes (HTG)</h2></div>
+            <p class="muted">Modifiez le prix indépendamment pour chaque formation. Le nouveau tarif s’applique aux prochaines demandes de paiement.</p>
+            <form id="coursePriceForm" style="margin-top:18px;">
+                <div class="field-grid">
+                    <div>
+                        <label for="coursePriceCourse">Formation</label>
+                        <select id="coursePriceCourse" required>
+                            <option value="bureautique">Informatique Bureautique</option>
+                            <option value="photographie">Photographie</option>
+                            <option value="design">Design Graphic</option>
+                            <option value="videographie">Vidéographie</option>
+                            <option value="montage">Montage Vidéo</option>
+                            <option value="quickbooks">QuickBooks</option>
+                            <option value="surveillance">Surveillance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="coursePriceAmount">Nouveau tarif (HTG)</label>
+                        <input id="coursePriceAmount" type="number" min="1" max="100000000" step="1" required>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="saveCoursePrice" class="primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer le tarif</button>
+                    <button id="refreshCoursePrices" class="secondary" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Actualiser les tarifs</button>
+                </div>
+            </form>
+            <div id="coursePricesNotice" class="notice" role="status" hidden></div>
+            <div id="coursePricesList" class="access-list" aria-live="polite"></div>
         </section>
         </div>
 
@@ -371,6 +420,16 @@
         const resultNotice = document.getElementById('resultNotice');
         const resultIssued = document.getElementById('resultIssued');
         const resultList = document.getElementById('resultList');
+        const coursePriceForm = document.getElementById('coursePriceForm');
+        const coursePriceCourseInput = document.getElementById('coursePriceCourse');
+        const coursePriceAmountInput = document.getElementById('coursePriceAmount');
+        const coursePricesNotice = document.getElementById('coursePricesNotice');
+        const coursePricesList = document.getElementById('coursePricesList');
+        const saveCoursePriceButton = document.getElementById('saveCoursePrice');
+        const accountRegistrationStatus = document.getElementById('accountRegistrationStatus');
+        const accountCount = document.getElementById('accountCount');
+        const toggleAccountRegistrationButton = document.getElementById('toggleAccountRegistration');
+        const accountRegistrationNotice = document.getElementById('accountRegistrationNotice');
         const QUIZ_API_BASE_URL = 'https://competence-academy-quiz.onrender.com';
         let busy = false;
         let adminToken = '';
@@ -397,6 +456,8 @@
                 adminTabPanels[index].hidden = !isSelected;
             });
             if (moveFocus) selectedTab.focus();
+            if (selectedTab.id === 'paymentsTab') loadCoursePrices();
+            if (selectedTab.id === 'accountsTab') loadAccountRegistration();
         }
 
         adminTabs.forEach(function(tab, index) {
@@ -557,7 +618,7 @@
             adminTabsContainer.hidden = false;
             adminLogoutButton.hidden = false;
             activateAdminTab(adminTabs[0], false);
-            await loadResults();
+            await Promise.all([loadResults(), loadAccountRegistration()]);
             return true;
         }
 
@@ -638,6 +699,113 @@
             if (!response.ok || !data.success) throw new Error(data.message || 'La demande a échoué.');
             return data;
         }
+
+        function formatCoursePrice(amount) {
+            return `${new Intl.NumberFormat('fr-HT').format(amount)} HTG`;
+        }
+
+        function displayAccountRegistration(data) {
+            accountRegistrationStatus.textContent = data.registrationOpen
+                ? 'Les créations de comptes sont ouvertes.'
+                : 'Les créations de comptes sont fermées.';
+            accountRegistrationStatus.classList.toggle('is-ready', data.registrationOpen);
+            accountRegistrationStatus.classList.toggle('is-error', !data.registrationOpen);
+            accountCount.textContent = new Intl.NumberFormat('fr-HT').format(data.accountCount);
+            toggleAccountRegistrationButton.disabled = false;
+            toggleAccountRegistrationButton.className = data.registrationOpen ? 'danger' : 'primary';
+            toggleAccountRegistrationButton.innerHTML = data.registrationOpen
+                ? '<i class="fa-solid fa-lock" aria-hidden="true"></i> Fermer les inscriptions'
+                : '<i class="fa-solid fa-lock-open" aria-hidden="true"></i> Ouvrir les inscriptions';
+            toggleAccountRegistrationButton.dataset.registrationOpen = String(data.registrationOpen);
+        }
+
+        async function loadAccountRegistration() {
+            toggleAccountRegistrationButton.disabled = true;
+            accountRegistrationStatus.textContent = 'Chargement du statut…';
+            accountRegistrationStatus.classList.remove('is-ready', 'is-error');
+            accountRegistrationNotice.hidden = true;
+            try {
+                const data = await adminRequest('/admin/account-registration', { method: 'GET' });
+                displayAccountRegistration(data);
+            } catch (error) {
+                accountRegistrationStatus.textContent = 'Impossible de charger le statut des inscriptions.';
+                accountRegistrationStatus.classList.add('is-error');
+                showNotice(accountRegistrationNotice, error.message, true);
+            }
+        }
+
+        toggleAccountRegistrationButton.addEventListener('click', async function() {
+            const registrationOpen = toggleAccountRegistrationButton.dataset.registrationOpen === 'true';
+            toggleAccountRegistrationButton.disabled = true;
+            accountRegistrationNotice.hidden = true;
+            try {
+                const data = await adminRequest('/admin/account-registration', {
+                    method: 'PUT',
+                    body: JSON.stringify({ registrationOpen: !registrationOpen })
+                });
+                displayAccountRegistration(data);
+                showNotice(
+                    accountRegistrationNotice,
+                    data.registrationOpen
+                        ? 'La création de nouveaux comptes est maintenant ouverte.'
+                        : 'La création de nouveaux comptes est maintenant fermée.',
+                    false
+                );
+            } catch (error) {
+                showNotice(accountRegistrationNotice, error.message, true);
+                toggleAccountRegistrationButton.disabled = false;
+            }
+        });
+
+        document.getElementById('refreshAccountRegistration').addEventListener('click', loadAccountRegistration);
+
+        async function loadCoursePrices() {
+            coursePricesList.replaceChildren();
+            try {
+                const data = await adminRequest('/admin/course-prices', { method: 'GET' });
+                data.prices.forEach(function(price) {
+                    const row = document.createElement('div');
+                    row.className = 'access-row';
+                    const title = document.createElement('strong');
+                    title.textContent = price.courseName;
+                    const amount = document.createElement('span');
+                    amount.textContent = formatCoursePrice(price.amount);
+                    const editButton = document.createElement('button');
+                    editButton.className = 'secondary';
+                    editButton.type = 'button';
+                    editButton.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier';
+                    editButton.addEventListener('click', function() {
+                        coursePriceCourseInput.value = price.courseId;
+                        coursePriceAmountInput.value = String(price.amount);
+                        coursePriceAmountInput.focus();
+                    });
+                    row.append(title, amount, editButton);
+                    coursePricesList.appendChild(row);
+                });
+            } catch (error) {
+                showNotice(coursePricesNotice, error.message, true);
+            }
+        }
+
+        coursePriceForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            saveCoursePriceButton.disabled = true;
+            try {
+                const courseId = coursePriceCourseInput.value;
+                const amount = Number(coursePriceAmountInput.value);
+                await adminRequest('/admin/course-prices/' + encodeURIComponent(courseId), {
+                    method: 'PUT',
+                    body: JSON.stringify({ amount })
+                });
+                showNotice(coursePricesNotice, 'Le tarif a été enregistré. Il s’appliquera aux prochains paiements.', false);
+                await loadCoursePrices();
+            } catch (error) {
+                showNotice(coursePricesNotice, error.message, true);
+            } finally {
+                saveCoursePriceButton.disabled = false;
+            }
+        });
+        document.getElementById('refreshCoursePrices').addEventListener('click', loadCoursePrices);
 
         function addResultModule(name, score) {
             const row = document.createElement('div');
