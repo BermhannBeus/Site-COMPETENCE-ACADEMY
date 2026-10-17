@@ -15,8 +15,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
+const Stripe = require('stripe');
 
-let tranzakClientPromise;
+let stripeClient;
 
 const app = express();
 const server = http.createServer(app);
@@ -425,6 +426,106 @@ const createCodeEmail = ({ greeting, message, code, buttonLabel, buttonUrl, note
 
 // Middleware
 app.use(helmet());
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const signature = req.get('stripe-signature');
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+        return res.status(503).json({ success: false, message: 'La configuration du webhook Stripe est incomplète.' });
+    }
+    if (!signature) {
+        return res.status(400).json({ success: false, message: 'Signature du webhook Stripe manquante.' });
+    }
+
+    let event;
+    try {
+        event = getStripeClient().webhooks.constructEvent(
+            req.body,
+            signature,
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+    } catch (error) {
+        console.error('Stripe webhook signature verification failed:', error.message);
+        return res.status(400).json({ success: false, message: 'Signature Stripe invalide.' });
+    }
+
+    try {
+        if (event.type === 'checkout.session.expired') {
+            const session = event.data.object;
+            await CoursePayment.updateOne(
+                { stripeCheckoutSessionId: session.id, status: 'PENDING' },
+                { $set: { status: 'CANCELLED' } }
+            );
+            return res.json({ received: true });
+        }
+        if (event.type !== 'checkout.session.completed') {
+            return res.json({ received: true, ignored: true });
+        }
+
+        const session = event.data.object;
+        if (session.payment_status !== 'paid') {
+            return res.status(400).json({ success: false, message: 'La session Stripe n’est pas payée.' });
+        }
+        const paymentId = String(session.metadata?.paymentId || '');
+        if (!mongoose.isValidObjectId(paymentId)) {
+            return res.status(400).json({ success: false, message: 'Référence de paiement Stripe invalide.' });
+        }
+
+        const payment = await CoursePayment.findOne({
+            _id: paymentId,
+            provider: 'stripe',
+            stripeCheckoutSessionId: session.id
+        });
+        if (!payment) {
+            return res.status(404).json({ success: false, message: 'Paiement Stripe introuvable.' });
+        }
+        if (payment.accessGrantedAt) return res.json({ received: true, processed: true });
+
+        const expectedCurrency = payment.currencyCode.toLowerCase();
+        const amountInMinorUnits = payment.amount * 100;
+        if (session.currency !== expectedCurrency
+            || session.amount_total !== amountInMinorUnits
+            || session.metadata?.courseId !== payment.courseId) {
+            console.error('Rejected Stripe checkout with mismatched payment details:', session.id);
+            await CoursePayment.updateOne({ _id: payment._id }, { $set: { status: 'REJECTED' } });
+            return res.status(400).json({ success: false, message: 'Montant, devise ou formation Stripe invalide.' });
+        }
+
+        const user = await User.findById(payment.userId).select('_id name email');
+        if (!user) throw new Error('Paid Stripe payment references a missing student account.');
+
+        payment.status = 'SUCCESSFUL';
+        payment.requestId = session.payment_intent ? String(session.payment_intent) : session.id;
+        payment.paidAt = payment.paidAt || new Date();
+        await payment.save();
+
+        const wasGranted = await grantCourseAccess(user, payment.courseId, { paymentConfirmed: true });
+        let access = await CourseEnrollmentAccess.findOne({
+            userId: user._id,
+            courseId: payment.courseId
+        }).select('+encryptedCode');
+        if (!wasGranted && access?.encryptedCode) {
+            await sendCourseAccessCodeEmail(
+                user,
+                payment.courseId,
+                decryptCourseAccessCode(access.encryptedCode),
+                true
+            );
+        } else if (!access?.encryptedCode) {
+            await issueCourseAccessCode(user, payment.courseId, { paymentConfirmed: true });
+            access = await CourseEnrollmentAccess.findOne({
+                userId: user._id,
+                courseId: payment.courseId
+            }).select('+encryptedCode');
+        }
+        if (!access?.encryptedCode) throw new Error('Course access code was not stored after successful Stripe payment.');
+
+        payment.accessGrantedAt = new Date();
+        await payment.save();
+        return res.json({ received: true, processed: true });
+    } catch (error) {
+        console.error('Process Stripe checkout webhook error:', error);
+        return res.status(500).json({ success: false, message: 'Le paiement Stripe n’a pas encore pu être traité; Stripe peut réessayer le webhook.' });
+    }
+});
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(cors({
@@ -572,10 +673,12 @@ const coursePriceSchema = new mongoose.Schema({
 const coursePaymentSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     courseId: { type: String, required: true, enum: COURSE_ACCESS_CATEGORIES, index: true },
+    provider: { type: String, enum: ['stripe', 'moncash', 'natcash'], default: 'stripe', index: true },
     amount: { type: Number, required: true, min: 1 },
     currencyCode: { type: String, required: true, enum: [COURSE_PAYMENT_CURRENCY] },
     mchTransactionRef: { type: String, required: true, unique: true, index: true },
     requestId: { type: String, default: '', index: true },
+    stripeCheckoutSessionId: { type: String, default: '', index: true },
     status: {
         type: String,
         enum: ['PENDING', 'SUCCESSFUL', 'CANCELLED', 'REJECTED'],
@@ -592,6 +695,10 @@ const accessConfirmationSchema = new mongoose.Schema({
     attempts: { type: Number, default: 0 },
     expiresAt: { type: Date, required: true, index: { expires: 0 } }
 }, { timestamps: true });
+const registrationSettingSchema = new mongoose.Schema({
+    _id: { type: String, default: 'account-registration' },
+    registrationOpen: { type: Boolean, default: true }
+}, { versionKey: false });
 
 const User = mongoose.model('User', userSchema);
 const ResetCode = mongoose.model('ResetCode', resetCodeSchema);
@@ -601,6 +708,13 @@ const CourseEnrollmentAccess = mongoose.model('CourseEnrollmentAccess', courseAc
 const CoursePrice = mongoose.model('CoursePrice', coursePriceSchema);
 const CoursePayment = mongoose.model('CoursePayment', coursePaymentSchema);
 const AccessConfirmation = mongoose.model('AccessConfirmation', accessConfirmationSchema);
+const RegistrationSetting = mongoose.model('RegistrationSetting', registrationSettingSchema);
+const getRegistrationOpen = async () => {
+    const setting = await RegistrationSetting.findById('account-registration')
+        .select('registrationOpen')
+        .lean();
+    return setting?.registrationOpen !== false;
+};
 const studentResultSchema = new mongoose.Schema({
     accessCodeHash: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
@@ -662,29 +776,14 @@ const decryptCourseAccessCode = (encryptedCode) => {
     ]).toString('utf8');
 };
 
-const getTranzakClient = async () => {
-    const { TRANZAK_APP_ID, TRANZAK_APP_KEY, TRANZAK_MODE = 'live' } = process.env;
-    if (!TRANZAK_APP_ID || !TRANZAK_APP_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
-        const error = new Error('Le paiement Tranzak n’est pas configuré.');
-        error.code = 'TRANZAK_NOT_CONFIGURED';
+const getStripeClient = () => {
+    if (!process.env.STRIPE_SECRET_KEY) {
+        const error = new Error('Le paiement par carte bancaire n’est pas configuré.');
+        error.code = 'STRIPE_NOT_CONFIGURED';
         throw error;
     }
-    if (!['live', 'sandbox'].includes(TRANZAK_MODE)) {
-        throw new Error('TRANZAK_MODE doit être « live » ou « sandbox ».');
-    }
-    if (!tranzakClientPromise) {
-        tranzakClientPromise = import('tranzak-node')
-            .then(({ default: Tranzak }) => new Tranzak({
-                appId: TRANZAK_APP_ID,
-                appKey: TRANZAK_APP_KEY,
-                mode: TRANZAK_MODE
-            }))
-            .catch((error) => {
-                tranzakClientPromise = null;
-                throw error;
-            });
-    }
-    return tranzakClientPromise;
+    if (!stripeClient) stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+    return stripeClient;
 };
 
 const sendCourseAccessCodeEmail = async (user, courseId, code, paymentConfirmed = false) => {
@@ -761,8 +860,6 @@ const grantCourseAccess = async (user, courseId, options) => {
 };
 
 const createAccessConfirmation = async (user) => {
-    const approvalEmails = getAdminNotificationEmails();
-
     const code = getStudentAccessOtp(user);
     const challengeId = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
@@ -774,15 +871,15 @@ const createAccessConfirmation = async (user) => {
     );
     try {
         await sendEmail({
-            to: approvalEmails,
-            subject: 'Demande de confirmation de connexion - Competence Academy',
+            to: user.email,
+            subject: 'Votre code de confirmation - Competence Academy',
             ...createCodeEmail({
-                greeting: 'Bonjour,',
-                message: `Nouvelle demande de confirmation de connexion pour ${user.name} (${user.email}). Transmettez ce code à l’étudiant pour qu’il le saisisse dans sa session de connexion.`,
+                greeting: `Bonjour ${user.name},`,
+                message: 'Utilisez ce code pour confirmer votre connexion à Competence Academy.',
                 code,
-                buttonLabel: 'Ouvrir la page de connexion',
+                buttonLabel: 'Retourner à la connexion',
                 buttonUrl: confirmationUrl,
-                note: 'Ne saisissez pas ce code sur votre propre session : il confirme la connexion de l’étudiant. Le code expire dans 20 minutes.'
+                note: 'Ce code est personnel et expire dans 20 minutes. Ne le partagez avec personne.'
             })
         });
     } catch (error) {
@@ -792,7 +889,7 @@ const createAccessConfirmation = async (user) => {
 
     return {
         challengeId,
-        message: 'Demande envoyée à l’administration. Saisissez le code de confirmation qui vous sera communiqué dans les 20 minutes.'
+        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 20 minutes.'
     };
 };
 
@@ -1091,6 +1188,52 @@ const requireCourseAdmin = (req, res, next) => {
     }
 };
 
+app.get('/api/signup/status', async (req, res) => {
+    try {
+        res.set('Cache-Control', 'no-store');
+        return res.json({ success: true, registrationOpen: await getRegistrationOpen() });
+    } catch (error) {
+        console.error('Signup status lookup error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de vérifier si les inscriptions sont ouvertes.' });
+    }
+});
+
+app.get('/api/admin/account-registration', requireCourseAdmin, async (req, res) => {
+    try {
+        const [registrationOpen, accountCount] = await Promise.all([
+            getRegistrationOpen(),
+            User.countDocuments({})
+        ]);
+        return res.json({ success: true, registrationOpen, accountCount });
+    } catch (error) {
+        console.error('Admin account registration lookup error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de charger la gestion des comptes.' });
+    }
+});
+
+app.put('/api/admin/account-registration', requireCourseAdmin, async (req, res) => {
+    if (typeof req.body?.registrationOpen !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'Indiquez si les inscriptions doivent être ouvertes ou fermées.' });
+    }
+
+    try {
+        const setting = await RegistrationSetting.findByIdAndUpdate(
+            'account-registration',
+            { $set: { registrationOpen: req.body.registrationOpen } },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        ).select('registrationOpen');
+        const accountCount = await User.countDocuments({});
+        return res.json({
+            success: true,
+            registrationOpen: setting.registrationOpen,
+            accountCount
+        });
+    } catch (error) {
+        console.error('Admin account registration update error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de modifier l’ouverture des inscriptions.' });
+    }
+});
+
 const createStudentResultCode = () => `CA-RESULT-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
 const hashStudentResultCode = (code) => crypto.createHmac('sha256', JWT_SECRET)
     .update(`student-result:${String(code).trim().toUpperCase()}`)
@@ -1350,6 +1493,13 @@ app.post('/api/results/verify', async (req, res) => {
 // 1. Route d’inscription
 app.post('/api/signup', authLimiter, async (req, res) => {
     try {
+        if (!await getRegistrationOpen()) {
+            return res.status(403).json({
+                success: false,
+                message: 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.'
+            });
+        }
+
         const name = String(req.body?.name || '').trim();
         const email = sanitizeEmail(req.body?.email);
         const password = String(req.body?.password || '');
@@ -1492,6 +1642,12 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
             ? String(payload.picture).slice(0, 2048)
             : '';
         if (!user) {
+            if (!await getRegistrationOpen()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.'
+                });
+            }
             user = await User.create({ name, email, googleId, avatarUrl: googleAvatarUrl });
         } else {
             let profileChanged = false;
@@ -2042,7 +2198,7 @@ app.put('/api/admin/course-prices/:courseId', requireCourseAdmin, async (req, re
     }
 });
 
-app.post('/api/payments/tranzak/checkout', authenticate, async (req, res) => {
+app.post('/api/create-stripe-session', authenticate, async (req, res) => {
     let payment;
     try {
         const courseId = String(req.body?.courseId || '');
@@ -2061,51 +2217,74 @@ app.post('/api/payments/tranzak/checkout', authenticate, async (req, res) => {
             return res.status(503).json({ success: false, message: 'Le tarif de cette formation n’est pas disponible.' });
         }
 
-        const tranzak = await getTranzakClient();
+        const stripe = getStripeClient();
         const mchTransactionRef = `CA${crypto.randomBytes(15).toString('hex')}`;
         payment = await CoursePayment.create({
             userId: user._id,
             courseId,
+            provider: 'stripe',
             amount: price.amount,
             currencyCode: COURSE_PAYMENT_CURRENCY,
             mchTransactionRef
         });
-        const returnUrl = new URL('https://competenceacademy.netlify.app/payment-success.html');
-        returnUrl.searchParams.set('reference', mchTransactionRef);
-        const transaction = await tranzak.payment.collection.simple.chargeByWebRedirect({
-            amount: price.amount,
-            currencyCode: COURSE_PAYMENT_CURRENCY,
-            description: `Formation ${COURSE_TITLES[courseId]}`.slice(0, 255),
-            payerNote: `Cours ${courseId}`.slice(0, 31),
-            mchTransactionRef,
-            returnUrl: returnUrl.toString(),
-            serviceDiscountAmount: 0
+        const successUrl = `${getFrontendUrl('/payment-success.html')}?reference={CHECKOUT_SESSION_ID}`;
+        const cancelUrl = new URL('/payment-cancel.html', getFrontendUrl('/')).toString();
+        const cancelUrlWithReference = new URL(cancelUrl);
+        cancelUrlWithReference.searchParams.set('reference', mchTransactionRef);
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            customer_email: user.email,
+            client_reference_id: mchTransactionRef,
+            line_items: [{
+                quantity: 1,
+                price_data: {
+                    currency: COURSE_PAYMENT_CURRENCY.toLowerCase(),
+                    unit_amount: price.amount * 100,
+                    product_data: {
+                        name: `Formation ${COURSE_TITLES[courseId]}`,
+                        description: 'Accès à une formation en ligne Competence Academy'
+                    }
+                }
+            }],
+            metadata: {
+                paymentId: String(payment._id),
+                courseId,
+                studentId: String(user._id)
+            },
+            success_url: successUrl,
+            cancel_url: cancelUrlWithReference.toString()
         });
-        const paymentAuthUrl = new URL(String(transaction.data?.links?.paymentAuthUrl || ''));
-        if (paymentAuthUrl.protocol !== 'https:') {
-            throw new Error('Tranzak did not provide a secure payment authorization URL.');
-        }
-        await CoursePayment.updateOne(
-            { _id: payment._id },
-            { $set: { requestId: String(transaction.data?.requestId || '') } }
-        );
+        await CoursePayment.updateOne({ _id: payment._id }, {
+            $set: { stripeCheckoutSessionId: session.id }
+        });
         res.json({
             success: true,
-            paymentUrl: paymentAuthUrl.toString(),
-            reference: mchTransactionRef,
+            paymentUrl: session.url,
+            reference: session.id,
             amount: price.amount,
             currencyCode: COURSE_PAYMENT_CURRENCY
         });
     } catch (error) {
-        console.error('Create Tranzak course payment error:', error);
-        if (error.code === 'TRANZAK_NOT_CONFIGURED') {
-            return res.status(503).json({ success: false, message: 'Le paiement en ligne n’est pas encore configuré. Contactez l’administration.' });
+        console.error('Create Stripe course payment error:', error);
+        if (payment) {
+            try {
+                await CoursePayment.updateOne(
+                    { _id: payment._id, status: 'PENDING' },
+                    { $set: { status: 'REJECTED' } }
+                );
+            } catch (updateError) {
+                console.error('Could not mark failed Stripe checkout:', updateError);
+            }
         }
-        res.status(502).json({ success: false, message: 'Impossible d’ouvrir le paiement Tranzak. Réessayez dans quelques instants.' });
+        if (error.code === 'STRIPE_NOT_CONFIGURED') {
+            return res.status(503).json({ success: false, message: 'Le paiement par carte bancaire n’est pas encore configuré.' });
+        }
+        res.status(502).json({ success: false, message: 'Impossible d’ouvrir le paiement Stripe. Réessayez dans quelques instants.' });
     }
 });
 
-app.get('/api/payments/tranzak/status', authenticate, async (req, res) => {
+app.get('/api/payments/status', authenticate, async (req, res) => {
     try {
         const reference = String(req.query?.reference || '');
         if (!reference || reference.length > 128 || /[\u0000-\u001f\u007f]/.test(reference)) {
@@ -2115,7 +2294,8 @@ app.get('/api/payments/tranzak/status', authenticate, async (req, res) => {
             userId: req.user.id,
             $or: [
                 { mchTransactionRef: reference },
-                { requestId: reference }
+                { requestId: reference },
+                { stripeCheckoutSessionId: reference }
             ]
         }).select('courseId amount currencyCode status accessGrantedAt paidAt');
         if (!payment) {
@@ -2140,120 +2320,24 @@ app.get('/api/payments/tranzak/status', authenticate, async (req, res) => {
         }
         res.json(response);
     } catch (error) {
-        console.error('Read Tranzak payment status error:', error);
+        console.error('Read payment status error:', error);
         res.status(500).json({ success: false, message: 'Impossible de consulter le statut de votre paiement.' });
     }
 });
 
-app.post('/api/payments/tranzak/webhook', async (req, res) => {
-    try {
-        const expectedSecret = String(process.env.TRANZAK_WEBHOOK_SECRET || '');
-        if (!expectedSecret) {
-            return res.status(503).json({ success: false, message: 'La signature du webhook Tranzak n’est pas configurée.' });
-        }
-        const suppliedSecret = String(req.body?.authKey || '');
-        const expectedBytes = Buffer.from(expectedSecret, 'utf8');
-        const suppliedBytes = Buffer.from(suppliedSecret, 'utf8');
-        if (!expectedSecret || expectedBytes.length !== suppliedBytes.length
-            || !crypto.timingSafeEqual(expectedBytes, suppliedBytes)) {
-            return res.status(401).json({ success: false, message: 'Signature du webhook invalide.' });
-        }
-
-        const eventType = String(req.body?.eventType || '');
-        if (!['REQUEST.COMPLETED', 'REQUEST.CANCELED'].includes(eventType)) {
-            return res.status(400).json({ success: false, message: 'Événement Tranzak non pris en charge.' });
-        }
-        const requestId = String(req.body?.resource?.requestId || '');
-        if (!requestId) {
-            return res.status(400).json({ success: false, message: 'Identifiant de transaction Tranzak manquant.' });
-        }
-
-        const tranzak = await getTranzakClient();
-        const verified = await tranzak.webhook.process(req.body);
-        if (!verified) {
-            return res.status(401).json({ success: false, message: 'Transaction Tranzak non authentifiée.' });
-        }
-        const transaction = await tranzak.payment.collection.simple.find({ requestId });
-        const transactionData = transaction.data;
-        const reference = String(transactionData.mchTransactionRef || '');
-        if (!/^CA[a-f0-9]{30}$/.test(reference)) {
-            return res.status(200).json({ success: true, ignored: true });
-        }
-        const payment = await CoursePayment.findOne({ mchTransactionRef: reference });
-        if (!payment) return res.status(200).json({ success: true, ignored: true });
-        if (payment.accessGrantedAt) return res.json({ success: true, processed: true });
-
-        if (eventType === 'REQUEST.CANCELED') {
-            await CoursePayment.updateOne(
-                { _id: payment._id, status: 'PENDING' },
-                { $set: { status: 'CANCELLED' } }
-            );
-            return res.json({ success: true, cancelled: true });
-        }
-
-        const transactionAmount = Number(transactionData.merchant?.amount ?? transactionData.amount);
-        const transactionCurrency = String(
-            transactionData.currencyCode || transactionData.merchant?.currencyCode || ''
-        );
-        if (transactionData.appId !== process.env.TRANZAK_APP_ID
-            || transactionData.status !== 'SUCCESSFUL'
-            || transactionAmount !== payment.amount
-            || transactionCurrency !== payment.currencyCode) {
-            console.error('Rejected Tranzak payment with mismatched transaction details:', reference);
-            await CoursePayment.updateOne(
-                { _id: payment._id },
-                { $set: { status: 'REJECTED' } }
-            );
-            return res.status(400).json({ success: false, message: 'Montant, devise ou statut de paiement invalide.' });
-        }
-
-        payment.status = 'SUCCESSFUL';
-        payment.requestId = requestId;
-        payment.paidAt = payment.paidAt || new Date();
-        await payment.save();
-
-        const user = await User.findById(payment.userId).select('_id name email');
-        if (!user) throw new Error('Paid course payment references a missing student account.');
-        const wasGranted = await grantCourseAccess(user, payment.courseId, { paymentConfirmed: true });
-        let access;
-        if (wasGranted) {
-            access = await CourseEnrollmentAccess.findOne({
-                userId: user._id,
-                courseId: payment.courseId
-            }).select('+encryptedCode');
-        } else {
-            access = await CourseEnrollmentAccess.findOne({
-                userId: user._id,
-                courseId: payment.courseId
-            }).select('+encryptedCode');
-            if (!access?.encryptedCode) {
-                await issueCourseAccessCode(user, payment.courseId, { paymentConfirmed: true });
-                access = await CourseEnrollmentAccess.findOne({
-                    userId: user._id,
-                    courseId: payment.courseId
-                }).select('+encryptedCode');
-            } else {
-                await sendCourseAccessCodeEmail(
-                    user,
-                    payment.courseId,
-                    decryptCourseAccessCode(access.encryptedCode),
-                    true
-                );
-            }
-        }
-        if (!access?.encryptedCode) throw new Error('Course access code was not stored after successful payment.');
-
-        payment.accessGrantedAt = new Date();
-        await payment.save();
-        res.json({ success: true, processed: true });
-    } catch (error) {
-        console.error('Process Tranzak payment webhook error:', error);
-        if (error.code === 'TRANZAK_NOT_CONFIGURED') {
-            return res.status(503).json({ success: false, message: 'La validation Tranzak n’est pas configurée.' });
-        }
-        res.status(500).json({ success: false, message: 'Le paiement n’a pas encore pu être traité; Tranzak peut réessayer le webhook.' });
+const handleDirectMobilePayment = (providerName) => async (req, res) => {
+    const courseId = String(req.body?.courseId || '');
+    if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
+        return res.status(400).json({ success: false, message: 'Choisissez une formation valide.' });
     }
-});
+    return res.status(503).json({
+        success: false,
+        message: `Le paiement ${providerName} Direct n’est pas encore activé. Les identifiants marchand et la documentation API officielle sont nécessaires pour le configurer.`
+    });
+};
+
+app.post('/api/moncash-pay', authenticate, handleDirectMobilePayment('MonCash'));
+app.post('/api/natcash-pay', authenticate, handleDirectMobilePayment('Natcash'));
 
 app.post('/api/course-progress/unlock', authenticate, async (req, res) => {
     try {
@@ -2560,8 +2644,12 @@ const startServer = async () => {
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
-    if (!process.env.TRANZAK_APP_ID || !process.env.TRANZAK_APP_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
-        console.warn('Tranzak payments are disabled until TRANZAK_APP_ID, TRANZAK_APP_KEY, and TRANZAK_WEBHOOK_SECRET are configured.');
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+        console.warn('Stripe card payments are disabled until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are configured.');
+    }
+    if (!process.env.MONCASH_CLIENT_ID || !process.env.MONCASH_CLIENT_SECRET
+        || !process.env.NATCASH_MERCHANT_ID || !process.env.NATCASH_API_KEY) {
+        console.warn('MonCash Direct and Natcash Direct require official merchant API credentials before activation.');
     }
 
     await mongoose.connect(MONGODB_URI, {
