@@ -41,13 +41,13 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20261012-footer-official-palette">
+  <link rel="stylesheet" href="style.css?v=20261014-mobile-nav-dark">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#0056b3">
+<meta name="theme-color" content="#000641">
 <script>
   try {
     const savedHomeTheme = localStorage.getItem('ca-home-theme');
@@ -300,8 +300,14 @@
           message: document.getElementById('form-message').value
         })
       });
+      if (!response.ok) {
+        throw new Error(`Le serveur n’a pas pu envoyer votre message (HTTP ${response.status}).`);
+      }
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('Le serveur a renvoyé une réponse invalide. Veuillez réessayer plus tard.');
+      }
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Échec de l’envoi');
+      if (result.success !== true) throw new Error(result.message || 'Échec de l’envoi.');
       successMsg.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${result.message}`;
       successMsg.style.display = 'flex';
       form.reset();
@@ -477,9 +483,10 @@ document.addEventListener("DOMContentLoaded", () => {
          onerror="this.onerror=null; this.src='Logo.png'; this.classList.add('fallback-logo');">
   </div>
 
-  <ul class="nav-links" id="nav-links">
+  <ul class="nav-links" id="nav-links" tabindex="0" aria-label="Navigation principale">
     <li><a href="#" data-label="Accueil" aria-label="Accueil" title="Accueil"><i class="fa-solid fa-house" aria-hidden="true"></i></a></li>
     <li><a href="#historique" data-label="Notre histoire" aria-label="Notre histoire" title="Notre histoire"><i class="fa-solid fa-landmark" aria-hidden="true"></i></a></li>
+    <li><a href="#notre-vision" data-label="Notre Vision" aria-label="Notre Vision" title="Notre Vision"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></a></li>
     <li><a href="#formations" data-label="Nos cours" aria-label="Nos cours" title="Nos cours"><i class="fa-solid fa-book-open" aria-hidden="true"></i></a></li>
     <li><a href="#why-choose-us" data-label="Pourquoi nous choisir" aria-label="Pourquoi nous choisir" title="Pourquoi nous choisir"><i class="fa-solid fa-star" aria-hidden="true"></i></a></li>
     <li><a href="#founders" data-label="Nos fondateurs" aria-label="Nos fondateurs" title="Nos fondateurs"><i class="fa-solid fa-users" aria-hidden="true"></i></a></li>
@@ -581,12 +588,33 @@ document.addEventListener("DOMContentLoaded", () => {
   
 <section class="historique" id="historique">
   <div class="container about-content">
-    <h2>À propos de Competence Academy</h2>
+    <h2 class="section-title">À propos de Competence Academy</h2>
     
-    <p>Depuis maintenant 2 ans, <strong>Competence Academy</strong> évolue avec une vision claire : former, inspirer et développer une nouvelle génération de jeunes compétents dans les domaines du numérique, de la création et des métiers techniques.</p>
-    
-    <p>Fondée le 15 Juin 2024, l’institution a été créée dans le but d’offrir une formation professionnelle moderne, pratique et accessible, adaptée aux réalités du marché actuel.
-       Dès le début, l’objectif a été de permettre aux étudiants d’acquérir de véritables compétences professionnelles capables de créer des opportunités concrètes d’emploi, de freelance ou d’entrepreneuriat.</p>
+    <p class="section-intro">Depuis sa fondation le <strong>  Juin 2024, COMPETENCE ACADEMY</strong> évolue avec une ambition ferme : démocratiser 
+      l’accès à une formation professionnelle moderne, pratique et directement alignée sur les réalités du marché actuel.</p>
+   
+    <h3>Des Origines à l'Ambition</h3>
+    <p class="section-intro">Competence Academy est née d'un constat clair et d'une conviction profonde : dans un monde en mutation rapide, la maîtrise des compétences pratiques et des technologies modernes est la clé fondamentale de l'autonomie financière et du progrès communautaire.</p>
+    <p class="section-intro">Ce qui a débuté comme une vision audacieuse s'est rapidement transformé en une envergure concrete. Dès nos premiers pas, nous nous sommes donnés pour mission de briser les barrières de la formation traditionnelle en offrant un apprentissage axé à 100 % sur la pratique, l'innovation et l'adaptabilité aux exigences du marché du travail actuel et international.</p>
+
+    <h3>Une Immersion Totale dans les Métiers d'Avenir</h3>
+    <p class="section-intro">Chez Competence Academy, nous ne nous contentons pas de transmettre de la théorie : nous préparons nos apprenants à résoudre des problèmes complexes du monde réel. Notre écosystème de formation s'articule autour de compétences stratégiques et à haute valeur ajoutée :</p>
+    <ul class="history-points">
+      <li><img src="Logo.png" alt="" aria-hidden="true">Technologies de l’Information & Développement Web : Conception de plateformes modernes, architectures logicielles, bases de données et outils interactifs.</li>
+      <li><img src="Logo.png" alt="" aria-hidden="true">Infrastructures Systèmes & Réseaux : Administration de serveurs, configuration d'équipements informatiques, routage et déploiement de liaisons sans fil point-à-multipoint (PtMP).</li>
+      <li><img src="Logo.png" alt="" aria-hidden="true">Création Numérique & Production Audiovisuelle : Maîtrise des techniques de montage vidéo, de la prise de vue, de la colorimétrie et de la communication visuelle pour les nouveaux médias.</li>
+    </ul>
+
+    <h3>Une Plateforme Avancée pour un Apprentissage Sans Frontières</h3>
+    <p class="section-intro">Pour soutenir cette vision, Competence Academy a développé sa propre plateforme d'apprentissage en ligne. Conçue pour offrir une expérience fluide et moderne, elle intègre des parcours de cours structurés, des évaluations interactives avec suivi de progression, ainsi qu'un système de certification automatisé.</p>
+    <p class="section-intro">Cette approche hybride garantit à chaque étudiant — qu'il soit en présentiel ou à distance — la même rigueur académique, le même encadrement de qualité et des opportunités réelles de réussir en tant qu'employé qualifié, travailleur indépendant (freelance) ou entrepreneur.</p>
+
+    <h3>Un Engagement Inébranlable envers l'Égalité des Chances</h3>
+    <p class="section-intro">Parce que le talent ne connaît pas de limites économiques, Competence Academy prône une politique d'accès démocratisé à la connaissance. À travers nos programmes de bourses d'études ciblés sur les frais de scolarité mensuels, nous veillons à ce que la motivation et la rigueur restent les seuls véritables critères d'accès à nos formations de pointe.</p>
+
+    <h3>Cap sur Demain</h3>
+    <p class="section-intro">Aujourd'hui, Competence Academy continue d'évoluer, d'innover et d'élargir ses horizons. En bâtissant des ponts solides entre la jeunesse passionnée, l'expertise technique et le secteur privé, nous préparons une nouvelle génération de techniciens, d'ingénieurs, de créateurs et de leaders.</p>
+    <p class="section-intro">Notre histoire ne fait que commencer — et elle s'écrit avec ceux qui choisissent de maîtriser leur avenir.</p>
 
    <div class="about-grid">
   <!-- Seksyon Formations -->
@@ -613,18 +641,28 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 </div>
 
-    <h3 style="text-align: center; margin-top: 50px;">Notre Vision</h3>
-    <p style="text-align: center;">Notre ambition est de devenir une référence dans la formation professionnelle moderne en Haïti, en accompagnant les jeunes talents vers l’excellence, la créativité et l’autonomie professionnelle.
-       Aujourd’hui, après 2 années d’évolution, Competence Academy continue de grandir avec la même passion : transmettre des compétences utiles, développer des professionnels qualifiés et construire l’avenir à travers l’éducation et la pratique.</p>
   </div>
+</section>
+
+<section class="vision-section" id="notre-vision">
+    <h2 class="section-title">Bâtir l'Avenir par l'Excellence et l'Innovation Technologique.</h2>
+    <p class="section-intro">Chez Competence Academy, nous transformons le potentiel en expertise. Notre mission est de former une nouvelle génération de leaders et de professionnels qualifiés dans les technologies de l'information, la gestion réseau, les énergies renouvelables et la création numérique.</p>
+
+    <h3 class="vision-commitments-title">NOS ENGAGEMENT CLÉS</h3>
+    <ul class="vision-commitments">
+        <li><img src="Logo.png" alt=""><span><strong>Formations Pratiques &amp; Modernes :</strong> Des programmes conçus pour répondre directement aux exigences du marché du travail.</span></li>
+        <li><img src="Logo.png" alt=""><span><strong>Apprentissage Hybride &amp; Flexible :</strong> Une plateforme numérique avancée accessible partout, avec des parcours interactifs et des certifications reconnues.</span></li>
+        <li><img src="Logo.png" alt=""><span><strong>Inclusion &amp; Opportunités :</strong> Un accès démocratisé à des compétences de pointe pour propulser votre carrière et vos projets entrepreneurs.</span></li>
+    </ul>
+    <p class="vision-call-to-action">Inscrivez-vous aujourd'hui et prenez en main votre avenir professionnel.</p>
 </section>
 
   <!-- Section Cours -->
 <section class="courses-section" id="formations">
     
     <div class="courses-header">
-        <h2>Nos Cours</h2>
-        <p>Découvrez nos programmes de formation technique et professionnelle conçus pour propulser vos compétences vers un niveau supérieur. Chaque parcours comprend un apprentissage pratique, un encadrement personnalisé et la délivrance d'un certificat officiel.</p>
+        <h2 class="section-title">Nos Cours</h2>
+        <p class="section-intro">Découvrez nos programmes de formation technique et professionnelle conçus pour propulser vos compétences vers un niveau supérieur. Chaque parcours comprend un apprentissage pratique, un encadrement personnalisé et la délivrance d'un certificat officiel.</p>
     </div>
 
     <div class="cards">
@@ -654,35 +692,27 @@ document.addEventListener("DOMContentLoaded", () => {
         <a class="courses-more-link" href="Cours en Ligne.html">Explorer toutes nos formations disponibles</a>
     </div>
 
-</section>
-
-<section class="stats-section">
-    <div class="stats-banner">
-        
-        <!-- Atik 1 -->
-        <div class="stat-item">
-            <h3 class="stat-number" data-target="2">0+</h3>
-            <p class="stat-text">Ans d'expérience</p>
+    <div class="stats-section">
+        <div class="stats-banner">
+            <div class="stat-item">
+                <h3 class="stat-number" data-target="2">0+</h3>
+                <p class="stat-text">Ans d'expérience</p>
+            </div>
+            <div class="stat-item">
+                <h3 class="stat-number" data-target="100">0+</h3>
+                <p class="stat-text">Étudiants formés</p>
+            </div>
+            <div class="stat-item">
+                <h3 class="stat-number" data-target="5">0+</h3>
+                <p class="stat-text">Filières disponibles</p>
+            </div>
         </div>
-
-        <!-- Atik 2 -->
-        <div class="stat-item">
-            <h3 class="stat-number" data-target="100">0+</h3>
-            <p class="stat-text">Étudiants formés</p>
-        </div>
-
-        <!-- Atik 3 -->
-        <div class="stat-item">
-            <h3 class="stat-number" data-target="5">0+</h3>
-            <p class="stat-text">Filières disponibles</p>
-        </div>
-
     </div>
 </section>
 
 <section class="services-section">
 
-<h2 id="services" style="scroll-margin-top: 120px; text-align: center;">NOS SERVICES</h2>
+<h2 id="services" class="section-title" style="scroll-margin-top: 120px;">NOS SERVICES</h2>
   <div class="services-grid">
     <div class="service-card"><h3>Branding</h3><p>Identité visuelle complète.</p></div>
     <div class="service-card"><h3>Graphisme</h3><p>Création pour réseaux sociaux, bannières, affiches, supports de communication.</p></div>
@@ -704,8 +734,8 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================================================== -->
 <section class="why-choose-us" id="why-choose-us">
     <div class="section-title-container">
-        <h2>Pourquoi Choisir Competence Academy ?</h2>
-        <p>Découvrez les avantages exclusifs qui font de notre académie le meilleur choix pour votre avenir professionnel.</p>
+        <h2 class="section-title">Pourquoi Choisir Competence Academy ?</h2>
+        <p class="section-intro">Découvrez les avantages exclusifs qui font de notre académie le meilleur choix pour votre avenir professionnel.</p>
     </div>
 
     <div class="advantages-grid">
@@ -746,8 +776,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <section class="founders-section" id="founders">
     <div class="founders-header">
-        <h2>Nos Fondateurs</h2>
-        <p>L'équipe visionnaire derrière COMPETENCE ACADEMY</p>
+        <h2 class="section-title">Nos Fondateurs</h2>
+        <p class="section-intro">L'équipe visionnaire derrière COMPETENCE ACADEMY</p>
     </div>
 
     <div class="founders-container">
@@ -820,8 +850,8 @@ document.addEventListener("DOMContentLoaded", () => {
     
     <!-- TI TIT SA A KI TE MANKE ANLÈ A -->
     <div class="contact-header">
-        <h2>CONTACTEZ-NOUS</h2>
-        <p>Prenez contact avec notre équipe pour toute assistance ou information complémentaire.</p>
+        <h2 class="section-title">CONTACTEZ-NOUS</h2>
+        <p class="section-intro">Prenez contact avec notre équipe pour toute assistance ou information complémentaire.</p>
     </div>
 
     <div class="Contact-container">
@@ -882,7 +912,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 <section class="faq-section">
-    <h2>Questions Fréquentes</h2>
+    <h2 class="section-title">Questions Fréquentes</h2>
 
     <div class="faq-container">
         
@@ -903,23 +933,48 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="faq-item">
             <button class="faq-question">Comment s'effectue le paiement ?</button>
             <div class="faq-answer">
-                Le paiement peut s'effectuer en plusieurs versements selon les modalités définies lors de votre inscription. Vous pouvez payer directement à notre secrétariat ou via nos canaux de paiement autorisés.
+                Le paiement peut s'effectuer en plusieurs versements selon les modalités définies lors de votre inscription. 
+                Vous pouvez payer directement à notre secrétariat ou via nos canaux de paiement autorisés.
+                Pour ceux qui suivent les cours en ligne, le paiement peut être effectué sur le site via des plateformes de paiement sécurisées.
             </div>
         </div>
 
         <div class="faq-item">
             <button class="faq-question">Y a-t-il une cérémonie de graduation ?</button>
             <div class="faq-answer">
-                Oui, chaque fin de cycle est couronnée par une cérémonie officielle de remise des diplômes pour célébrer la réussite de nos étudiants certifiés.
+                Oui, chaque fin de cycle est couronnée par une cérémonie officielle de remise des diplômes pour célébrer la réussite de nos étudiants certifiés qui ont pris le cours en présentiel.
             </div>
         </div>
 
         <div class="faq-item">
             <button class="faq-question">Puis-je suivre les cours en ligne ?</button>
             <div class="faq-answer">
-                Certaines de nos options et ressources pédagogiques sont disponibles à distance, mais nos laboratoires d'ingénierie réseaux et d'administration système se font principalement en présentiel pour garantir une pratique optimale.
+               Grâce à notre plateforme numérique intégrée, accédez directement à nos ressources pédagogiques, évaluations interactives et certifications en ligne.
+              
             </div>
         </div>
+
+         <div class="faq-item">
+            <button class="faq-question">Comment fonctionnent les cours sur la plateforme en ligne ?</button>
+            <div class="faq-answer">
+              Une fois inscrit, vous avez un accès 24/7 à votre espace étudiant avec des cours vidéo, des quiz d'évaluation automatisés et des supports de cours téléchargeables.
+            </div>
+            </div>
+
+             <div class="faq-item">
+            <button class="faq-question">Quels sont les prérequis pour s'inscrire à nos formations ?</button>
+            <div class="faq-answer">
+               La majorité de nos formations sont accessibles aux débutants passionnés. Il vous suffit d'avoir un ordinateur, une connexion internet et la volonté d'apprendre.
+            </div>
+             </div>
+            
+             <div class="faq-item">
+            <button class="faq-question">Comment bénéficier d'une bourse d'études ?</button>
+            <div class="faq-answer">
+               Les bourses s'appliquent sur les frais mensuels de scolarité. Pour en bénéficier,
+               il suffit de remplir le formulaire d'admission disponible sur le site et e contacter notre service d'admission pour savoir les critères d'éligibilité et les documents requis.
+            </div>
+          </div>
 
     </div>
 </section>
@@ -935,11 +990,22 @@ document.addEventListener("DOMContentLoaded", () => {
     
     <div class="content-deroule">
       <h3>Merci à vous !</h3>
-      <p>Competence Academy tient à exprimer sa profonde gratitude à tous les utilisateurs, étudiants, partenaires et visiteurs qui font confiance à notre plateforme.</p>
-      <p>Votre engagement, votre intérêt et votre fidélité nous motivent chaque jour à améliorer nos services et à offrir des formations toujours plus professionnelles, pratiques et adaptées aux réalités du marché actuel.</p>
-      <p>Merci de faire partie de cette vision. Chaque interaction, chaque inscription et chaque participation contribuent à la croissance d’une communauté dynamique dédiée à l’apprentissage, à la créativité et à l’excellence.</p>
+      <p>Depuis le lancement de <strong>Competence Academy</strong>, notre mission a toujours été guidée par une conviction profonde : l'éducation pratique et la maîtrise des compétences techniques sont les plus puissants leviers de transformation personnelle et professionnelle.
+         Aujourd'hui, si notre plateforme évolue et franchit de nouvelles étapes majeures, c'est avant tout grâce à vous.</p>
+         <br>
+         <p><strong>À nos étudiants</strong>, qui investissent leur temps, leur énergie et leur passion dans chaque module de formation : votre détermination à apprendre, à surmonter les défis techniques et à viser l'excellence est notre plus grande source d'inspiration au quotidien.</p>
+          <br>
+         <p><strong>À nos partenaires, formateurs et collaborateurs</strong>, qui partagent notre vision et contribuent sans relâche à garantir des contenus pédagogiques de haut niveau, alignés sur les réalités et les exigences du marché actuel.</p>
+          <br>
+        <P> <strong>À nos visiteurs et membres de la communauté</strong>, dont la confiance, les retours constructifs et l'engagement continu nous poussent à innover sans cesse et à perfectionner nos outils, notre plateforme en ligne et nos infrastructures d'apprentissage.
+      <br>
       <p>Nous restons engagés à vous accompagner dans votre parcours de développement personnel et professionnel.</p>
-      <p><strong>Merci pour votre confiance. Ensemble, construisons l’avenir.</strong></p>
+      <br>
+<p>Chaque inscription, chaque évaluation réussie, chaque projet concrétisé et chaque échange au sein de notre réseau renforce une communauté dynamique, ambitieuse et tournée vers l'avenir. Vous ne faites pas seulement partie de Competence Academy — vous en êtes le cœur battant.</p>
+  <br>
+        </p>Nous renouvelons notre engagement solennel à vous accompagner avec rigueur, passion et bienveillance tout au long de votre parcours professionnel. Ensemble, nous continuons à bâtir des opportunités concrètes et à transformer le potentiel de chacun en réussites durables. </p
+
+ <p> <strong> <i> Merci du fond du cœur pour votre confiance inébranlable. Ensemble, façonnons l'avenir par la compétence et l'excellence. </strong> </i></p>
     </div>
   </div>
 </section>
