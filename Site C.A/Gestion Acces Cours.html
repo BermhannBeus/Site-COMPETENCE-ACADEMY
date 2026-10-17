@@ -84,6 +84,9 @@
         .access-list { display: grid; gap: 10px; margin-top: 12px; }
         .access-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: #fbfdff; }
         .access-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .account-details { display: grid; flex: 1 1 260px; min-width: 0; gap: 3px; overflow-wrap: anywhere; }
+        .account-session-status { padding: 5px 9px; border-radius: 999px; color: #64748b; background: #e2e8f0; font-size: .82rem; white-space: nowrap; }
+        .account-session-status.is-online { color: #166534; background: #dcfce7; }
         .access-row button { min-height: 38px; padding: 8px 12px; font-size: .9rem; }
         .access-code { flex-basis: 100%; padding: 10px; border-radius: 7px; background: #f0fdf4; color: #14532d; font-weight: 700; overflow-wrap: anywhere; }
         .access-code[hidden] { display: none; }
@@ -233,16 +236,27 @@
         </div>
 
         <div id="accountsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="accountsTab" hidden>
-            <section class="panel" aria-labelledby="accountRegistrationTitle">
-                <div class="section-heading"><i class="fa-solid fa-users" aria-hidden="true"></i><h2 id="accountRegistrationTitle">Gestion des créations de comptes</h2></div>
-                <p class="muted">Ouvrez ou fermez la création de nouveaux comptes sur le site. Les comptes existants restent accessibles.</p>
-                <p id="accountRegistrationStatus" class="quiz-bank-status" role="status" aria-live="polite">Chargement du statut…</p>
-                <p class="student-summary">Nombre de comptes créés : <strong id="accountCount">—</strong></p>
+            <section class="panel" aria-labelledby="accountsTitle">
+                <div class="section-heading"><i class="fa-solid fa-users" aria-hidden="true"></i><h2 id="accountsTitle">Comptes des étudiants</h2></div>
+                <p class="muted">Déconnecter un compte ferme seulement sa session active. Le compte n’est pas supprimé ni bloqué : l’étudiant peut se reconnecter immédiatement.</p>
+                <p class="student-summary">Comptes trouvés : <strong id="accountCount">—</strong></p>
+                <form id="accountSearchForm" class="quiz-bank-controls">
+                    <div>
+                        <label for="accountSearch">Rechercher par nom ou adresse e-mail</label>
+                        <input id="accountSearch" type="search" maxlength="100" autocomplete="off">
+                    </div>
+                    <button type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Rechercher</button>
+                </form>
                 <div class="actions">
-                    <button id="toggleAccountRegistration" class="danger" type="button" disabled><i class="fa-solid fa-lock" aria-hidden="true"></i> Fermer les inscriptions</button>
-                    <button id="refreshAccountRegistration" class="secondary" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Actualiser</button>
+                    <button id="refreshAccounts" class="secondary" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Actualiser</button>
                 </div>
-                <div id="accountRegistrationNotice" class="notice" role="status" hidden></div>
+                <div id="accountsNotice" class="notice" role="status" hidden></div>
+                <div id="accountList" class="access-list" aria-live="polite"></div>
+                <div class="actions">
+                    <button id="previousAccountsPage" class="secondary" type="button" disabled><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Précédent</button>
+                    <span id="accountsPageStatus" class="muted" role="status" aria-live="polite">Page 1 sur 1</span>
+                    <button id="nextAccountsPage" class="secondary" type="button" disabled>Suivant <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
             </section>
         </div>
 
@@ -426,16 +440,23 @@
         const coursePricesNotice = document.getElementById('coursePricesNotice');
         const coursePricesList = document.getElementById('coursePricesList');
         const saveCoursePriceButton = document.getElementById('saveCoursePrice');
-        const accountRegistrationStatus = document.getElementById('accountRegistrationStatus');
         const accountCount = document.getElementById('accountCount');
-        const toggleAccountRegistrationButton = document.getElementById('toggleAccountRegistration');
-        const accountRegistrationNotice = document.getElementById('accountRegistrationNotice');
+        const accountSearchForm = document.getElementById('accountSearchForm');
+        const accountSearchInput = document.getElementById('accountSearch');
+        const accountList = document.getElementById('accountList');
+        const accountsNotice = document.getElementById('accountsNotice');
+        const accountsPageStatus = document.getElementById('accountsPageStatus');
+        const previousAccountsPageButton = document.getElementById('previousAccountsPage');
+        const nextAccountsPageButton = document.getElementById('nextAccountsPage');
         const QUIZ_API_BASE_URL = 'https://competence-academy-quiz.onrender.com';
         let busy = false;
         let adminToken = '';
         let otpCountdownTimer = null;
         let editingQuizQuestionId = '';
         let quizBankCount = 0;
+        let accountsPage = 1;
+        let accountsPages = 1;
+        const accountsPageSize = 50;
 
         function showNotice(element, message, isError) {
             element.textContent = message;
@@ -457,7 +478,7 @@
             });
             if (moveFocus) selectedTab.focus();
             if (selectedTab.id === 'paymentsTab') loadCoursePrices();
-            if (selectedTab.id === 'accountsTab') loadAccountRegistration();
+            if (selectedTab.id === 'accountsTab') loadAccounts();
         }
 
         adminTabs.forEach(function(tab, index) {
@@ -618,7 +639,7 @@
             adminTabsContainer.hidden = false;
             adminLogoutButton.hidden = false;
             activateAdminTab(adminTabs[0], false);
-            await Promise.all([loadResults(), loadAccountRegistration()]);
+            await Promise.all([loadResults(), loadAccounts()]);
             return true;
         }
 
@@ -704,60 +725,114 @@
             return `${new Intl.NumberFormat('fr-HT').format(amount)} HTG`;
         }
 
-        function displayAccountRegistration(data) {
-            accountRegistrationStatus.textContent = data.registrationOpen
-                ? 'Les créations de comptes sont ouvertes.'
-                : 'Les créations de comptes sont fermées.';
-            accountRegistrationStatus.classList.toggle('is-ready', data.registrationOpen);
-            accountRegistrationStatus.classList.toggle('is-error', !data.registrationOpen);
-            accountCount.textContent = new Intl.NumberFormat('fr-HT').format(data.accountCount);
-            toggleAccountRegistrationButton.disabled = false;
-            toggleAccountRegistrationButton.className = data.registrationOpen ? 'danger' : 'primary';
-            toggleAccountRegistrationButton.innerHTML = data.registrationOpen
-                ? '<i class="fa-solid fa-lock" aria-hidden="true"></i> Fermer les inscriptions'
-                : '<i class="fa-solid fa-lock-open" aria-hidden="true"></i> Ouvrir les inscriptions';
-            toggleAccountRegistrationButton.dataset.registrationOpen = String(data.registrationOpen);
+        function renderAccounts(accounts) {
+            accountList.replaceChildren();
+            if (!accounts.length) {
+                const emptyMessage = document.createElement('p');
+                emptyMessage.className = 'muted';
+                emptyMessage.textContent = 'Aucun compte trouvé.';
+                accountList.appendChild(emptyMessage);
+                return;
+            }
+
+            accounts.forEach(function(account) {
+                const row = document.createElement('div');
+                row.className = 'access-row account-row';
+
+                const details = document.createElement('div');
+                details.className = 'account-details';
+                const name = document.createElement('strong');
+                name.textContent = account.name;
+                const email = document.createElement('span');
+                email.textContent = account.email;
+                const course = document.createElement('span');
+                course.className = 'muted';
+                course.textContent = account.registeredCourse || 'Formation non renseignée';
+                const createdAt = document.createElement('span');
+                createdAt.className = 'muted';
+                createdAt.textContent = account.createdAt
+                    ? `Créé le ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(new Date(account.createdAt))}`
+                    : '';
+                details.append(name, email, course, createdAt);
+
+                const status = document.createElement('strong');
+                status.className = account.isLoggedIn ? 'account-session-status is-online' : 'account-session-status';
+                status.textContent = account.isLoggedIn ? 'Connecté' : 'Déconnecté';
+                row.append(details, status);
+
+                if (account.isLoggedIn) {
+                    const disconnectButton = document.createElement('button');
+                    disconnectButton.type = 'button';
+                    disconnectButton.className = 'danger';
+                    disconnectButton.dataset.disconnectAccount = account.id;
+                    disconnectButton.textContent = 'Déconnecter';
+                    row.appendChild(disconnectButton);
+                }
+                accountList.appendChild(row);
+            });
         }
 
-        async function loadAccountRegistration() {
-            toggleAccountRegistrationButton.disabled = true;
-            accountRegistrationStatus.textContent = 'Chargement du statut…';
-            accountRegistrationStatus.classList.remove('is-ready', 'is-error');
-            accountRegistrationNotice.hidden = true;
+        async function loadAccounts() {
+            accountsNotice.hidden = true;
+            accountList.replaceChildren();
+            const query = new URLSearchParams({
+                page: String(accountsPage),
+                limit: String(accountsPageSize),
+                search: accountSearchInput.value.trim()
+            });
             try {
-                const data = await adminRequest('/admin/account-registration', { method: 'GET' });
-                displayAccountRegistration(data);
+                const data = await adminRequest('/admin/accounts?' + query.toString(), { method: 'GET' });
+                accountsPages = data.pages;
+                accountCount.textContent = new Intl.NumberFormat('fr-HT').format(data.accountCount);
+                accountsPageStatus.textContent = `Page ${data.page} sur ${data.pages}`;
+                previousAccountsPageButton.disabled = data.page <= 1;
+                nextAccountsPageButton.disabled = data.page >= data.pages;
+                renderAccounts(data.accounts);
             } catch (error) {
-                accountRegistrationStatus.textContent = 'Impossible de charger le statut des inscriptions.';
-                accountRegistrationStatus.classList.add('is-error');
-                showNotice(accountRegistrationNotice, error.message, true);
+                accountCount.textContent = '—';
+                accountsPageStatus.textContent = 'Liste indisponible';
+                previousAccountsPageButton.disabled = true;
+                nextAccountsPageButton.disabled = true;
+                showNotice(accountsNotice, error.message, true);
             }
         }
 
-        toggleAccountRegistrationButton.addEventListener('click', async function() {
-            const registrationOpen = toggleAccountRegistrationButton.dataset.registrationOpen === 'true';
-            toggleAccountRegistrationButton.disabled = true;
-            accountRegistrationNotice.hidden = true;
-            try {
-                const data = await adminRequest('/admin/account-registration', {
-                    method: 'PUT',
-                    body: JSON.stringify({ registrationOpen: !registrationOpen })
-                });
-                displayAccountRegistration(data);
-                showNotice(
-                    accountRegistrationNotice,
-                    data.registrationOpen
-                        ? 'La création de nouveaux comptes est maintenant ouverte.'
-                        : 'La création de nouveaux comptes est maintenant fermée.',
-                    false
-                );
-            } catch (error) {
-                showNotice(accountRegistrationNotice, error.message, true);
-                toggleAccountRegistrationButton.disabled = false;
+        accountSearchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            accountsPage = 1;
+            loadAccounts();
+        });
+        document.getElementById('refreshAccounts').addEventListener('click', loadAccounts);
+        previousAccountsPageButton.addEventListener('click', function() {
+            if (accountsPage > 1) {
+                accountsPage -= 1;
+                loadAccounts();
             }
         });
+        nextAccountsPageButton.addEventListener('click', function() {
+            if (accountsPage < accountsPages) {
+                accountsPage += 1;
+                loadAccounts();
+            }
+        });
+        accountList.addEventListener('click', async function(event) {
+            const button = event.target.closest('[data-disconnect-account]');
+            if (!button) return;
+            if (!window.confirm('Fermer la session de ce compte ? L’étudiant pourra se reconnecter immédiatement.')) return;
 
-        document.getElementById('refreshAccountRegistration').addEventListener('click', loadAccountRegistration);
+            button.disabled = true;
+            try {
+                const data = await adminRequest(
+                    '/admin/accounts/' + encodeURIComponent(button.dataset.disconnectAccount) + '/disconnect',
+                    { method: 'POST' }
+                );
+                await loadAccounts();
+                showNotice(accountsNotice, data.message, false);
+            } catch (error) {
+                showNotice(accountsNotice, error.message, true);
+                button.disabled = false;
+            }
+        });
 
         async function loadCoursePrices() {
             coursePricesList.replaceChildren();
