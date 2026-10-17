@@ -310,7 +310,7 @@
 
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0056b3">
+    <meta name="theme-color" content="#000641">
     <link rel="stylesheet" href="cours-en-ligne.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -386,6 +386,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-bureautique" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-bureautique', 'lock-bureautique', 'bureautique-video', 'tag-bureautique', 'doc-bureautique', 'text-bureautique', '1.2 MB', 'quiz-bureautique')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="bureautique"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg" id="err-bureautique"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -447,6 +448,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-photo" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-photo', 'lock-photo', 'photo-video', 'tag-photo', 'doc-photo', 'text-photo', '3.5 MB', 'quiz-photo')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="photographie"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg" id="err-photo"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -508,6 +510,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-design" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-design', 'lock-design', 'design-video', 'tag-design', 'doc-design', 'text-design', '4.2 MB', 'quiz-design')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="design"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg" id="err-design"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -569,6 +572,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-vid" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-vid', 'lock-vid', 'video-vid', 'tag-vid', 'doc-vid', 'text-vid', '2.8 MB', 'quiz-vid')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="videographie"><i class="fa-solid fa-credit-card" aria-hidden="true"></i>Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg" id="err-vid"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -630,6 +634,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-montage" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-montage', 'lock-montage', 'montage-video', 'tag-montage', 'doc-montage', 'text-montage', '5.1 MB', 'quiz-montage')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="montage"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg" id="err-montage"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -691,6 +696,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-quickbooks" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-quickbooks', 'lock-quickbooks', 'quickbooks-video', 'tag-quickbooks', 'doc-quickbooks', 'text-quickbooks', 'Document réservé', 'quiz-quickbooks')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="quickbooks"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -752,6 +758,7 @@
                             <div class="password-box">
                                 <input type="password" id="input-surveillance" placeholder="Code d'accès">
                                 <button type="button" onclick="verifierCode('input-surveillance', 'lock-surveillance', 'surveillance-video', 'tag-surveillance', 'doc-surveillance', 'text-surveillance', 'Document réservé', 'quiz-surveillance')">Débloquer</button>
+                                <button class="course-payment-button" type="button" data-course-id="surveillance"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Éffectuer votre Paiement</button>
                             </div>
                             <p class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Code incorrect !</p>
                         </div>
@@ -793,11 +800,26 @@
 
     </main>
 
-
-
-    
-
-
+    <dialog id="paymentMethodDialog" class="payment-method-dialog" aria-labelledby="paymentMethodTitle">
+        <button class="payment-method-close" type="button" aria-label="Fermer" data-close-payment-dialog><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <h2 id="paymentMethodTitle">Choisir un moyen de paiement</h2>
+        <p id="paymentMethodCourse"></p>
+        <div class="payment-method-options">
+            <button class="payment-method-option primary" type="button" data-payment-provider="stripe">
+                <i class="fa-regular fa-credit-card" aria-hidden="true"></i> Carte bancaire — Visa / Mastercard
+                <small>Paiement sécurisé via Stripe</small>
+            </button>
+            <button class="payment-method-option" type="button" data-payment-provider="moncash">
+                <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i> MonCash Direct
+                <small>API marchand à configurer</small>
+            </button>
+            <button class="payment-method-option" type="button" data-payment-provider="natcash">
+                <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i> Natcash Direct
+                <small>API marchand à configurer</small>
+            </button>
+        </div>
+        <p id="paymentMethodNotice" class="payment-method-notice" role="status" aria-live="polite" hidden></p>
+    </dialog>
 
     <footer class="course-footer">
         <button type="button" class="logout-btn" onclick="deconnecterEtudiant()">
@@ -927,6 +949,90 @@
         }
         return data;
     }
+
+    const paymentMethodDialog = document.getElementById('paymentMethodDialog');
+    const paymentMethodCourse = document.getElementById('paymentMethodCourse');
+    const paymentMethodNotice = document.getElementById('paymentMethodNotice');
+    const coursePrices = new Map();
+    let selectedPaymentCourseId = '';
+
+    function ouvrirChoixPaiement(courseId) {
+        selectedPaymentCourseId = courseId;
+        const price = coursePrices.get(courseId);
+        const courseName = document.querySelector(`.course-card-wrapper[data-category="${courseId}"] .category-badge`)?.textContent.trim()
+            || courseId;
+        paymentMethodCourse.textContent = price
+            ? `${courseName} — ${new Intl.NumberFormat('fr-HT').format(price.amount)} ${price.currencyCode}`
+            : courseName;
+        paymentMethodNotice.hidden = true;
+        paymentMethodDialog.showModal();
+    }
+
+    async function payerFormation(courseId, provider, button) {
+        button.disabled = true;
+        paymentMethodNotice.hidden = true;
+        try {
+            const endpoints = {
+                stripe: '/create-stripe-session',
+                moncash: '/moncash-pay',
+                natcash: '/natcash-pay'
+            };
+            const payment = await courseApiRequest(endpoints[provider], {
+                method: 'POST',
+                body: JSON.stringify({ courseId })
+            });
+            if (!payment.paymentUrl || new URL(payment.paymentUrl).protocol !== 'https:') {
+                throw new Error('Le fournisseur n’a pas renvoyé une adresse de paiement sécurisée.');
+            }
+            window.location.assign(payment.paymentUrl);
+        } catch (error) {
+            console.error(`Could not start ${provider} course payment:`, error);
+            paymentMethodNotice.textContent = error.message || 'Impossible de démarrer le paiement.';
+            paymentMethodNotice.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function afficherTarifsCours() {
+        const response = await fetch(`${COURSE_API_BASE_URL}/course-prices`, {
+            cache: 'no-store'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Impossible de charger les tarifs des formations.');
+        }
+        data.prices.forEach((price) => coursePrices.set(price.courseId, price));
+        document.querySelectorAll('.course-payment-button[data-course-id]').forEach(function(button) {
+            const price = coursePrices.get(button.dataset.courseId);
+            if (!price) return;
+            const icon = button.querySelector('i');
+            button.replaceChildren(
+                icon,
+                document.createTextNode(` Payer ${new Intl.NumberFormat('fr-HT').format(price.amount)} ${price.currencyCode}`)
+            );
+        });
+    }
+
+    document.querySelectorAll('.course-payment-button[data-course-id]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            ouvrirChoixPaiement(button.dataset.courseId);
+        });
+    });
+    paymentMethodDialog.querySelector('[data-close-payment-dialog]').addEventListener('click', function() {
+        paymentMethodDialog.close();
+    });
+    paymentMethodDialog.addEventListener('click', function(event) {
+        if (event.target === paymentMethodDialog) paymentMethodDialog.close();
+    });
+    paymentMethodDialog.querySelectorAll('[data-payment-provider]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            payerFormation(selectedPaymentCourseId, button.dataset.paymentProvider, button);
+        });
+    });
+    afficherTarifsCours().catch(function(error) {
+        console.error('Course prices could not be loaded:', error);
+    });
 
     function isVideoUnlocked(videoId) {
         return courseProgress.unlockedVideoIds.includes(videoId);
