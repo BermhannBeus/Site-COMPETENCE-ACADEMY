@@ -238,7 +238,7 @@
         <div id="accountsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="accountsTab" hidden>
             <section class="panel" aria-labelledby="accountsTitle">
                 <div class="section-heading"><i class="fa-solid fa-users" aria-hidden="true"></i><h2 id="accountsTitle">Comptes des étudiants</h2></div>
-                <p class="muted">Déconnecter un compte ferme seulement sa session active. Le compte n’est pas supprimé ni bloqué : l’étudiant peut se reconnecter immédiatement.</p>
+                <p class="muted">Déconnecter un compte ferme seulement sa session active. Supprimer un compte efface son profil, ses accès et sa progression, mais conserve les paiements et les résultats.</p>
                 <p class="student-summary">Comptes trouvés : <strong id="accountCount">—</strong></p>
                 <form id="accountSearchForm" class="quiz-bank-controls">
                     <div>
@@ -643,6 +643,39 @@
             return true;
         }
 
+        async function openAdminSessionFromEmailLink() {
+            const fragment = new URLSearchParams(window.location.hash.slice(1));
+            const linkToken = fragment.get('adminToken');
+            if (!linkToken) return false;
+
+            fragment.delete('adminToken');
+            const cleanHash = fragment.toString();
+            history.replaceState(null, '', window.location.pathname + window.location.search + (cleanHash ? `#${cleanHash}` : ''));
+            adminEmailForm.hidden = true;
+            adminLoginNotice.hidden = true;
+            showNotice(adminLoginNotice, 'Validation du code et ouverture de l’administration…', false);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/verify-link`, {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: linkToken })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success || !data.token) {
+                    throw new Error(data.message || 'Le lien de connexion est expiré ou invalide.');
+                }
+                const opened = await openAdminSession(data.token);
+                if (opened) activateAdminTab(document.getElementById('accessTab'), false);
+                return opened;
+            } catch (error) {
+                adminEmailForm.hidden = false;
+                showNotice(adminLoginNotice, error.message || 'Impossible de valider le lien de connexion.', true);
+                return false;
+            }
+        }
+
         async function verifyAdminOtp(event) {
             event.preventDefault();
             const email = adminEmailInput.value.trim().toLowerCase();
@@ -768,6 +801,13 @@
                     disconnectButton.textContent = 'Déconnecter';
                     row.appendChild(disconnectButton);
                 }
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'danger';
+                deleteButton.dataset.deleteAccount = account.id;
+                deleteButton.dataset.accountEmail = account.email;
+                deleteButton.textContent = 'Supprimer le compte';
+                row.appendChild(deleteButton);
                 accountList.appendChild(row);
             });
         }
@@ -816,15 +856,29 @@
             }
         });
         accountList.addEventListener('click', async function(event) {
-            const button = event.target.closest('[data-disconnect-account]');
+            const disconnectButton = event.target.closest('[data-disconnect-account]');
+            const deleteButton = event.target.closest('[data-delete-account]');
+            const button = disconnectButton || deleteButton;
             if (!button) return;
-            if (!window.confirm('Fermer la session de ce compte ? L’étudiant pourra se reconnecter immédiatement.')) return;
+            if (deleteButton) {
+                const confirmed = window.confirm(
+                    `Supprimer définitivement le compte ${deleteButton.dataset.accountEmail} ? ` +
+                    'Son profil, ses accès et sa progression seront supprimés. Les paiements et les résultats seront conservés. ' +
+                    'Cette adresse e-mail pourra ensuite être utilisée pour créer un nouveau compte.'
+                );
+                if (!confirmed) return;
+            } else if (!window.confirm('Fermer la session de ce compte ? L’étudiant pourra se reconnecter immédiatement.')) {
+                return;
+            }
 
             button.disabled = true;
             try {
+                const accountId = deleteButton
+                    ? deleteButton.dataset.deleteAccount
+                    : disconnectButton.dataset.disconnectAccount;
                 const data = await adminRequest(
-                    '/admin/accounts/' + encodeURIComponent(button.dataset.disconnectAccount) + '/disconnect',
-                    { method: 'POST' }
+                    '/admin/accounts/' + encodeURIComponent(accountId) + (deleteButton ? '' : '/disconnect'),
+                    { method: deleteButton ? 'DELETE' : 'POST' }
                 );
                 await loadAccounts();
                 showNotice(accountsNotice, data.message, false);
@@ -1414,7 +1468,9 @@
                 showNotice(issueNotice, 'La copie automatique est indisponible dans ce navigateur. Sélectionnez le code et copiez-le manuellement.', true);
             }
         });
-        restoreAdminSession();
+        openAdminSessionFromEmailLink().then(function(opened) {
+            if (!opened) restoreAdminSession();
+        });
     </script>
 </body>
 </html>
