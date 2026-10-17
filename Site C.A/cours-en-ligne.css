@@ -703,6 +703,30 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .password-box button:hover { background: #e06200; }
 .password-box .course-payment-button { background: #000641; }
 .password-box .course-payment-button:hover { background: #000641; }
+.payment-method-dialog {
+    width: min(92vw, 480px);
+    max-width: none;
+    margin: auto;
+    padding: 28px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    color: var(--academy-blue);
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(0, 6, 65, 0.25);
+}
+.payment-method-dialog::backdrop { background: rgba(0, 6, 65, 0.62); }
+.payment-method-dialog h2 { margin: 0 34px 8px 0; color: var(--academy-blue); font-size: 1.35rem; }
+.payment-method-dialog > p { margin: 0 0 18px; color: #64748b; line-height: 1.5; }
+.payment-method-close { float: right; width: 36px; min-height: 36px; padding: 0; border: 0; border-radius: 50%; color: var(--academy-blue); background: #f1f5f9; cursor: pointer; }
+.payment-method-options { display: grid; gap: 10px; }
+.payment-method-option { width: 100%; min-height: 54px; padding: 12px 15px; border: 1px solid #dbe3ee; border-radius: 10px; color: var(--academy-blue); background: #fff; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.payment-method-option:hover:not(:disabled) { border-color: var(--academy-orange); background: #fff7ed; }
+.payment-method-option.primary { border-color: var(--academy-blue); color: #fff; background: var(--academy-blue); }
+.payment-method-option.primary:hover:not(:disabled) { background: #101b73; }
+.payment-method-option:disabled { cursor: not-allowed; opacity: .55; }
+.payment-method-option small { display: block; margin-top: 4px; font-weight: 400; opacity: .8; }
+.payment-method-notice { margin: 14px 0 0 !important; padding: 11px 12px; border-radius: 8px; color: #7c2d12 !important; background: #fff7ed; font-size: .9rem; }
+.payment-method-notice[hidden] { display: none; }
 .error-msg { color: #ffc107; font-size: 0.8rem; margin-top: 10px; display: none; font-weight: 600; }
 
 /* Info */
