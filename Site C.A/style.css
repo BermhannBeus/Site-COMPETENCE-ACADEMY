@@ -1244,7 +1244,8 @@ html[data-theme="dark"] .courses-more p {
     padding-left: 15px; 
 }
 
-.about-content > h3 {
+.about-content > h3,
+.history-details > h3 {
     border-left: 0;
     padding-left: 0;
 }
@@ -3484,6 +3485,7 @@ min-width: 0;
 }
 
 .historique .about-content > p.section-intro,
+.historique .history-details > p.section-intro,
 .vision-section > p.section-intro,
 body > section.vision-section > p.section-intro {
   width: min(100%, 760px);
@@ -3492,18 +3494,86 @@ body > section.vision-section > p.section-intro {
   text-justify: inter-word;
 }
 
-.historique .about-content > h3 {
+.historique .about-content > p.section-intro {
+  margin-bottom: 0.5rem;
+}
+
+.historique .history-details > h3 {
   width: min(100%, 760px);
   margin: 2rem auto 1rem;
   text-align: left;
 }
 
-.historique .about-content > .history-points {
+.historique .history-details > h3:first-child {
+  margin-top: 0;
+}
+.historique .history-details > .history-points {
   width: min(100%, 760px);
   margin: 0 auto 1.5rem;
   text-align: justify;
   text-justify: inter-word;
 }
+
+.historique .history-more {
+  margin-top: 0.25rem;
+  text-align: center;
+}
+
+.historique .history-more:not([open]) > .history-details {
+  display: none;
+}
+
+.historique .history-more[open] > .history-details {
+  display: block;
+}
+
+.historique .history-more summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #000641;
+  border-radius: 8px;
+  background: #000641;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.historique .history-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.historique .history-more summary:hover,
+.historique .history-more summary:focus-visible {
+  border-color: #F76B00;
+  background: #F76B00;
+  color: #ffffff;
+}
+
+.historique .history-more summary:focus-visible {
+  outline: 3px solid #F76B00;
+  outline-offset: 3px;
+}
+
+.historique .history-more[open] summary {
+  margin-bottom: 1rem;
+}
+
+.historique .history-more-close,
+.historique .history-more[open] .history-more-open {
+  display: none;
+}
+
+.historique .history-more[open] .history-more-close {
+  display: inline;
+}
+
 
 .vision-section .vision-commitments-title {
   width: min(100%, 760px);
@@ -3523,4 +3593,12 @@ body > section.vision-section > p.section-intro {
 
 .vision-section .vision-call-to-action {
   width: min(100%, 760px);
+}
+
+body > section.historique {
+  padding-bottom: clamp(1rem, 2vw, 1.5rem);
+}
+
+body > section.vision-section {
+  padding-top: clamp(2rem, 4vw, 3rem);
 }
