@@ -480,7 +480,10 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         if (!payment) {
             return res.status(404).json({ success: false, message: 'Paiement Stripe introuvable.' });
         }
-        if (payment.accessGrantedAt) return res.json({ received: true, processed: true });
+        if (payment.accessGrantedAt) {
+            await sendCoursePaymentReceipt(payment);
+            return res.json({ received: true, processed: true });
+        }
 
         const expectedCurrency = payment.currencyCode.toLowerCase();
         const amountInMinorUnits = payment.amount * 100;
@@ -523,6 +526,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 
         payment.accessGrantedAt = new Date();
         await payment.save();
+        await sendCoursePaymentReceipt(payment);
         return res.json({ received: true, processed: true });
     } catch (error) {
         console.error('Process Stripe checkout webhook error:', error);
@@ -689,7 +693,9 @@ const coursePaymentSchema = new mongoose.Schema({
         index: true
     },
     accessGrantedAt: { type: Date, default: null },
-    paidAt: { type: Date, default: null }
+    paidAt: { type: Date, default: null },
+    receiptEmailSentAt: { type: Date, default: null },
+    receiptEmailClaimedAt: { type: Date, default: null }
 }, { timestamps: true });
 const accessConfirmationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
@@ -810,6 +816,84 @@ const sendCourseAccessCodeEmail = async (user, courseId, code, paymentConfirmed 
         subject: `${paymentConfirmed ? 'Paiement confirmé — ' : ''}code d’accès ${COURSE_TITLES[courseId]} | Competence Academy`,
         ...emailContent
     });
+};
+
+const sendCoursePaymentReceipt = async (payment) => {
+    const claimTime = new Date();
+    const claim = await CoursePayment.findOneAndUpdate({
+        _id: payment._id,
+        receiptEmailSentAt: null,
+        $or: [
+            { receiptEmailClaimedAt: null },
+            { receiptEmailClaimedAt: { $exists: false } },
+            { receiptEmailClaimedAt: { $lt: new Date(claimTime.getTime() - 5 * 60 * 1000) } }
+        ]
+    }, {
+        $set: { receiptEmailClaimedAt: claimTime }
+    }, { new: true }).select('userId courseId provider amount currencyCode mchTransactionRef paidAt');
+    if (!claim) return;
+
+    try {
+        const user = await User.findById(claim.userId).select('name email');
+        if (!user) throw new Error('Paid course payment references a missing student account.');
+
+        const paidAt = claim.paidAt || new Date();
+        const formattedDate = new Intl.DateTimeFormat('fr-HT', {
+            dateStyle: 'long',
+            timeStyle: 'short',
+            timeZone: 'America/Port-au-Prince'
+        }).format(paidAt);
+        const formattedAmount = `${new Intl.NumberFormat('fr-HT').format(claim.amount)} ${claim.currencyCode}`;
+        const studentName = escapeHtml(user.name);
+        const courseName = escapeHtml(COURSE_TITLES[claim.courseId]);
+        const safeDate = escapeHtml(formattedDate);
+        const safeAmount = escapeHtml(formattedAmount);
+        const safeProvider = escapeHtml(claim.provider.toUpperCase());
+        const safeReference = escapeHtml(claim.mchTransactionRef);
+
+        await sendEmail({
+            to: user.email,
+            subject: `Reçu de paiement — ${COURSE_TITLES[claim.courseId]} | Competence Academy`,
+            text: [
+                'REÇU DE PAIEMENT — COMPETENCE ACADEMY',
+                `Étudiant : ${user.name}`,
+                `Date : ${formattedDate}`,
+                `Montant : ${formattedAmount}`,
+                `Formation : ${COURSE_TITLES[claim.courseId]}`,
+                `Mode de paiement : ${claim.provider.toUpperCase()}`,
+                `Référence : ${claim.mchTransactionRef}`,
+                'Statut : Paiement confirmé'
+            ].join('\n'),
+            html: `
+                <div style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#000641">
+                    <div style="max-width:560px;margin:0 auto;padding:32px;border:1px solid #dbe3ee;border-radius:16px;background:#fff">
+                        <p style="margin:0 0 8px;color:#000641;font-size:13px;font-weight:bold;letter-spacing:2px">COMPETENCE ACADEMY</p>
+                        <h1 style="margin:0 0 8px;color:#000641;font-size:24px">Reçu de paiement</h1>
+                        <p style="margin:0 0 24px;color:#15803d;font-weight:bold">Paiement confirmé</p>
+                        <p style="margin:0 0 18px">Bonjour ${studentName}, voici le récapitulatif de votre paiement.</p>
+                        <table style="width:100%;border-collapse:collapse">
+                            <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Étudiant</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold">${studentName}</td></tr>
+                            <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Date</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right">${safeDate}</td></tr>
+                            <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Formation</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold">${courseName}</td></tr>
+                            <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Montant</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold">${safeAmount}</td></tr>
+                            <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Paiement</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right">${safeProvider}</td></tr>
+                            <tr><td style="padding:12px;color:#64748b">Référence</td><td style="padding:12px;text-align:right;overflow-wrap:anywhere">${safeReference}</td></tr>
+                        </table>
+                        <p style="margin:24px 0 0;color:#64748b;font-size:13px">Conservez ce reçu comme preuve de paiement. Merci d’avoir choisi Competence Academy.</p>
+                    </div>
+                </div>`
+        });
+        await CoursePayment.updateOne(
+            { _id: claim._id, receiptEmailClaimedAt: claimTime },
+            { $set: { receiptEmailSentAt: new Date() }, $unset: { receiptEmailClaimedAt: 1 } }
+        );
+    } catch (error) {
+        await CoursePayment.updateOne(
+            { _id: claim._id, receiptEmailClaimedAt: claimTime },
+            { $unset: { receiptEmailClaimedAt: 1 } }
+        );
+        throw error;
+    }
 };
 
 const issueCourseAccessCode = async (user, courseId, { paymentConfirmed = false } = {}) => {
@@ -2332,10 +2416,11 @@ app.post('/api/create-stripe-session', authenticate, async (req, res) => {
             currencyCode: COURSE_PAYMENT_CURRENCY,
             mchTransactionRef
         });
-        const successUrl = `${getFrontendUrl('/payment-success.html')}?reference={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = new URL('/payment-cancel.html', getFrontendUrl('/')).toString();
-        const cancelUrlWithReference = new URL(cancelUrl);
-        cancelUrlWithReference.searchParams.set('reference', mchTransactionRef);
+        const coursePageUrl = getFrontendUrl('/Cours%20en%20Ligne.html');
+        const successUrl = `${coursePageUrl}?payment=success&reference={CHECKOUT_SESSION_ID}`;
+        const cancelUrl = new URL(coursePageUrl);
+        cancelUrl.searchParams.set('payment', 'cancel');
+        cancelUrl.searchParams.set('reference', mchTransactionRef);
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             payment_method_types: ['card'],
@@ -2358,7 +2443,7 @@ app.post('/api/create-stripe-session', authenticate, async (req, res) => {
                 studentId: String(user._id)
             },
             success_url: successUrl,
-            cancel_url: cancelUrlWithReference.toString()
+            cancel_url: cancelUrl.toString()
         });
         await CoursePayment.updateOne({ _id: payment._id }, {
             $set: { stripeCheckoutSessionId: session.id }
@@ -2427,6 +2512,55 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Read payment status error:', error);
         res.status(500).json({ success: false, message: 'Impossible de consulter le statut de votre paiement.' });
+    }
+});
+
+app.post('/api/payments/cancel', authenticate, async (req, res) => {
+    try {
+        const reference = String(req.body?.reference || '');
+        if (!reference || reference.length > 128 || /[\u0000-\u001f\u007f]/.test(reference)) {
+            return res.status(400).json({ success: false, message: 'Référence de paiement invalide.' });
+        }
+        const payment = await CoursePayment.findOneAndUpdate({
+            userId: req.user.id,
+            mchTransactionRef: reference,
+            status: 'PENDING'
+        }, {
+            $set: { status: 'CANCELLED' }
+        }, { new: true }).select('_id');
+        return res.json({ success: true, cancelled: Boolean(payment) });
+    } catch (error) {
+        console.error('Cancel course payment error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de mettre à jour le statut du paiement.' });
+    }
+});
+
+app.post('/api/course-progress/unlock-paid', authenticate, async (req, res) => {
+    try {
+        const courseId = String(req.body?.courseId || '');
+        const accessCode = String(req.body?.accessCode || '').trim();
+        const videoIds = Array.isArray(req.body?.videoIds)
+            ? [...new Set(req.body.videoIds.map((videoId) => String(videoId || '').trim()))]
+            : [];
+        if (!COURSE_ACCESS_CATEGORIES.includes(courseId)
+            || !accessCode
+            || accessCode.length > 128
+            || videoIds.length < 1
+            || videoIds.length > 100
+            || videoIds.some((videoId) => videoId.length > 128 || getCourseForVideo(videoId) !== courseId)) {
+            return res.status(400).json({ success: false, message: 'Formation, code ou leçons invalides.' });
+        }
+        if (!await isValidCourseAccessCode(req.user.id, courseId, accessCode)) {
+            return res.status(400).json({ success: false, message: 'Code d’accès incorrect ou expiré.' });
+        }
+
+        const progress = await getOrCreateCourseProgress(req.user.id);
+        progress.unlockedVideoIds.addToSet(...videoIds);
+        await progress.save();
+        return res.json({ success: true, progress: serializeCourseProgress(progress) });
+    } catch (error) {
+        console.error('Unlock paid course videos error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de débloquer les leçons de cette formation.' });
     }
 });
 
