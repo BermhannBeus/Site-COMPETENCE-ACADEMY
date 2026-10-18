@@ -2487,7 +2487,7 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
                 { requestId: reference },
                 { stripeCheckoutSessionId: reference }
             ]
-        }).select('courseId amount currencyCode status accessGrantedAt paidAt');
+        }).select('courseId amount currencyCode status accessGrantedAt paidAt provider mchTransactionRef');
         if (!payment) {
             return res.status(404).json({ success: false, message: 'Aucun paiement ne correspond à cette référence.' });
         }
@@ -2507,6 +2507,14 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
                 courseId: payment.courseId
             }).select('+encryptedCode');
             if (access?.encryptedCode) response.accessCode = decryptCourseAccessCode(access.encryptedCode);
+        }
+        if (payment.status === 'SUCCESSFUL' && payment.accessGrantedAt) {
+            const student = await User.findById(payment.userId).select('name');
+            response.studentName = student?.name || '';
+            response.providerName = payment.provider === 'stripe'
+                ? 'Carte bancaire (Visa / Mastercard)'
+                : payment.provider === 'moncash' ? 'MonCash' : 'Natcash';
+            response.transactionReference = payment.mchTransactionRef;
         }
         res.json(response);
     } catch (error) {
