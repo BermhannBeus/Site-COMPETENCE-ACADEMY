@@ -805,21 +805,55 @@
         <h2 id="paymentMethodTitle">Choisir un moyen de paiement</h2>
         <p id="paymentMethodCourse"></p>
         <div class="payment-method-options">
-            <button class="payment-method-option primary" type="button" data-payment-provider="stripe">
-                <i class="fa-regular fa-credit-card" aria-hidden="true"></i> Carte bancaire — Visa / Mastercard
-                <small>Paiement sécurisé via Stripe</small>
+            <button class="payment-method-option payment-method-card" type="button" data-payment-provider="stripe">
+                <i class="fa-regular fa-credit-card" aria-hidden="true"></i>
+                <span>Carte bancaire — Visa / Mastercard</span>
             </button>
-            <button class="payment-method-option" type="button" data-payment-provider="moncash">
-                <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i> MonCash Direct
-                <small>API marchand à configurer</small>
+            <button class="payment-method-option payment-method-moncash" type="button" data-payment-provider="moncash">
+                <img src="Logo/Logo%20Moncash.png" alt="" aria-hidden="true">
+                <span>MonCash</span>
             </button>
-            <button class="payment-method-option" type="button" data-payment-provider="natcash">
-                <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i> Natcash Direct
-                <small>API marchand à configurer</small>
+            <button class="payment-method-option payment-method-natcash" type="button" data-payment-provider="natcash">
+                <img src="Logo/LogoNatcash.png" alt="" aria-hidden="true">
+                <span>Natcash</span>
             </button>
         </div>
         <p id="paymentMethodNotice" class="payment-method-notice" role="status" aria-live="polite" hidden></p>
     </dialog>
+
+    <dialog id="paymentConfirmationDialog" class="payment-method-dialog payment-confirmation-dialog" aria-labelledby="paymentConfirmationTitle">
+        <button class="payment-method-close" type="button" aria-label="Fermer" data-close-payment-confirmation><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <p class="payment-confirmation-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></p>
+        <h2 id="paymentConfirmationTitle">Paiement confirmé</h2>
+        <p id="paymentConfirmationMessage" role="status" aria-live="polite"></p>
+        <div class="payment-confirmation-code">
+            <span>Votre code d’accès</span>
+            <code id="paymentAccessCode"></code>
+            <button id="copyPaymentAccessCode" class="secondary" type="button"><i class="fa-regular fa-copy" aria-hidden="true"></i> Copier le code</button>
+        </div>
+        <button id="viewPaymentReceipt" class="payment-receipt-open" type="button"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Voir le reçu</button>
+        <p id="paymentConfirmationNotice" class="payment-method-notice" role="status" aria-live="polite" hidden></p>
+        <button class="payment-confirmation-done" type="button" data-close-payment-confirmation>Continuer le cours</button>
+    </dialog>
+    <dialog id="paymentReceiptDialog" class="payment-method-dialog payment-receipt-dialog" aria-labelledby="paymentReceiptTitle">
+        <button class="payment-method-close" type="button" aria-label="Fermer le reçu" data-close-payment-receipt><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <div id="paymentReceiptPrintable" class="payment-receipt-paper">
+            <p class="payment-receipt-brand">COMPETENCE ACADEMY</p>
+            <h2 id="paymentReceiptTitle">Reçu de paiement</h2>
+            <p class="payment-receipt-status"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Paiement confirmé</p>
+            <dl class="payment-receipt-details">
+                <div><dt>Étudiant</dt><dd id="paymentReceiptStudent"></dd></div>
+                <div><dt>Date</dt><dd id="paymentReceiptDate"></dd></div>
+                <div><dt>Formation</dt><dd id="paymentReceiptCourse"></dd></div>
+                <div><dt>Montant</dt><dd id="paymentReceiptAmount"></dd></div>
+                <div><dt>Moyen de paiement</dt><dd id="paymentReceiptProvider"></dd></div>
+                <div><dt>Référence</dt><dd id="paymentReceiptReference"></dd></div>
+            </dl>
+            <p class="payment-receipt-thanks">Merci d’avoir choisi Competence Academy.</p>
+        </div>
+        <button id="printPaymentReceipt" class="payment-receipt-print" type="button"><i class="fa-solid fa-print" aria-hidden="true"></i> Imprimer le reçu</button>
+    </dialog>
+    <p id="paymentReturnNotice" class="payment-return-notice" role="status" aria-live="polite" hidden></p>
 
     <footer class="course-footer">
         <button type="button" class="logout-btn" onclick="deconnecterEtudiant()">
@@ -953,6 +987,12 @@
     const paymentMethodDialog = document.getElementById('paymentMethodDialog');
     const paymentMethodCourse = document.getElementById('paymentMethodCourse');
     const paymentMethodNotice = document.getElementById('paymentMethodNotice');
+    const paymentConfirmationDialog = document.getElementById('paymentConfirmationDialog');
+    const paymentConfirmationMessage = document.getElementById('paymentConfirmationMessage');
+    const paymentAccessCode = document.getElementById('paymentAccessCode');
+    const paymentConfirmationNotice = document.getElementById('paymentConfirmationNotice');
+    const paymentReceiptDialog = document.getElementById('paymentReceiptDialog');
+    const paymentReturnNotice = document.getElementById('paymentReturnNotice');
     const coursePrices = new Map();
     let selectedPaymentCourseId = '';
 
@@ -981,17 +1021,49 @@
                 method: 'POST',
                 body: JSON.stringify({ courseId })
             });
-            if (!payment.paymentUrl || new URL(payment.paymentUrl).protocol !== 'https:') {
-                throw new Error('Le fournisseur n’a pas renvoyé une adresse de paiement sécurisée.');
+            if (payment.accessCode) {
+                paymentMethodDialog.close();
+                await afficherConfirmationPaiement({
+                    courseId,
+                    accessCode: payment.accessCode,
+                    courseName: payment.courseName || paymentMethodCourse.textContent
+                });
+                return;
             }
-            window.location.assign(payment.paymentUrl);
+            if (payment.paymentUrl) {
+                const paymentUrl = new URL(payment.paymentUrl);
+                if (paymentUrl.protocol !== 'https:') {
+                    throw new Error('Le fournisseur n’a pas renvoyé une adresse de paiement sécurisée.');
+                }
+                paymentMethodDialog.close();
+                window.location.assign(paymentUrl.href);
+                return;
+            }
+            if (payment.reference) {
+                paymentMethodDialog.close();
+                await attendreConfirmationPaiement(payment.reference);
+                return;
+            }
+            throw new Error('Le fournisseur n’a pas renvoyé les informations de paiement attendues.');
         } catch (error) {
             console.error(`Could not start ${provider} course payment:`, error);
-            paymentMethodNotice.textContent = error.message || 'Impossible de démarrer le paiement.';
-            paymentMethodNotice.hidden = false;
+            paymentMethodDialog.close();
+            afficherEchecPaiement();
         } finally {
             button.disabled = false;
         }
+    }
+
+    let paymentFailureNoticeTimer = null;
+    function afficherEchecPaiement() {
+        window.clearTimeout(paymentFailureNoticeTimer);
+        paymentReturnNotice.textContent = 'Paiement non effectué. Aucun reçu n’a été envoyé.';
+        paymentReturnNotice.classList.add('is-payment-failed');
+        paymentReturnNotice.hidden = false;
+        paymentFailureNoticeTimer = window.setTimeout(function() {
+            paymentReturnNotice.hidden = true;
+            paymentReturnNotice.classList.remove('is-payment-failed');
+        }, 5000);
     }
 
     async function afficherTarifsCours() {
@@ -1030,9 +1102,143 @@
             payerFormation(selectedPaymentCourseId, button.dataset.paymentProvider, button);
         });
     });
+    paymentConfirmationDialog.querySelectorAll('[data-close-payment-confirmation]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            paymentConfirmationDialog.close();
+        });
+    });
+    document.getElementById('copyPaymentAccessCode').addEventListener('click', async function() {
+        try {
+            await navigator.clipboard.writeText(paymentAccessCode.textContent);
+            paymentConfirmationNotice.textContent = 'Le code d’accès a été copié.';
+            paymentConfirmationNotice.hidden = false;
+        } catch (error) {
+            console.error('Could not copy course access code:', error);
+            paymentConfirmationNotice.textContent = 'Copie automatique indisponible. Sélectionnez et copiez le code manuellement.';
+            paymentConfirmationNotice.hidden = false;
+        }
+    });
+    document.getElementById('viewPaymentReceipt').addEventListener('click', function() {
+        paymentReceiptDialog.showModal();
+    });
+    paymentReceiptDialog.querySelector('[data-close-payment-receipt]').addEventListener('click', function() {
+        paymentReceiptDialog.close();
+    });
+    document.getElementById('printPaymentReceipt').addEventListener('click', function() {
+        window.print();
+    });
     afficherTarifsCours().catch(function(error) {
         console.error('Course prices could not be loaded:', error);
     });
+
+    async function afficherConfirmationPaiement(payment) {
+        const wrapper = document.querySelector(`.course-card-wrapper[data-category="${payment.courseId}"]`);
+        if (!wrapper || !payment.accessCode) {
+            throw new Error('Le code d’accès ou la formation est introuvable.');
+        }
+
+        const videos = Array.from(wrapper.querySelectorAll('.course-video-item'));
+        if (!videos.length) throw new Error('Aucune leçon n’est disponible pour cette formation.');
+
+        const videoIds = videos.map((video) => video.dataset.videoId);
+        const progressResult = await courseApiRequest('/course-progress/unlock-paid', {
+            method: 'POST',
+            body: JSON.stringify({
+                courseId: payment.courseId,
+                videoIds,
+                accessCode: payment.accessCode
+            })
+        });
+        courseProgress.unlockedVideoIds = progressResult.progress.unlockedVideoIds;
+        courseProgress.completedVideoIds = progressResult.progress.completedVideoIds;
+        activeVideoId = videoIds[0];
+        syncCourseProgress();
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        paymentConfirmationMessage.textContent =
+            `Votre paiement pour ${payment.courseName || payment.courseId} est confirmé. ` +
+            'Les leçons, les documents et le quiz sont maintenant débloqués.';
+        paymentAccessCode.textContent = payment.accessCode;
+        document.getElementById('paymentReceiptStudent').textContent = payment.studentName || 'Étudiant';
+        document.getElementById('paymentReceiptDate').textContent = payment.paidAt
+            ? new Intl.DateTimeFormat('fr-HT', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(payment.paidAt))
+            : new Intl.DateTimeFormat('fr-HT', { dateStyle: 'long', timeStyle: 'short' }).format(new Date());
+        document.getElementById('paymentReceiptCourse').textContent = payment.courseName || payment.courseId;
+        document.getElementById('paymentReceiptAmount').textContent = payment.amount !== undefined
+            ? `${new Intl.NumberFormat('fr-HT').format(payment.amount)} ${payment.currencyCode || 'HTG'}`
+            : '—';
+        document.getElementById('paymentReceiptProvider').textContent = payment.providerName || 'Carte bancaire';
+        document.getElementById('paymentReceiptReference').textContent = payment.reference || '—';
+        paymentConfirmationNotice.hidden = true;
+        paymentMethodDialog.close();
+        paymentConfirmationDialog.showModal();
+    }
+
+    async function attendreConfirmationPaiement(reference) {
+        const maxAttempts = 30;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            const data = await courseApiRequest(
+                '/payments/status?reference=' + encodeURIComponent(reference),
+                { method: 'GET' }
+            );
+            if (data.accessCode && data.status === 'SUCCESSFUL') {
+                await afficherConfirmationPaiement({
+                    courseId: data.courseId,
+                    courseName: data.courseName,
+                    accessCode: data.accessCode,
+                    studentName: data.studentName,
+                    amount: data.amount,
+                    currencyCode: data.currencyCode,
+                    paidAt: data.paidAt,
+                    providerName: data.providerName,
+                    reference: data.transactionReference
+                });
+                return;
+            }
+            if (data.status === 'CANCELLED' || data.status === 'REJECTED') {
+                afficherEchecPaiement();
+                return;
+            }
+            await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        }
+
+        paymentReturnNotice.textContent =
+            'Le paiement est en cours de confirmation. Vos leçons se débloqueront automatiquement dès sa validation.';
+        paymentReturnNotice.hidden = false;
+    }
+
+    async function traiterRetourPaiement() {
+        const url = new URL(window.location.href);
+        const paymentResult = url.searchParams.get('payment');
+        const reference = url.searchParams.get('reference');
+        if (!paymentResult) return;
+
+        url.searchParams.delete('payment');
+        url.searchParams.delete('reference');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+        if (paymentMethodDialog.open) paymentMethodDialog.close();
+        if (paymentResult === 'cancel') {
+            if (reference) {
+                courseApiRequest('/payments/cancel', {
+                    method: 'POST',
+                    body: JSON.stringify({ reference })
+                }).catch(function(error) {
+                    console.error('Could not mark the cancelled payment:', error);
+                });
+            }
+            afficherEchecPaiement();
+            return;
+        }
+        if (paymentResult !== 'success' || !reference) return;
+
+        try {
+            await attendreConfirmationPaiement(reference);
+        } catch (error) {
+            console.error('Could not confirm the returned payment:', error);
+            paymentReturnNotice.textContent = error.message || 'Impossible de vérifier le paiement pour le moment.';
+            paymentReturnNotice.hidden = false;
+        }
+    }
 
     function isVideoUnlocked(videoId) {
         return courseProgress.unlockedVideoIds.includes(videoId);
@@ -1346,7 +1552,9 @@
         });
     });
 
-    initializeCourseVideosAndProgress().catch(function(error) {
+    initializeCourseVideosAndProgress().then(function() {
+        return traiterRetourPaiement();
+    }).catch(function(error) {
         console.error('Course video progress could not be loaded:', error);
         document.querySelectorAll('.course-video-item').forEach(function(item) {
             item.disabled = true;
