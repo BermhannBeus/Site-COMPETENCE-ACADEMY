@@ -24,6 +24,38 @@
     const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5000/api'
         : 'https://site-competence-academy-backend.onrender.com/api';
+    async function fetchBackendWithRetry(url, options) {
+        const isSafeToRetry = !options?.method || options.method.toUpperCase() === 'GET';
+        const maxAttempts = isSafeToRetry ? 3 : 1;
+        let lastError;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            const controller = new AbortController();
+            const timeoutId = isSafeToRetry
+                ? window.setTimeout(() => controller.abort(), 30000)
+                : null;
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    ...(isSafeToRetry ? { signal: controller.signal } : {})
+                });
+                if (response.status < 500 || attempt === maxAttempts - 1) return response;
+                lastError = new Error(`Le serveur est temporairement indisponible (HTTP ${response.status}).`);
+            } catch (error) {
+                lastError = error.name === 'AbortError'
+                    ? new Error('Le serveur met trop de temps à répondre.')
+                    : error;
+                if (attempt === maxAttempts - 1) throw lastError;
+            } finally {
+                if (timeoutId !== null) window.clearTimeout(timeoutId);
+            }
+            if (attempt < maxAttempts - 1) {
+                await new Promise((resolve) => window.setTimeout(resolve, 800 * (attempt + 1)));
+            }
+        }
+
+        throw lastError || new Error('Le serveur est temporairement indisponible.');
+    }
     const SINGLE_SESSION_MESSAGE = 'Vous êtes déjà connecté sur un autre appareil. Nouvelle connexion refusée.';
     let singleSessionRedirectStarted = false;
 
@@ -99,7 +131,7 @@
         const headers = {};
         if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/heartbeat`, {
+            const response = await fetchBackendWithRetry(`${API_BASE_URL}/auth/heartbeat`, {
                 method: 'POST',
                 credentials: 'include',
                 headers
@@ -265,7 +297,7 @@
 
     document.documentElement.classList.add('auth-pending');
 
-    fetch(`${API_BASE_URL}/me`, { credentials: 'include' })
+    fetchBackendWithRetry(`${API_BASE_URL}/me`, { credentials: 'include' })
         .then(async response => {
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -290,11 +322,9 @@
             }
             document.documentElement.classList.remove('auth-pending');
         })
-        .catch(() => {
-            if (!singleSessionRedirectStarted) {
-                clearLocalStudentSession();
-                window.location.replace(new URL('Login.html', window.location.href).href);
-            }
+        .catch(error => {
+            document.documentElement.classList.remove('auth-pending');
+            console.warn('Le backend est temporairement indisponible; la session locale est conservée.', error);
         });
 
     window.addEventListener('storage', (event) => {
@@ -802,20 +832,12 @@
 
     <dialog id="paymentMethodDialog" class="payment-method-dialog" aria-labelledby="paymentMethodTitle">
         <button class="payment-method-close" type="button" aria-label="Fermer" data-close-payment-dialog><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-        <h2 id="paymentMethodTitle">Choisir un moyen de paiement</h2>
+        <h2 id="paymentMethodTitle">Paiement sécurisé Tranzak</h2>
         <p id="paymentMethodCourse"></p>
         <div class="payment-method-options">
-            <button class="payment-method-option payment-method-card" type="button" data-payment-provider="stripe">
-                <i class="fa-regular fa-credit-card" aria-hidden="true"></i>
-                <span>Carte bancaire — Visa / Mastercard</span>
-            </button>
-            <button class="payment-method-option payment-method-moncash" type="button" data-payment-provider="moncash">
-                <img src="Logo/Moncash.png" alt="" aria-hidden="true">
-                <span>MonCash</span>
-            </button>
-            <button class="payment-method-option payment-method-natcash" type="button" data-payment-provider="natcash">
-                <img src="Logo/Natcash.png" alt="" aria-hidden="true">
-                <span>Natcash</span>
+            <button class="payment-method-option" type="button" data-tranzak-checkout>
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <span>Payer en ligne (MonCash, Natcash, Carte, Zelle)</span>
             </button>
         </div>
         <p id="paymentMethodNotice" class="payment-method-notice" role="status" aria-live="polite" hidden></p>
@@ -971,7 +993,7 @@
         const headers = { 'Content-Type': 'application/json' };
         if (token && token !== 'undefined') headers.Authorization = `Bearer ${token}`;
 
-        const response = await fetch(`${COURSE_API_BASE_URL}${path}`, {
+        const response = await fetchBackendWithRetry(`${COURSE_API_BASE_URL}${path}`, {
             ...options,
             headers: { ...headers, ...(options && options.headers) },
             credentials: 'include'
@@ -1008,16 +1030,11 @@
         paymentMethodDialog.showModal();
     }
 
-    async function payerFormation(courseId, provider, button) {
+    async function payerFormation(courseId, button) {
         button.disabled = true;
         paymentMethodNotice.hidden = true;
         try {
-            const endpoints = {
-                stripe: '/create-stripe-session',
-                moncash: '/moncash-pay',
-                natcash: '/natcash-pay'
-            };
-            const payment = await courseApiRequest(endpoints[provider], {
+            const payment = await courseApiRequest('/pay-tranzak', {
                 method: 'POST',
                 body: JSON.stringify({ courseId })
             });
@@ -1033,7 +1050,7 @@
             if (payment.paymentUrl) {
                 const paymentUrl = new URL(payment.paymentUrl);
                 if (paymentUrl.protocol !== 'https:') {
-                    throw new Error('Le fournisseur n’a pas renvoyé une adresse de paiement sécurisée.');
+                    throw new Error('Tranzak n’a pas renvoyé une adresse de paiement sécurisée.');
                 }
                 paymentMethodDialog.close();
                 window.location.assign(paymentUrl.href);
@@ -1044,11 +1061,11 @@
                 await attendreConfirmationPaiement(payment.reference);
                 return;
             }
-            throw new Error('Le fournisseur n’a pas renvoyé les informations de paiement attendues.');
+            throw new Error('Tranzak n’a pas renvoyé les informations de paiement attendues.');
         } catch (error) {
-            console.error(`Could not start ${provider} course payment:`, error);
-            paymentMethodDialog.close();
-            afficherEchecPaiement();
+            console.error('Could not start Tranzak course payment:', error);
+            paymentMethodNotice.textContent = error.message || 'Impossible d’ouvrir le paiement Tranzak.';
+            paymentMethodNotice.hidden = false;
         } finally {
             button.disabled = false;
         }
@@ -1067,7 +1084,7 @@
     }
 
     async function afficherTarifsCours() {
-        const response = await fetch(`${COURSE_API_BASE_URL}/course-prices`, {
+        const response = await fetchBackendWithRetry(`${COURSE_API_BASE_URL}/course-prices`, {
             cache: 'no-store'
         });
         const data = await response.json();
@@ -1095,9 +1112,9 @@
     paymentMethodDialog.addEventListener('click', function(event) {
         if (event.target === paymentMethodDialog) paymentMethodDialog.close();
     });
-    paymentMethodDialog.querySelectorAll('[data-payment-provider]').forEach(function(button) {
+    paymentMethodDialog.querySelectorAll('[data-tranzak-checkout]').forEach(function(button) {
         button.addEventListener('click', function() {
-            payerFormation(selectedPaymentCourseId, button.dataset.paymentProvider, button);
+            payerFormation(selectedPaymentCourseId, button);
         });
     });
     paymentConfirmationDialog.querySelectorAll('[data-close-payment-confirmation]').forEach(function(button) {
