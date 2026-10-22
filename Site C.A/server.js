@@ -24,8 +24,8 @@ const getTranzakBaseUrl = () => {
     const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
     return TRANZAK_BASE_URLS[mode] || TRANZAK_BASE_URLS.sandbox;
 };
-const getTranzakHeaders = () => ({
-    Authorization: `Bearer ${process.env.TRANZAK_API_KEY || ''}`,
+const getTranzakHeaders = (apiKey) => ({
+    Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json'
 });
 
@@ -2505,19 +2505,24 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
         cancelUrl.searchParams.set('payment', 'cancel');
         cancelUrl.searchParams.set('reference', mchTransactionRef);
         const customId = `userId:${user._id}|courseId:${courseId}`;
+        const callbackUrl = process.env.TRANZAK_CALLBACK_URL
+            || (process.env.RENDER_EXTERNAL_URL
+                ? new URL('/api/tranzak-webhook', process.env.RENDER_EXTERNAL_URL).toString()
+                : '');
 
         let tranzakResponse;
         try {
             tranzakResponse = await fetch(`${getTranzakBaseUrl()}/xp/v1/request/create-checkout`, {
                 method: 'POST',
-                headers: getTranzakHeaders(),
+                headers: getTranzakHeaders(apiKey),
                 body: JSON.stringify({
                     amount: price.amount,
                     currency: COURSE_PAYMENT_CURRENCY,
                     description: `Paiement du cours ${COURSE_TITLES[courseId]}`,
                     customId,
                     returnUrl: returnUrl.toString(),
-                    cancelUrl: cancelUrl.toString()
+                    cancelUrl: cancelUrl.toString(),
+                    ...(callbackUrl ? { callbackUrl } : {})
                 }),
                 signal: AbortSignal.timeout(20000)
             });
@@ -2528,17 +2533,27 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             throw error;
         }
 
+        const responseBody = await tranzakResponse.text();
         let checkout;
         try {
-            checkout = await tranzakResponse.json();
+            checkout = JSON.parse(responseBody);
         } catch (cause) {
-            throw new Error(`Tranzak returned an invalid checkout response (${tranzakResponse.status}).`);
+            const error = new Error(`Tranzak returned an invalid checkout response (${tranzakResponse.status}).`);
+            error.tranzakResponse = {
+                status: tranzakResponse.status,
+                body: responseBody.slice(0, 4000)
+            };
+            throw error;
         }
         const requestId = String(checkout.data?.requestId || '').trim();
         const paymentUrl = String(checkout.data?.paymentUrl || '').trim();
         if (!tranzakResponse.ok || checkout.status !== 'SUCCESS' || !requestId || !paymentUrl) {
-            console.error('Tranzak rejected checkout creation:', tranzakResponse.status, checkout.status || 'unknown');
-            throw new Error('Tranzak did not return a valid checkout session.');
+            const error = new Error('Tranzak did not return a valid checkout session.');
+            error.tranzakResponse = {
+                status: tranzakResponse.status,
+                body: responseBody.slice(0, 4000)
+            };
+            throw error;
         }
 
         let securePaymentUrl;
@@ -2565,7 +2580,12 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             currencyCode: COURSE_PAYMENT_CURRENCY
         });
     } catch (error) {
-        console.error('Create Tranzak course payment error:', error);
+        console.error('Create Tranzak course payment error:', {
+            message: error.message,
+            code: error.code,
+            cause: error.cause?.message,
+            tranzakResponse: error.tranzakResponse
+        });
         if (payment) {
             try {
                 await CoursePayment.updateOne(
