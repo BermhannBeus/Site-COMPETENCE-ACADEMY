@@ -722,25 +722,28 @@
             const signupRegistrationStatus = document.getElementById('signupRegistrationStatus');
             const signupControls = Array.from(signupForm.querySelectorAll('input, select, button'));
             const updateSignupAvailability = async () => {
-                signupControls.forEach(control => { control.disabled = true; });
+                signupRegistrationStatus.hidden = true;
+                signupControls.forEach(control => { control.disabled = false; });
+                updateSignupSubmitState();
                 try {
                     const response = await fetch(`${API_BASE_URL}/signup/status`, { cache: 'no-store' });
                     const data = await response.json();
-                    if (!response.ok || !data.success || typeof data.registrationOpen !== 'boolean') {
-                        throw new Error(data.message || 'Impossible de vérifier les inscriptions.');
-                    }
-                    if (data.registrationOpen) {
+                    const statusOpen = data && typeof data.registrationOpen === 'boolean' ? data.registrationOpen : true;
+                    if (statusOpen) {
                         signupRegistrationStatus.hidden = true;
                         signupControls.forEach(control => { control.disabled = false; });
                         updateSignupSubmitState();
-                    } else {
-                        signupRegistrationStatus.textContent = 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.';
-                        signupRegistrationStatus.hidden = false;
+                        return;
                     }
-                } catch (error) {
-                    console.error('Impossible de vérifier si les inscriptions sont ouvertes:', error);
-                    signupRegistrationStatus.textContent = 'Impossible de vérifier l’ouverture des inscriptions. Réessayez plus tard.';
+                    signupRegistrationStatus.textContent = 'La création de nouveaux comptes est temporairement fermée. Réessayez plus tard.';
                     signupRegistrationStatus.hidden = false;
+                    signupControls.forEach(control => { control.disabled = true; });
+                    signupSubmitButton.disabled = true;
+                } catch (error) {
+                    console.warn('Impossible de vérifier si les inscriptions sont ouvertes, on laisse l’accès ouvert par défaut:', error);
+                    signupRegistrationStatus.hidden = true;
+                    signupControls.forEach(control => { control.disabled = false; });
+                    updateSignupSubmitState();
                 }
             };
             updateSignupAvailability();
@@ -765,7 +768,7 @@
             if (pendingChallengeId) {
                 showAccessConfirmation(
                     pendingChallengeId,
-                    'Un code de confirmation a été envoyé à votre adresse e-mail. Il expire après 20 minutes; saisissez-le ci-dessous.'
+                    'Un code de confirmation a été envoyé à votre adresse e-mail. Il expire après 5 minutes; saisissez-le ci-dessous.'
                 );
             } else {
                 switchView('login');
