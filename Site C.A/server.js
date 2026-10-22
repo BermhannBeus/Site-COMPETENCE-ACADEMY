@@ -16,7 +16,18 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
-let stripeClient;
+const TRANZAK_BASE_URLS = {
+    sandbox: 'https://sandbox.tranzak.net',
+    live: 'https://api.tranzak.net'
+};
+const getTranzakBaseUrl = () => {
+    const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
+    return TRANZAK_BASE_URLS[mode] || TRANZAK_BASE_URLS.sandbox;
+};
+const getTranzakHeaders = () => ({
+    Authorization: `Bearer ${process.env.TRANZAK_API_KEY || ''}`,
+    'Content-Type': 'application/json'
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -425,115 +436,86 @@ const createCodeEmail = ({ greeting, message, code, buttonLabel, buttonUrl, note
 
 // Middleware
 app.use(helmet());
-app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    const signature = req.get('stripe-signature');
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-        return res.status(503).json({ success: false, message: 'La configuration du webhook Stripe est incomplète.' });
+app.post('/api/tranzak-webhook', express.raw({ type: 'application/json', limit: '1mb' }), async (req, res) => {
+    const signature = req.get('x-tranzak-signature') || '';
+    const webhookSecret = process.env.TRANZAK_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+        return res.status(503).json({ status: 'ERROR', message: 'La configuration du webhook Tranzak est incomplète.' });
     }
-    if (!signature) {
-        return res.status(400).json({ success: false, message: 'Signature du webhook Stripe manquante.' });
+    if (!Buffer.isBuffer(req.body) || !/^[a-f\d]{64}$/i.test(signature)) {
+        return res.status(401).json({ status: 'ERROR', message: 'Signature Tranzak manquante ou invalide.' });
+    }
+
+    const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(req.body)
+        .digest();
+    const receivedSignature = Buffer.from(signature, 'hex');
+    if (receivedSignature.length !== expectedSignature.length
+        || !crypto.timingSafeEqual(receivedSignature, expectedSignature)) {
+        return res.status(401).json({ status: 'ERROR', message: 'Signature Tranzak invalide.' });
     }
 
     let event;
     try {
-        event = getStripeClient().webhooks.constructEvent(
-            req.body,
-            signature,
-            process.env.STRIPE_WEBHOOK_SECRET
-        );
+        event = JSON.parse(req.body.toString('utf8'));
     } catch (error) {
-        if (error.code === 'STRIPE_NOT_CONFIGURED') {
-            console.error('Stripe webhook unavailable:', error.message);
-            return res.status(503).json({ success: false, message: 'Le traitement Stripe est temporairement indisponible.' });
-        }
-        console.error('Stripe webhook signature verification failed:', error.message);
-        return res.status(400).json({ success: false, message: 'Signature Stripe invalide.' });
+        return res.status(400).json({ status: 'ERROR', message: 'Le contenu du webhook Tranzak est invalide.' });
+    }
+    if (event.event !== 'PAYMENT_COMPLETED' || event.data?.status !== 'SUCCESS') {
+        return res.status(200).json({ status: 'SUCCESS', ignored: true });
     }
 
     try {
-        if (event.type === 'checkout.session.expired') {
-            const session = event.data.object;
-            await CoursePayment.updateOne(
-                { stripeCheckoutSessionId: session.id, status: 'PENDING' },
-                { $set: { status: 'CANCELLED' } }
-            );
-            return res.json({ received: true });
-        }
-        if (event.type !== 'checkout.session.completed') {
-            return res.json({ received: true, ignored: true });
+        const requestId = String(event.data.requestId || '').trim();
+        const customId = String(event.data.customId || '');
+        if (!requestId || requestId.length > 128 || customId.length > 256) {
+            return res.status(400).json({ status: 'ERROR', message: 'Les références du paiement Tranzak sont invalides.' });
         }
 
-        const session = event.data.object;
-        if (session.payment_status !== 'paid') {
-            return res.status(400).json({ success: false, message: 'La session Stripe n’est pas payée.' });
-        }
-        const paymentId = String(session.metadata?.paymentId || '');
-        if (!mongoose.isValidObjectId(paymentId)) {
-            return res.status(400).json({ success: false, message: 'Référence de paiement Stripe invalide.' });
-        }
-
-        const payment = await CoursePayment.findOne({
-            _id: paymentId,
-            provider: 'stripe',
-            stripeCheckoutSessionId: session.id
-        });
+        const payment = await CoursePayment.findOne({ requestId, provider: 'tranzak' });
         if (!payment) {
-            return res.status(404).json({ success: false, message: 'Paiement Stripe introuvable.' });
+            return res.status(404).json({ status: 'ERROR', message: 'Paiement Tranzak introuvable.' });
         }
-        if (payment.accessGrantedAt) {
-            await sendCoursePaymentReceipt(payment);
-            return res.json({ received: true, processed: true });
-        }
-
-        const expectedCurrency = payment.currencyCode.toLowerCase();
-        const amountInMinorUnits = payment.amount * 100;
-        if (session.currency !== expectedCurrency
-            || session.amount_total !== amountInMinorUnits
-            || session.metadata?.courseId !== payment.courseId) {
-            console.error('Rejected Stripe checkout with mismatched payment details:', session.id);
-            await CoursePayment.updateOne({ _id: payment._id }, { $set: { status: 'REJECTED' } });
-            return res.status(400).json({ success: false, message: 'Montant, devise ou formation Stripe invalide.' });
+        const expectedCustomId = `userId:${payment.userId}|courseId:${payment.courseId}`;
+        if (customId !== expectedCustomId) {
+            console.error('Rejected Tranzak webhook with mismatched customId:', requestId);
+            return res.status(400).json({ status: 'ERROR', message: 'Les informations du paiement Tranzak ne correspondent pas.' });
         }
 
         const user = await User.findById(payment.userId).select('_id name email');
-        if (!user) throw new Error('Paid Stripe payment references a missing student account.');
+        if (!user) throw new Error('Successful Tranzak payment references a missing student account.');
 
         payment.status = 'SUCCESSFUL';
-        payment.requestId = session.payment_intent ? String(session.payment_intent) : session.id;
         payment.paidAt = payment.paidAt || new Date();
         await payment.save();
 
-        const wasGranted = await grantCourseAccess(user, payment.courseId, { paymentConfirmed: true });
         let access = await CourseEnrollmentAccess.findOne({
             userId: user._id,
             courseId: payment.courseId
         }).select('+encryptedCode');
-        if (!wasGranted && access?.encryptedCode) {
-            await sendCourseAccessCodeEmail(
-                user,
-                payment.courseId,
-                decryptCourseAccessCode(access.encryptedCode),
-                true
-            );
-        } else if (!access?.encryptedCode) {
+        if (!access?.encryptedCode) {
             await issueCourseAccessCode(user, payment.courseId, { paymentConfirmed: true });
             access = await CourseEnrollmentAccess.findOne({
                 userId: user._id,
                 courseId: payment.courseId
             }).select('+encryptedCode');
         }
-        if (!access?.encryptedCode) throw new Error('Course access code was not stored after successful Stripe payment.');
+        if (!access?.encryptedCode) throw new Error('Course access code was not stored after successful Tranzak payment.');
 
-        payment.accessGrantedAt = new Date();
+        payment.accessGrantedAt = payment.accessGrantedAt || new Date();
         await payment.save();
         await sendCoursePaymentReceipt(payment);
-        return res.json({ received: true, processed: true });
+        return res.status(200).json({ status: 'SUCCESS' });
     } catch (error) {
-        console.error('Process Stripe checkout webhook error:', error);
-        return res.status(500).json({ success: false, message: 'Le paiement Stripe n’a pas encore pu être traité; Stripe peut réessayer le webhook.' });
+        console.error('Process Tranzak webhook error:', error);
+        return res.status(500).json({ status: 'ERROR', message: 'Le paiement Tranzak n’a pas encore pu être traité.' });
     }
 });
 app.use(express.json({ limit: '1mb' }));
+app.get('/api/ping', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime() });
+});
 app.use(cookieParser());
 app.use(cors({
     origin: (origin, callback) => {
@@ -680,12 +662,11 @@ const coursePriceSchema = new mongoose.Schema({
 const coursePaymentSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     courseId: { type: String, required: true, enum: COURSE_ACCESS_CATEGORIES, index: true },
-    provider: { type: String, enum: ['stripe', 'moncash', 'natcash'], default: 'stripe', index: true },
+    provider: { type: String, enum: ['tranzak', 'stripe', 'moncash', 'natcash'], default: 'tranzak', index: true },
     amount: { type: Number, required: true, min: 1 },
     currencyCode: { type: String, required: true, enum: [COURSE_PAYMENT_CURRENCY] },
     mchTransactionRef: { type: String, required: true, unique: true, index: true },
     requestId: { type: String, default: '', index: true },
-    stripeCheckoutSessionId: { type: String, default: '', index: true },
     status: {
         type: String,
         enum: ['PENDING', 'SUCCESSFUL', 'CANCELLED', 'REJECTED'],
@@ -773,27 +754,6 @@ const decryptCourseAccessCode = (encryptedCode) => {
     ]).toString('utf8');
 };
 
-const getStripeClient = () => {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        const error = new Error('Le paiement par carte bancaire n’est pas configuré.');
-        error.code = 'STRIPE_NOT_CONFIGURED';
-        throw error;
-    }
-    if (!stripeClient) {
-        let Stripe;
-        try {
-            Stripe = require('stripe');
-        } catch (cause) {
-            const error = new Error('Le SDK Stripe est absent du déploiement. Installez les dépendances depuis package.json.');
-            error.code = 'STRIPE_NOT_CONFIGURED';
-            error.cause = cause;
-            throw error;
-        }
-        stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
-    }
-    return stripeClient;
-};
-
 const sendCourseAccessCodeEmail = async (user, courseId, code, paymentConfirmed = false) => {
     const adminCopyEmails = getAdminNotificationEmails().filter((email) => email !== user.email);
     const courseUrl = getFrontendUrl('/Cours%20en%20Ligne.html', {
@@ -830,12 +790,17 @@ const sendCoursePaymentReceipt = async (payment) => {
         ]
     }, {
         $set: { receiptEmailClaimedAt: claimTime }
-    }, { new: true }).select('userId courseId provider amount currencyCode mchTransactionRef paidAt');
+    }, { new: true     }).select('userId courseId provider amount currencyCode mchTransactionRef requestId paidAt');
     if (!claim) return;
 
     try {
         const user = await User.findById(claim.userId).select('name email');
         if (!user) throw new Error('Paid course payment references a missing student account.');
+        const access = await CourseEnrollmentAccess.findOne({
+            userId: claim.userId,
+            courseId: claim.courseId
+        }).select('+encryptedCode');
+        if (!access?.encryptedCode) throw new Error('Paid course payment has no recoverable course access code.');
 
         const paidAt = claim.paidAt || new Date();
         const formattedDate = new Intl.DateTimeFormat('fr-HT', {
@@ -848,8 +813,11 @@ const sendCoursePaymentReceipt = async (payment) => {
         const courseName = escapeHtml(COURSE_TITLES[claim.courseId]);
         const safeDate = escapeHtml(formattedDate);
         const safeAmount = escapeHtml(formattedAmount);
-        const safeProvider = escapeHtml(claim.provider.toUpperCase());
-        const safeReference = escapeHtml(claim.mchTransactionRef);
+        const accessCode = decryptCourseAccessCode(access.encryptedCode);
+        const safeAccessCode = escapeHtml(accessCode);
+        const safeProvider = escapeHtml(claim.provider === 'tranzak' ? 'Tranzak' : claim.provider.toUpperCase());
+        const transactionReference = claim.requestId || claim.mchTransactionRef;
+        const safeReference = escapeHtml(transactionReference);
 
         await sendEmail({
             to: user.email,
@@ -860,8 +828,9 @@ const sendCoursePaymentReceipt = async (payment) => {
                 `Date : ${formattedDate}`,
                 `Montant : ${formattedAmount}`,
                 `Formation : ${COURSE_TITLES[claim.courseId]}`,
-                `Mode de paiement : ${claim.provider.toUpperCase()}`,
-                `Référence : ${claim.mchTransactionRef}`,
+                `Mode de paiement : ${claim.provider === 'tranzak' ? 'Tranzak' : claim.provider.toUpperCase()}`,
+                `Référence de transaction : ${transactionReference}`,
+                `Code d’accès : ${accessCode}`,
                 'Statut : Paiement confirmé'
             ].join('\n'),
             html: `
@@ -877,7 +846,8 @@ const sendCoursePaymentReceipt = async (payment) => {
                             <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Formation</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold">${courseName}</td></tr>
                             <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Montant</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold">${safeAmount}</td></tr>
                             <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Paiement</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right">${safeProvider}</td></tr>
-                            <tr><td style="padding:12px;color:#64748b">Référence</td><td style="padding:12px;text-align:right;overflow-wrap:anywhere">${safeReference}</td></tr>
+                            <tr><td style="padding:12px;border-bottom:1px solid #e2e8f0;color:#64748b">Référence de transaction</td><td style="padding:12px;border-bottom:1px solid #e2e8f0;text-align:right;overflow-wrap:anywhere">${safeReference}</td></tr>
+                            <tr><td style="padding:12px;color:#64748b">Code d’accès au cours</td><td style="padding:12px;text-align:right;font-weight:bold;letter-spacing:1px;overflow-wrap:anywhere">${safeAccessCode}</td></tr>
                         </table>
                         <p style="margin:24px 0 0;color:#64748b;font-size:13px">Conservez ce reçu comme preuve de paiement. Merci d’avoir choisi Competence Academy.</p>
                     </div>
@@ -2387,9 +2357,18 @@ app.put('/api/admin/course-prices/:courseId', requireCourseAdmin, async (req, re
     }
 });
 
-app.post('/api/create-stripe-session', authenticate, async (req, res) => {
+app.post('/api/pay-tranzak', authenticate, async (req, res) => {
     let payment;
     try {
+        const apiKey = process.env.TRANZAK_API_KEY;
+        const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
+        if (!apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
+            return res.status(503).json({ success: false, message: 'Le paiement Tranzak n’est pas encore configuré.' });
+        }
+        if (!Object.prototype.hasOwnProperty.call(TRANZAK_BASE_URLS, mode)) {
+            return res.status(503).json({ success: false, message: 'Le mode Tranzak doit être « live » ou « sandbox ».' });
+        }
+
         const courseId = String(req.body?.courseId || '');
         if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
             return res.status(400).json({ success: false, message: 'Choisissez une formation valide.' });
@@ -2406,57 +2385,83 @@ app.post('/api/create-stripe-session', authenticate, async (req, res) => {
             return res.status(503).json({ success: false, message: 'Le tarif de cette formation n’est pas disponible.' });
         }
 
-        const stripe = getStripeClient();
         const mchTransactionRef = `CA${crypto.randomBytes(15).toString('hex')}`;
         payment = await CoursePayment.create({
             userId: user._id,
             courseId,
-            provider: 'stripe',
+            provider: 'tranzak',
             amount: price.amount,
             currencyCode: COURSE_PAYMENT_CURRENCY,
             mchTransactionRef
         });
-        const coursePageUrl = getFrontendUrl('/Cours%20en%20Ligne.html');
-        const successUrl = `${coursePageUrl}?payment=success&reference={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = new URL(coursePageUrl);
+        const returnUrl = new URL(getFrontendUrl('/Cours%20en%20Ligne.html'));
+        returnUrl.searchParams.set('payment', 'success');
+        returnUrl.searchParams.set('reference', mchTransactionRef);
+        const cancelUrl = new URL(getFrontendUrl('/Cours%20en%20Ligne.html'));
         cancelUrl.searchParams.set('payment', 'cancel');
         cancelUrl.searchParams.set('reference', mchTransactionRef);
-        const session = await stripe.checkout.sessions.create({
-            mode: 'payment',
-            payment_method_types: ['card'],
-            customer_email: user.email,
-            client_reference_id: mchTransactionRef,
-            line_items: [{
-                quantity: 1,
-                price_data: {
-                    currency: COURSE_PAYMENT_CURRENCY.toLowerCase(),
-                    unit_amount: price.amount * 100,
-                    product_data: {
-                        name: `Formation ${COURSE_TITLES[courseId]}`,
-                        description: 'Accès à une formation en ligne Competence Academy'
-                    }
-                }
-            }],
-            metadata: {
-                paymentId: String(payment._id),
-                courseId,
-                studentId: String(user._id)
-            },
-            success_url: successUrl,
-            cancel_url: cancelUrl.toString()
+        const customId = `userId:${user._id}|courseId:${courseId}`;
+
+        let tranzakResponse;
+        try {
+            tranzakResponse = await fetch(`${getTranzakBaseUrl()}/xp/v1/request/create-checkout`, {
+                method: 'POST',
+                headers: getTranzakHeaders(),
+                body: JSON.stringify({
+                    amount: price.amount,
+                    currency: COURSE_PAYMENT_CURRENCY,
+                    description: `Paiement du cours ${COURSE_TITLES[courseId]}`,
+                    customId,
+                    returnUrl: returnUrl.toString(),
+                    cancelUrl: cancelUrl.toString()
+                }),
+                signal: AbortSignal.timeout(20000)
+            });
+        } catch (cause) {
+            const error = new Error('Tranzak checkout could not be reached.');
+            error.cause = cause;
+            error.code = 'TRANZAK_UNAVAILABLE';
+            throw error;
+        }
+
+        let checkout;
+        try {
+            checkout = await tranzakResponse.json();
+        } catch (cause) {
+            throw new Error(`Tranzak returned an invalid checkout response (${tranzakResponse.status}).`);
+        }
+        const requestId = String(checkout.data?.requestId || '').trim();
+        const paymentUrl = String(checkout.data?.paymentUrl || '').trim();
+        if (!tranzakResponse.ok || checkout.status !== 'SUCCESS' || !requestId || !paymentUrl) {
+            console.error('Tranzak rejected checkout creation:', tranzakResponse.status, checkout.status || 'unknown');
+            throw new Error('Tranzak did not return a valid checkout session.');
+        }
+
+        let securePaymentUrl;
+        try {
+            securePaymentUrl = new URL(paymentUrl);
+        } catch (cause) {
+            throw new Error('Tranzak returned an invalid checkout URL.');
+        }
+        if (securePaymentUrl.protocol !== 'https:') {
+            throw new Error('Tranzak returned a non-secure checkout URL.');
+        }
+
+        const storedCheckout = await CoursePayment.updateOne({ _id: payment._id }, {
+            $set: { requestId }
         });
-        await CoursePayment.updateOne({ _id: payment._id }, {
-            $set: { stripeCheckoutSessionId: session.id }
-        });
+        if (!storedCheckout.matchedCount) {
+            throw new Error('The Tranzak checkout reference could not be saved.');
+        }
         res.json({
             success: true,
-            paymentUrl: session.url,
-            reference: session.id,
+            paymentUrl: securePaymentUrl.href,
+            reference: mchTransactionRef,
             amount: price.amount,
             currencyCode: COURSE_PAYMENT_CURRENCY
         });
     } catch (error) {
-        console.error('Create Stripe course payment error:', error);
+        console.error('Create Tranzak course payment error:', error);
         if (payment) {
             try {
                 await CoursePayment.updateOne(
@@ -2464,13 +2469,13 @@ app.post('/api/create-stripe-session', authenticate, async (req, res) => {
                     { $set: { status: 'REJECTED' } }
                 );
             } catch (updateError) {
-                console.error('Could not mark failed Stripe checkout:', updateError);
+                console.error('Could not mark failed Tranzak checkout:', updateError);
             }
         }
-        if (error.code === 'STRIPE_NOT_CONFIGURED') {
-            return res.status(503).json({ success: false, message: 'Le paiement par carte bancaire n’est pas encore configuré.' });
+        if (error.code === 'TRANZAK_UNAVAILABLE') {
+            return res.status(502).json({ success: false, message: 'Tranzak est temporairement indisponible. Réessayez dans quelques instants.' });
         }
-        res.status(502).json({ success: false, message: 'Impossible d’ouvrir le paiement Stripe. Réessayez dans quelques instants.' });
+        res.status(502).json({ success: false, message: 'Impossible d’ouvrir le paiement Tranzak. Réessayez dans quelques instants.' });
     }
 });
 
@@ -2484,10 +2489,9 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
             userId: req.user.id,
             $or: [
                 { mchTransactionRef: reference },
-                { requestId: reference },
-                { stripeCheckoutSessionId: reference }
+                { requestId: reference }
             ]
-        }).select('courseId amount currencyCode status accessGrantedAt paidAt provider mchTransactionRef');
+        }).select('courseId amount currencyCode status accessGrantedAt paidAt provider mchTransactionRef requestId');
         if (!payment) {
             return res.status(404).json({ success: false, message: 'Aucun paiement ne correspond à cette référence.' });
         }
@@ -2511,10 +2515,10 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
         if (payment.status === 'SUCCESSFUL' && payment.accessGrantedAt) {
             const student = await User.findById(payment.userId).select('name');
             response.studentName = student?.name || '';
-            response.providerName = payment.provider === 'stripe'
-                ? 'Carte bancaire (Visa / Mastercard)'
-                : payment.provider === 'moncash' ? 'MonCash' : 'Natcash';
-            response.transactionReference = payment.mchTransactionRef;
+            response.providerName = payment.provider === 'tranzak' ? 'Tranzak'
+                : payment.provider === 'stripe' ? 'Carte bancaire (Visa / Mastercard)'
+                    : payment.provider === 'moncash' ? 'MonCash' : 'Natcash';
+            response.transactionReference = payment.requestId || payment.mchTransactionRef;
         }
         res.json(response);
     } catch (error) {
@@ -2571,20 +2575,6 @@ app.post('/api/course-progress/unlock-paid', authenticate, async (req, res) => {
         return res.status(500).json({ success: false, message: 'Impossible de débloquer les leçons de cette formation.' });
     }
 });
-
-const handleDirectMobilePayment = (providerName) => async (req, res) => {
-    const courseId = String(req.body?.courseId || '');
-    if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
-        return res.status(400).json({ success: false, message: 'Choisissez une formation valide.' });
-    }
-    return res.status(503).json({
-        success: false,
-        message: `Le paiement ${providerName} Direct n’est pas encore activé. Les identifiants marchand et la documentation API officielle sont nécessaires pour le configurer.`
-    });
-};
-
-app.post('/api/moncash-pay', authenticate, handleDirectMobilePayment('MonCash'));
-app.post('/api/natcash-pay', authenticate, handleDirectMobilePayment('Natcash'));
 
 app.post('/api/course-progress/unlock', authenticate, async (req, res) => {
     try {
@@ -2891,12 +2881,10 @@ const startServer = async () => {
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-        console.warn('Stripe card payments are disabled until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are configured.');
-    }
-    if (!process.env.MONCASH_CLIENT_ID || !process.env.MONCASH_CLIENT_SECRET
-        || !process.env.NATCASH_MERCHANT_ID || !process.env.NATCASH_API_KEY) {
-        console.warn('MonCash Direct and Natcash Direct require official merchant API credentials before activation.');
+    if (!process.env.TRANZAK_API_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        console.warn('Tranzak payments require TRANZAK_API_KEY and TRANZAK_WEBHOOK_SECRET.');
+    } else {
+        console.log(`Tranzak ${String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase()} mode configured.`);
     }
 
     await mongoose.connect(MONGODB_URI, {
@@ -2920,6 +2908,22 @@ const startServer = async () => {
 
     server.listen(PORT, () => {
         console.log(`Server Competence Academy Run ${PORT}`);
+        const keepAliveUrl = new URL('/api/ping', process.env.RENDER_EXTERNAL_URL || `http://127.0.0.1:${PORT}`);
+        const keepAliveTimer = setInterval(async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            try {
+                const response = await fetch(keepAliveUrl, { signal: controller.signal });
+                if (!response.ok) {
+                    console.warn(`Keep-alive ping returned HTTP ${response.status}.`);
+                }
+            } catch (error) {
+                console.warn('Keep-alive ping failed:', error.message);
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }, 600000);
+        keepAliveTimer.unref();
     });
 };
 
@@ -2927,4 +2931,3 @@ startServer().catch((error) => {
     console.error('Server startup failed:', error.message);
     process.exit(1);
 });
-
