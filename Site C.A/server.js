@@ -18,7 +18,7 @@ const nodemailer = require('nodemailer');
 
 const TRANZAK_BASE_URLS = {
     sandbox: 'https://sandbox.tranzak.net',
-    live: 'https://api.tranzak.net'
+    live: 'https://dsapi.tranzak.me'
 };
 const getTranzakBaseUrl = () => {
     const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
