@@ -54,6 +54,10 @@ const ADMIN_JWT_EXPIRES_IN = '1h';
 const ADMIN_OTP_TTL_MS = 2 * 60 * 1000;
 const ADMIN_OTP_RESEND_INTERVAL_MS = ADMIN_OTP_TTL_MS;
 const ADMIN_OTP_MAX_ATTEMPTS = 5;
+const ACCESS_CONFIRMATION_TTL_MS = 5 * 60 * 1000;
+const ACCESS_CONFIRMATION_RESEND_INTERVAL_MS = 5 * 60 * 1000;
+const ACCESS_CONFIRMATION_MAX_ATTEMPTS = 5;
+const ACCESS_CONFIRMATION_LOCKOUT_MS = 15 * 60 * 1000;
 const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -131,6 +135,8 @@ const getAllowedAdminEmails = () => String(process.env.ALLOWED_ADMIN_EMAILS || '
 const isAllowedAdminEmail = (email) => getAllowedAdminEmails().includes(sanitizeEmail(email));
 const adminOtpChallenges = new Map();
 const adminOtpLastSentAt = new Map();
+const accessConfirmationRequestCooldowns = new Map();
+const accessConfirmationRequestLimiter = new Map();
 const adminOtpRequestLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
@@ -918,7 +924,7 @@ const grantCourseAccess = async (user, courseId, options) => {
 const createAccessConfirmation = async (user) => {
     const code = getStudentAccessOtp(user);
     const challengeId = crypto.randomBytes(24).toString('hex');
-    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + ACCESS_CONFIRMATION_TTL_MS);
     const confirmationUrl = getFrontendUrl('/Login.html');
     await AccessConfirmation.findOneAndUpdate(
         { userId: user._id },
@@ -935,7 +941,7 @@ const createAccessConfirmation = async (user) => {
                 code,
                 buttonLabel: 'Retourner à la connexion',
                 buttonUrl: confirmationUrl,
-                note: 'Ce code est personnel et expire dans 20 minutes. Ne le partagez avec personne.'
+                note: 'Ce code est personnel et expire dans 5 minutes. Ne le partagez avec personne.'
             })
         });
     } catch (error) {
@@ -945,7 +951,7 @@ const createAccessConfirmation = async (user) => {
 
     return {
         challengeId,
-        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 20 minutes.'
+        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 5 minutes.'
     };
 };
 
@@ -1663,6 +1669,30 @@ app.post('/api/results/verify', async (req, res) => {
 });
 
 // 1. Route d’inscription
+const getRegistrationStatusPayload = () => ({
+    success: true,
+    open: true,
+    registrationOpen: true,
+    message: 'Les inscriptions sont actuellement ouvertes.'
+});
+
+app.get('/api/signup/status', async (req, res) => {
+    try {
+        return res.json(getRegistrationStatusPayload());
+    } catch (error) {
+        console.error('Signup status check error:', error);
+        return res.status(200).json(getRegistrationStatusPayload());
+    }
+});
+app.get('/api/inscription-status', async (req, res) => {
+    try {
+        return res.json(getRegistrationStatusPayload());
+    } catch (error) {
+        console.error('Inscription status check error:', error);
+        return res.status(200).json(getRegistrationStatusPayload());
+    }
+});
+
 app.post('/api/signup', authLimiter, async (req, res) => {
     try {
         const name = String(req.body?.name || '').trim();
@@ -1857,7 +1887,7 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
         }
 
         const challenge = await AccessConfirmation.findOne({ challengeId });
-        if (!challenge || challenge.expiresAt <= new Date() || challenge.attempts >= 5) {
+        if (!challenge || challenge.expiresAt <= new Date() || challenge.attempts >= ACCESS_CONFIRMATION_MAX_ATTEMPTS) {
             if (challenge) await AccessConfirmation.deleteOne({ _id: challenge._id });
             return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
         }
@@ -1868,7 +1898,7 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
             && crypto.timingSafeEqual(submittedHash, expectedHash);
         if (!isCorrectCode) {
             challenge.attempts += 1;
-            if (challenge.attempts >= 5) await challenge.deleteOne();
+            if (challenge.attempts >= ACCESS_CONFIRMATION_MAX_ATTEMPTS) await challenge.deleteOne();
             else await challenge.save();
             return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
         }
@@ -1892,6 +1922,80 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
     } catch (error) {
         console.error('Confirm login access error:', error);
         res.status(500).json({ success: false, message: 'Impossible de confirmer cette connexion.' });
+    }
+});
+
+const accessConfirmationRateLimiters = new Map();
+const getAccessConfirmationRateLimitState = (key) => {
+    const current = accessConfirmationRateLimiters.get(key);
+    if (!current) return null;
+    if (Date.now() >= current.blockedUntil) {
+        accessConfirmationRateLimiters.delete(key);
+        return null;
+    }
+    return current;
+};
+
+const registerAccessConfirmationAttempt = (key) => {
+    const now = Date.now();
+    const current = accessConfirmationRateLimiters.get(key) || { attempts: 0, blockedUntil: 0, lastRequestAt: 0 };
+    const windowStart = now - (15 * 60 * 1000);
+    if (current.blockedUntil > now) {
+        return { blocked: true, retryAfterMs: current.blockedUntil - now };
+    }
+    if (current.lastRequestAt < windowStart) {
+        current.attempts = 0;
+    }
+    current.lastRequestAt = now;
+    current.attempts += 1;
+    if (current.attempts > ACCESS_CONFIRMATION_MAX_ATTEMPTS) {
+        current.blockedUntil = now + ACCESS_CONFIRMATION_LOCKOUT_MS;
+        current.attempts = ACCESS_CONFIRMATION_MAX_ATTEMPTS + 1;
+        accessConfirmationRateLimiters.set(key, current);
+        return { blocked: true, retryAfterMs: ACCESS_CONFIRMATION_LOCKOUT_MS };
+    }
+    accessConfirmationRateLimiters.set(key, current);
+    return { blocked: false, retryAfterMs: 0 };
+};
+
+const getAccessConfirmationRateLimitKey = (req) => {
+    const ip = String(req.ip || req.headers['x-forwarded-for'] || 'unknown').trim();
+    const email = sanitizeEmail(req.body?.email || req.body?.userEmail || '');
+    return email ? `email:${email}` : `ip:${ip}`;
+};
+
+app.post('/api/auth/request-access-code', async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.body?.email);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Adresse e-mail invalide.' });
+        }
+        const key = getAccessConfirmationRateLimitKey(req);
+        const rateState = getAccessConfirmationRateLimitState(key);
+        if (rateState && rateState.blockedUntil > Date.now()) {
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de tentatives. Réessayez dans 15 minutes.',
+                retryAfterSeconds: Math.ceil((rateState.blockedUntil - Date.now()) / 1000)
+            });
+        }
+        const user = await User.findOne({ email }).select('_id name email');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Aucun compte trouvé pour cette adresse e-mail.' });
+        }
+        const attempt = registerAccessConfirmationAttempt(key);
+        if (attempt.blocked) {
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de demandes de code. Réessayez dans 15 minutes.',
+                retryAfterSeconds: Math.ceil(attempt.retryAfterMs / 1000)
+            });
+        }
+        const confirmation = await createAccessConfirmation(user);
+        return res.json({ success: true, ...confirmation });
+    } catch (error) {
+        console.error('Request access confirmation error:', error);
+        return res.status(500).json({ success: false, message: 'Impossible d’envoyer le code de confirmation.' });
     }
 });
 
