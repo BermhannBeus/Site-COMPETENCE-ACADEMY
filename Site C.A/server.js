@@ -17,13 +17,14 @@ const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
 const TRANZAK_BASE_URLS = {
-    sandbox: 'https://sandbox.tranzak.net',
+    sandbox: 'https://sandbox.dsapi.tranzak.me',
     live: 'https://dsapi.tranzak.me'
 };
 const getTranzakBaseUrl = () => {
     const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
     return TRANZAK_BASE_URLS[mode] || TRANZAK_BASE_URLS.sandbox;
 };
+const getTranzakCheckoutUrl = () => `${getTranzakBaseUrl().replace(/\/$/, '')}/v1/merchant/orders`;
 const getTranzakHeaders = (apiKey) => ({
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json'
@@ -54,10 +55,18 @@ const ADMIN_JWT_EXPIRES_IN = '1h';
 const ADMIN_OTP_TTL_MS = 2 * 60 * 1000;
 const ADMIN_OTP_RESEND_INTERVAL_MS = ADMIN_OTP_TTL_MS;
 const ADMIN_OTP_MAX_ATTEMPTS = 5;
-const ACCESS_CONFIRMATION_TTL_MS = 5 * 60 * 1000;
+const ACCESS_CONFIRMATION_TTL_MS = 15 * 60 * 1000;
 const ACCESS_CONFIRMATION_RESEND_INTERVAL_MS = 5 * 60 * 1000;
-const ACCESS_CONFIRMATION_MAX_ATTEMPTS = 5;
-const ACCESS_CONFIRMATION_LOCKOUT_MS = 15 * 60 * 1000;
+const ACCESS_CONFIRMATION_MAX_ATTEMPTS = 3;
+const ACCESS_CONFIRMATION_LOCKOUT_MS = 10 * 60 * 1000;
+const ACCESS_CONFIRMATION_MAX_REQUESTS = 5;
+const ACCESS_CONFIRMATION_REQUEST_LOCKOUT_MS = 15 * 60 * 1000;
+const SIGNUP_MAX_FAILED_ATTEMPTS = 3;
+const LOGIN_MAX_FAILED_ATTEMPTS = 3;
+const LOGIN_LOCKOUT_MS = 10 * 60 * 1000;
+const PASSWORD_RESET_MAX_ATTEMPTS = 3;
+const PASSWORD_RESET_LOCKOUT_MS = 10 * 60 * 1000;
+const PASSWORD_RESET_CODE_TTL_MS = 15 * 60 * 1000;
 const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_TOKEN_LIFETIME_MS = 60 * 60 * 1000;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -541,25 +550,43 @@ app.use('/api/', rateLimit({
     message: { success: false, message: 'Trop de requêtes, veuillez réessayer plus tard.' }
 }));
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
+    windowMs: LOGIN_LOCKOUT_MS,
+    max: LOGIN_MAX_FAILED_ATTEMPTS,
+    skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, message: 'Trop de tentatives. Veuillez réessayer dans quelques minutes.' }
+    message: { success: false, message: 'Trop de tentatives. Réessayez dans 10 minutes.' }
+});
+const signupLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: SIGNUP_MAX_FAILED_ATTEMPTS,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Trop de tentatives d’inscription. Réessayez dans 10 minutes.' }
+});
+const loginLimiter = rateLimit({
+    windowMs: LOGIN_LOCKOUT_MS,
+    max: LOGIN_MAX_FAILED_ATTEMPTS,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Trop de tentatives de connexion. Réessayez dans 10 minutes. Si vous avez oublié votre mot de passe, utilisez « Mot de passe oublié ».' }
 });
 const resetRequestLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5,
+    windowMs: PASSWORD_RESET_LOCKOUT_MS,
+    max: PASSWORD_RESET_MAX_ATTEMPTS,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, message: 'Trop de demandes de récupération. Veuillez réessayer plus tard.' }
+    message: { success: false, message: 'Trop de demandes de récupération. Réessayez dans 10 minutes.' }
 });
 const resetVerificationLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
+    windowMs: PASSWORD_RESET_LOCKOUT_MS,
+    max: PASSWORD_RESET_MAX_ATTEMPTS,
+    skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, message: 'Trop de tentatives de vérification. Veuillez réessayer plus tard.' }
+    message: { success: false, message: 'Trop de codes incorrects. Réessayez dans 10 minutes.' }
 });
 const accessCodeLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -618,6 +645,8 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     avatarUrl: { type: String, default: '', trim: true, maxlength: 2048 },
     password: { type: String, default: '' },
+    loginFailedAttempts: { type: Number, default: 0 },
+    loginBlockedUntil: { type: Date, default: null },
     googleId: { type: String, default: '' },
     tokenVersion: { type: Number, default: 0 },
     activeSessionId: { type: String, default: null },
@@ -634,6 +663,9 @@ const userSchema = new mongoose.Schema({
 const resetCodeSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, index: true },
     codeHash: { type: String, required: true },
+    attempts: { type: Number, default: 0 },
+    blockedUntil: { type: Date, default: null },
+    lastSentAt: { type: Date, default: null },
     expiresAt: { type: Date, required: true, index: { expires: 0 } }
 });
 const courseProgressSchema = new mongoose.Schema({
@@ -689,6 +721,8 @@ const accessConfirmationSchema = new mongoose.Schema({
     challengeId: { type: String, required: true, unique: true },
     codeHash: { type: String, required: true },
     attempts: { type: Number, default: 0 },
+    blockedUntil: { type: Date, default: null },
+    lastSentAt: { type: Date, default: null },
     expiresAt: { type: Date, required: true, index: { expires: 0 } }
 }, { timestamps: true });
 const User = mongoose.model('User', userSchema);
@@ -720,13 +754,6 @@ const studentResultSchema = new mongoose.Schema({
     createdBy: { type: String, default: 'admin' }
 }, { timestamps: true });
 const StudentResult = mongoose.model('StudentResult', studentResultSchema);
-
-const getStudentAccessOtp = (user) => {
-    const digest = crypto.createHmac('sha256', JWT_SECRET)
-        .update(`course-page-access:${user.id}:${user.email}`)
-        .digest();
-    return String(digest.readUInt32BE(0) % 1000000).padStart(6, '0');
-};
 
 const generateCourseAccessCode = (courseId = '') => {
     const prefix = String(courseId || 'CA').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'CA';
@@ -921,29 +948,52 @@ const grantCourseAccess = async (user, courseId, options) => {
     return true;
 };
 
+const sendAccessConfirmationCode = async (user, code) => {
+    await sendEmail({
+        to: user.email,
+        subject: 'Votre code de confirmation - Competence Academy',
+        ...createCodeEmail({
+            greeting: `Bonjour ${user.name},`,
+            message: 'Utilisez ce code pour confirmer votre connexion à Competence Academy.',
+            code,
+            buttonLabel: 'Retourner à la connexion',
+            buttonUrl: getFrontendUrl('/Login.html'),
+            note: 'Ce code est personnel et expire dans 15 minutes. Ne le partagez avec personne.'
+        })
+    });
+};
+
 const createAccessConfirmation = async (user) => {
-    const code = getStudentAccessOtp(user);
+    const existingChallenge = await AccessConfirmation.findOne({ userId: user._id })
+        .select('challengeId blockedUntil expiresAt lastSentAt');
+    const now = new Date();
+    if (existingChallenge?.blockedUntil && existingChallenge.blockedUntil > now) {
+        const error = new Error('Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.');
+        error.code = 'AUTH_CHALLENGE_LOCKED';
+        error.retryAfterSeconds = Math.ceil((existingChallenge.blockedUntil.getTime() - now.getTime()) / 1000);
+        throw error;
+    }
+    if (existingChallenge?.challengeId
+        && existingChallenge.expiresAt > now
+        && existingChallenge.lastSentAt
+        && now.getTime() - existingChallenge.lastSentAt.getTime() < ACCESS_CONFIRMATION_RESEND_INTERVAL_MS) {
+        return {
+            challengeId: existingChallenge.challengeId,
+            message: 'Un code a déjà été envoyé récemment. Vérifiez votre e-mail avant de demander un autre code.'
+        };
+    }
+
+    const code = createResetCode();
     const challengeId = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + ACCESS_CONFIRMATION_TTL_MS);
-    const confirmationUrl = getFrontendUrl('/Login.html');
+    const lastSentAt = new Date();
     await AccessConfirmation.findOneAndUpdate(
         { userId: user._id },
-        { challengeId, codeHash: hashResetCode(code), attempts: 0, expiresAt },
+        { challengeId, codeHash: hashResetCode(code), attempts: 0, blockedUntil: null, lastSentAt, expiresAt },
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     try {
-        await sendEmail({
-            to: user.email,
-            subject: 'Votre code de confirmation - Competence Academy',
-            ...createCodeEmail({
-                greeting: `Bonjour ${user.name},`,
-                message: 'Utilisez ce code pour confirmer votre connexion à Competence Academy.',
-                code,
-                buttonLabel: 'Retourner à la connexion',
-                buttonUrl: confirmationUrl,
-                note: 'Ce code est personnel et expire dans 5 minutes. Ne le partagez avec personne.'
-            })
-        });
+        await sendAccessConfirmationCode(user, code);
     } catch (error) {
         await AccessConfirmation.deleteOne({ userId: user._id, challengeId });
         throw error;
@@ -951,8 +1001,23 @@ const createAccessConfirmation = async (user) => {
 
     return {
         challengeId,
-        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 5 minutes.'
+        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 15 minutes.'
     };
+};
+
+const sendPasswordResetCode = async (email, code) => {
+    await sendEmail({
+        to: email,
+        subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
+        ...createCodeEmail({
+            greeting: 'Bonjour,',
+            message: 'Voici votre nouveau code de vérification pour réinitialiser votre mot de passe. Appuyez sur le bouton pour ouvrir le formulaire avec votre adresse e-mail et le code déjà renseignés.',
+            code,
+            buttonLabel: 'Réinitialiser mon mot de passe',
+            buttonUrl: getFrontendUrl('/Login.html', { 'reset-code': code, email }),
+            note: 'Le code expire dans 15 minutes. Vous devrez encore choisir un nouveau mot de passe pour terminer la réinitialisation.'
+        })
+    });
 };
 
 const isValidCourseAccessCode = async (userId, courseId, code) => {
@@ -1693,7 +1758,7 @@ app.get('/api/inscription-status', async (req, res) => {
     }
 });
 
-app.post('/api/signup', authLimiter, async (req, res) => {
+app.post('/api/signup', signupLimiter, async (req, res) => {
     try {
         const name = String(req.body?.name || '').trim();
         const email = sanitizeEmail(req.body?.email);
@@ -1745,6 +1810,14 @@ app.post('/api/signup', authLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('Signup error:', error);
+        if (error.code === 'AUTH_CHALLENGE_LOCKED') {
+            res.set('Retry-After', String(error.retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                retryAfterSeconds: error.retryAfterSeconds
+            });
+        }
         if (error.code === 'EMAIL_DELIVERY_FAILED') {
             return res.status(503).json({
                 success: false,
@@ -1756,7 +1829,7 @@ app.post('/api/signup', authLimiter, async (req, res) => {
 });
 
 // 2. Route de connexion
-app.post('/api/login', authLimiter, async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const email = sanitizeEmail(req.body?.email);
         const password = String(req.body?.password || '');
@@ -1777,9 +1850,51 @@ app.post('/api/login', authLimiter, async (req, res) => {
             });
         }
 
+        const now = new Date();
+        if (user.loginBlockedUntil && user.loginBlockedUntil > now) {
+            const retryAfterSeconds = Math.ceil((user.loginBlockedUntil.getTime() - now.getTime()) / 1000);
+            res.set('Retry-After', String(retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de mots de passe incorrects. Réessayez dans 10 minutes. Si vous avez oublié votre mot de passe, utilisez « Mot de passe oublié ».'
+            });
+        }
+        if (user.loginBlockedUntil && user.loginBlockedUntil <= now) {
+            await User.updateOne(
+                { _id: user._id, loginBlockedUntil: { $lte: now } },
+                { $set: { loginFailedAttempts: 0, loginBlockedUntil: null } }
+            );
+            user.loginFailedAttempts = 0;
+            user.loginBlockedUntil = null;
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            const failedLogin = await User.findOneAndUpdate(
+                { _id: user._id },
+                { $inc: { loginFailedAttempts: 1 } },
+                { new: true }
+            ).select('loginFailedAttempts');
+            if (failedLogin && failedLogin.loginFailedAttempts >= LOGIN_MAX_FAILED_ATTEMPTS) {
+                const blockedUntil = new Date(Date.now() + LOGIN_LOCKOUT_MS);
+                await User.updateOne(
+                    { _id: user._id },
+                    { $set: { loginBlockedUntil: blockedUntil } }
+                );
+                res.set('Retry-After', String(Math.ceil(LOGIN_LOCKOUT_MS / 1000)));
+                return res.status(429).json({
+                    success: false,
+                    message: 'Trop de mots de passe incorrects. Réessayez dans 10 minutes. Si vous avez oublié votre mot de passe, utilisez « Mot de passe oublié ».'
+                });
+            }
             return res.status(400).json({ success: false, message: 'Adresse e-mail ou mot de passe incorrect.' });
+        }
+
+        if (user.loginFailedAttempts || user.loginBlockedUntil) {
+            await User.updateOne(
+                { _id: user._id },
+                { $set: { loginFailedAttempts: 0, loginBlockedUntil: null } }
+            );
         }
 
         if (await hasActiveSession(user._id)) {
@@ -1798,6 +1913,14 @@ app.post('/api/login', authLimiter, async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
+        if (error.code === 'AUTH_CHALLENGE_LOCKED') {
+            res.set('Retry-After', String(error.retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                retryAfterSeconds: error.retryAfterSeconds
+            });
+        }
         if (error.code === 'EMAIL_DELIVERY_FAILED') {
             return res.status(503).json({
                 success: false,
@@ -1868,6 +1991,14 @@ app.post('/api/google-login', authLimiter, async (req, res) => {
 
     } catch (error) {
         console.error(error);
+        if (error.code === 'AUTH_CHALLENGE_LOCKED') {
+            res.set('Retry-After', String(error.retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                retryAfterSeconds: error.retryAfterSeconds
+            });
+        }
         if (error.code === 'EMAIL_DELIVERY_FAILED') {
             return res.status(503).json({
                 success: false,
@@ -1887,9 +2018,18 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
         }
 
         const challenge = await AccessConfirmation.findOne({ challengeId });
-        if (!challenge || challenge.expiresAt <= new Date() || challenge.attempts >= ACCESS_CONFIRMATION_MAX_ATTEMPTS) {
+        if (!challenge || challenge.expiresAt <= new Date()) {
             if (challenge) await AccessConfirmation.deleteOne({ _id: challenge._id });
             return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
+        }
+        if (challenge.blockedUntil && challenge.blockedUntil > new Date()) {
+            const retryAfterSeconds = Math.ceil((challenge.blockedUntil.getTime() - Date.now()) / 1000);
+            res.set('Retry-After', String(retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                retryAfterSeconds
+            });
         }
 
         const submittedHash = Buffer.from(hashResetCode(code), 'hex');
@@ -1897,9 +2037,89 @@ app.post('/api/auth/confirm-access', accessCodeLimiter, async (req, res) => {
         const isCorrectCode = submittedHash.length === expectedHash.length
             && crypto.timingSafeEqual(submittedHash, expectedHash);
         if (!isCorrectCode) {
-            challenge.attempts += 1;
-            if (challenge.attempts >= ACCESS_CONFIRMATION_MAX_ATTEMPTS) await challenge.deleteOne();
-            else await challenge.save();
+            const now = new Date();
+            const failedAttempt = await AccessConfirmation.findOneAndUpdate(
+                {
+                    _id: challenge._id,
+                    codeHash: challenge.codeHash,
+                    attempts: { $lt: ACCESS_CONFIRMATION_MAX_ATTEMPTS },
+                    $or: [{ blockedUntil: null }, { blockedUntil: { $lte: now } }]
+                },
+                { $inc: { attempts: 1 } },
+                { new: true }
+            ).select('attempts');
+            const currentChallenge = failedAttempt || await AccessConfirmation.findById(challenge._id)
+                .select('attempts blockedUntil');
+            if (!currentChallenge) {
+                return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
+            }
+            if (currentChallenge.blockedUntil && currentChallenge.blockedUntil > now) {
+                const retryAfterSeconds = Math.ceil((currentChallenge.blockedUntil.getTime() - now.getTime()) / 1000);
+                res.set('Retry-After', String(retryAfterSeconds));
+                return res.status(429).json({
+                    success: false,
+                    message: 'Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                    retryAfterSeconds
+                });
+            }
+            if (currentChallenge.attempts >= ACCESS_CONFIRMATION_MAX_ATTEMPTS) {
+                const user = await User.findById(challenge.userId).select('name email');
+                if (!user) {
+                    await challenge.deleteOne();
+                    return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
+                }
+
+                const replacementCode = createResetCode();
+                const blockedUntil = new Date(Date.now() + ACCESS_CONFIRMATION_LOCKOUT_MS);
+                const replacementChallenge = await AccessConfirmation.findOneAndUpdate(
+                    {
+                        _id: challenge._id,
+                        codeHash: challenge.codeHash,
+                        attempts: { $gte: ACCESS_CONFIRMATION_MAX_ATTEMPTS },
+                        $or: [{ blockedUntil: null }, { blockedUntil: { $lte: now } }]
+                    },
+                    {
+                        $set: {
+                            codeHash: hashResetCode(replacementCode),
+                            attempts: 0,
+                            blockedUntil,
+                            expiresAt: new Date(Date.now() + ACCESS_CONFIRMATION_TTL_MS),
+                            lastSentAt: new Date()
+                        }
+                    },
+                    { new: true }
+                );
+                if (!replacementChallenge) {
+                    const latestChallenge = await AccessConfirmation.findById(challenge._id)
+                        .select('blockedUntil');
+                    const retryAfterSeconds = latestChallenge?.blockedUntil
+                        ? Math.max(1, Math.ceil((latestChallenge.blockedUntil.getTime() - Date.now()) / 1000))
+                        : ACCESS_CONFIRMATION_LOCKOUT_MS / 1000;
+                    res.set('Retry-After', String(retryAfterSeconds));
+                    return res.status(429).json({
+                        success: false,
+                        message: 'Trop de demandes de code. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                        retryAfterSeconds
+                    });
+                }
+                try {
+                    await sendAccessConfirmationCode(user, replacementCode);
+                } catch (error) {
+                    console.error('Replacement access confirmation email failed:', error);
+                    res.set('Retry-After', String(ACCESS_CONFIRMATION_LOCKOUT_MS / 1000));
+                    return res.status(503).json({
+                        success: false,
+                        message: 'Trop de codes incorrects. Réessayez dans 10 minutes. Le nouvel e-mail n’a pas pu être envoyé; veuillez demander un nouveau code après ce délai.'
+                    });
+                }
+
+                res.set('Retry-After', String(ACCESS_CONFIRMATION_LOCKOUT_MS / 1000));
+                return res.status(429).json({
+                    success: false,
+                    message: 'Un nouveau code a été envoyé à votre adresse e-mail. Réessayez dans 10 minutes.',
+                    retryAfterSeconds: ACCESS_CONFIRMATION_LOCKOUT_MS / 1000
+                });
+            }
             return res.status(400).json({ success: false, message: 'Code de confirmation invalide ou expiré.' });
         }
 
@@ -1948,11 +2168,11 @@ const registerAccessConfirmationAttempt = (key) => {
     }
     current.lastRequestAt = now;
     current.attempts += 1;
-    if (current.attempts > ACCESS_CONFIRMATION_MAX_ATTEMPTS) {
-        current.blockedUntil = now + ACCESS_CONFIRMATION_LOCKOUT_MS;
-        current.attempts = ACCESS_CONFIRMATION_MAX_ATTEMPTS + 1;
+    if (current.attempts > ACCESS_CONFIRMATION_MAX_REQUESTS) {
+        current.blockedUntil = now + ACCESS_CONFIRMATION_REQUEST_LOCKOUT_MS;
+        current.attempts = ACCESS_CONFIRMATION_MAX_REQUESTS + 1;
         accessConfirmationRateLimiters.set(key, current);
-        return { blocked: true, retryAfterMs: ACCESS_CONFIRMATION_LOCKOUT_MS };
+        return { blocked: true, retryAfterMs: ACCESS_CONFIRMATION_REQUEST_LOCKOUT_MS };
     }
     accessConfirmationRateLimiters.set(key, current);
     return { blocked: false, retryAfterMs: 0 };
@@ -1983,6 +2203,24 @@ app.post('/api/auth/request-access-code', async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'Aucun compte trouvé pour cette adresse e-mail.' });
         }
+        const activeChallenge = await AccessConfirmation.findOne({ userId: user._id })
+            .select('blockedUntil lastSentAt');
+        if (activeChallenge?.blockedUntil && activeChallenge.blockedUntil > new Date()) {
+            const retryAfterSeconds = Math.ceil((activeChallenge.blockedUntil.getTime() - Date.now()) / 1000);
+            res.set('Retry-After', String(retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Un nouveau code a été envoyé à votre adresse e-mail. Réessayez dans 10 minutes.',
+                retryAfterSeconds
+            });
+        }
+        if (activeChallenge?.lastSentAt
+            && Date.now() - activeChallenge.lastSentAt.getTime() < ACCESS_CONFIRMATION_RESEND_INTERVAL_MS) {
+            return res.json({
+                success: true,
+                message: 'Un code a déjà été envoyé récemment. Vérifiez votre e-mail avant de demander un autre code.'
+            });
+        }
         const attempt = registerAccessConfirmationAttempt(key);
         if (attempt.blocked) {
             return res.status(429).json({
@@ -1995,6 +2233,14 @@ app.post('/api/auth/request-access-code', async (req, res) => {
         return res.json({ success: true, ...confirmation });
     } catch (error) {
         console.error('Request access confirmation error:', error);
+        if (error.code === 'AUTH_CHALLENGE_LOCKED') {
+            res.set('Retry-After', String(error.retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Trop de codes incorrects. Réessayez dans 10 minutes et vérifiez votre e-mail.',
+                retryAfterSeconds: error.retryAfterSeconds
+            });
+        }
         return res.status(500).json({ success: false, message: 'Impossible d’envoyer le code de confirmation.' });
     }
 });
@@ -2060,6 +2306,7 @@ app.post('/api/contact', async (req, res) => {
 // 4. Route de demande d’un code de récupération (envoi du code à 6 chiffres)
 app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
     const email = sanitizeEmail(req.body?.email);
+    const genericResponseMessage = 'Si le compte existe et qu’aucun délai de sécurité n’est actif, un code de vérification sera envoyé.';
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
         return res.status(400).json({ success: false, message: 'Veuillez fournir un email valide.' });
@@ -2068,38 +2315,36 @@ app.post('/api/forgot-password', resetRequestLimiter, async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            return res.json({ success: true, message: 'Si votre adresse existe, un code de vérification a été envoyé.' });
+            return res.json({ success: true, message: genericResponseMessage });
+        }
+
+        const existingResetCode = await ResetCode.findOne({ email }).select('blockedUntil lastSentAt');
+        const now = new Date();
+        if (existingResetCode?.blockedUntil && existingResetCode.blockedUntil > now) {
+            return res.json({ success: true, message: genericResponseMessage });
+        }
+        if (existingResetCode?.lastSentAt
+            && now.getTime() - existingResetCode.lastSentAt.getTime() < ACCESS_CONFIRMATION_RESEND_INTERVAL_MS) {
+            return res.json({ success: true, message: genericResponseMessage });
         }
 
         const resetCode = createResetCode();
+        const lastSentAt = new Date();
         await ResetCode.findOneAndUpdate(
             { email },
             {
                 email,
                 codeHash: hashResetCode(resetCode),
-                expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+                attempts: 0,
+                blockedUntil: null,
+                lastSentAt,
+                expiresAt: new Date(Date.now() + PASSWORD_RESET_CODE_TTL_MS)
             },
             { upsert: true, new: true }
         );
 
-        const mailOptions = {
-            to: email,
-            subject: 'Code de réinitialisation de votre mot de passe - Competence Academy',
-            ...createCodeEmail({
-                greeting: 'Bonjour,',
-                message: 'Voici votre code de vérification pour réinitialiser votre mot de passe. Appuyez sur le bouton pour ouvrir le formulaire avec votre adresse e-mail et le code déjà renseignés.',
-                code: resetCode,
-                buttonLabel: 'Réinitialiser mon mot de passe',
-                buttonUrl: getFrontendUrl('/Login.html', {
-                    'reset-code': resetCode,
-                    email
-                }),
-                note: 'Le code expire dans 10 minutes. Vous devrez encore choisir un nouveau mot de passe pour terminer la réinitialisation.'
-            })
-        };
-
-        await sendEmail(mailOptions);
-        return res.json({ success: true, message: 'Un code à 6 chiffres a été envoyé sur votre email !' });
+        await sendPasswordResetCode(email, resetCode);
+        return res.json({ success: true, message: genericResponseMessage });
 
     } catch (error) {
         console.error("Erreur d'envoi d'email:", error);
@@ -2118,14 +2363,110 @@ app.post('/api/reset-password-code', resetVerificationLimiter, async (req, res) 
         if (!email || !code || !newPassword) {
             return res.status(400).json({ success: false, message: 'Veuillez remplir tous les champs.' });
         }
+        if (!/^\d{6}$/.test(code)) {
+            return res.status(400).json({ success: false, message: 'Le code doit contenir exactement 6 chiffres.' });
+        }
 
         if (!isStrongPassword(newPassword)) {
             return res.status(400).json({ success: false, message: 'Le nouveau mot de passe doit contenir au moins 8 caractères avec lettres et chiffres.' });
         }
 
         const resetEntry = await ResetCode.findOne({ email });
-        if (!resetEntry || resetEntry.expiresAt <= new Date() || resetEntry.codeHash !== hashResetCode(code)) {
+        const now = new Date();
+        if (!resetEntry || resetEntry.expiresAt <= now) {
             return res.status(400).json({ success: false, message: 'Le code est incorrect ou a expiré !' });
+        }
+        if (resetEntry.blockedUntil && resetEntry.blockedUntil > now) {
+            const retryAfterSeconds = Math.ceil((resetEntry.blockedUntil.getTime() - now.getTime()) / 1000);
+            res.set('Retry-After', String(retryAfterSeconds));
+            return res.status(429).json({
+                success: false,
+                message: 'Vous avez fait 3 tentatives incorrectes. Réessayez dans 10 minutes.'
+            });
+        }
+        const submittedHash = Buffer.from(hashResetCode(code), 'hex');
+        const expectedHash = Buffer.from(resetEntry.codeHash, 'hex');
+        const isCorrectCode = submittedHash.length === expectedHash.length
+            && crypto.timingSafeEqual(submittedHash, expectedHash);
+        if (!isCorrectCode) {
+            const failedAttempt = await ResetCode.findOneAndUpdate(
+                {
+                    _id: resetEntry._id,
+                    codeHash: resetEntry.codeHash,
+                    attempts: { $lt: PASSWORD_RESET_MAX_ATTEMPTS },
+                    $or: [{ blockedUntil: null }, { blockedUntil: { $lte: now } }]
+                },
+                { $inc: { attempts: 1 } },
+                { new: true }
+            ).select('attempts');
+            const currentEntry = failedAttempt || await ResetCode.findById(resetEntry._id)
+                .select('attempts blockedUntil');
+            if (!currentEntry) {
+                return res.status(400).json({ success: false, message: 'Le code est incorrect ou a expiré !' });
+            }
+            if (currentEntry.blockedUntil && currentEntry.blockedUntil > now) {
+                const retryAfterSeconds = Math.ceil((currentEntry.blockedUntil.getTime() - now.getTime()) / 1000);
+                res.set('Retry-After', String(retryAfterSeconds));
+                return res.status(429).json({
+                    success: false,
+                    message: 'Trop de codes incorrects. Réessayez dans 10 minutes. Si votre demande est valide, un nouveau code a été envoyé par e-mail.',
+                    retryAfterSeconds
+                });
+            }
+            if (currentEntry.attempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+                const blockedUntil = new Date(Date.now() + PASSWORD_RESET_LOCKOUT_MS);
+                const replacementCode = createResetCode();
+                const replacementEntry = await ResetCode.findOneAndUpdate(
+                    {
+                        _id: resetEntry._id,
+                        codeHash: resetEntry.codeHash,
+                        attempts: { $gte: PASSWORD_RESET_MAX_ATTEMPTS },
+                        $or: [{ blockedUntil: null }, { blockedUntil: { $lte: now } }]
+                    },
+                    {
+                        $set: {
+                            codeHash: hashResetCode(replacementCode),
+                            attempts: 0,
+                            blockedUntil,
+                            lastSentAt: new Date(),
+                            expiresAt: new Date(Date.now() + PASSWORD_RESET_CODE_TTL_MS)
+                        }
+                    },
+                    { new: true }
+                );
+                if (!replacementEntry) {
+                    const latestEntry = await ResetCode.findById(resetEntry._id).select('blockedUntil');
+                    const retryAfterSeconds = latestEntry?.blockedUntil
+                        ? Math.max(1, Math.ceil((latestEntry.blockedUntil.getTime() - Date.now()) / 1000))
+                        : PASSWORD_RESET_LOCKOUT_MS / 1000;
+                    res.set('Retry-After', String(retryAfterSeconds));
+                    return res.status(429).json({
+                        success: false,
+                        message: 'Trop de codes incorrects. Réessayez dans 10 minutes. Si votre demande est valide, un nouveau code a été envoyé par e-mail.',
+                        retryAfterSeconds
+                    });
+                }
+                try {
+                    await sendPasswordResetCode(email, replacementCode);
+                } catch (error) {
+                    console.error('Replacement password reset email failed:', error);
+                    res.set('Retry-After', String(PASSWORD_RESET_LOCKOUT_MS / 1000));
+                    return res.status(503).json({
+                        success: false,
+                        message: 'Trop de codes incorrects. Réessayez dans 10 minutes. Le nouvel e-mail n’a pas pu être envoyé; veuillez demander un nouveau code après ce délai.'
+                    });
+                }
+                res.set('Retry-After', String(Math.ceil(PASSWORD_RESET_LOCKOUT_MS / 1000)));
+                return res.status(429).json({
+                    success: false,
+                    message: 'Trop de codes incorrects. Réessayez dans 10 minutes. Si votre demande est valide, un nouveau code a été envoyé par e-mail.',
+                    retryAfterSeconds: PASSWORD_RESET_LOCKOUT_MS / 1000
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: `Code incorrect. Il vous reste ${PASSWORD_RESET_MAX_ATTEMPTS - currentEntry.attempts} tentative(s).`
+            });
         }
 
         const user = await User.findOne({ email });
@@ -2134,6 +2475,9 @@ app.post('/api/reset-password-code', resetVerificationLimiter, async (req, res) 
         }
 
         user.password = await bcrypt.hash(newPassword, 10);
+        user.loginFailedAttempts = 0;
+        user.loginBlockedUntil = null;
+        await user.save();
 
         await ResetCode.deleteOne({ email });
 
@@ -2512,7 +2856,7 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
 
         let tranzakResponse;
         try {
-            tranzakResponse = await fetch(`${getTranzakBaseUrl()}/xp/v1/request/create-checkout`, {
+            tranzakResponse = await fetch(getTranzakCheckoutUrl(), {
                 method: 'POST',
                 headers: getTranzakHeaders(apiKey),
                 body: JSON.stringify({
