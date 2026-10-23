@@ -24,7 +24,7 @@ const getTranzakBaseUrl = () => {
     const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
     return TRANZAK_BASE_URLS[mode] || TRANZAK_BASE_URLS.sandbox;
 };
-const getTranzakCheckoutUrl = () => `${getTranzakBaseUrl().replace(/\/$/, '')}/v1/merchant/orders`;
+const getTranzakCheckoutUrl = () => `${getTranzakBaseUrl().replace(/\/$/, '')}/v1/request-collection`;
 const getTranzakHeaders = (apiKey) => ({
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json'
@@ -2885,7 +2885,8 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             const error = new Error(`Tranzak returned an invalid checkout response (${tranzakResponse.status}).`);
             error.tranzakResponse = {
                 status: tranzakResponse.status,
-                body: responseBody.slice(0, 4000)
+                statusText: tranzakResponse.statusText,
+                body: responseBody
             };
             throw error;
         }
@@ -2895,7 +2896,8 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             const error = new Error('Tranzak did not return a valid checkout session.');
             error.tranzakResponse = {
                 status: tranzakResponse.status,
-                body: responseBody.slice(0, 4000)
+                statusText: tranzakResponse.statusText,
+                body: responseBody
             };
             throw error;
         }
@@ -2924,6 +2926,9 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             currencyCode: COURSE_PAYMENT_CURRENCY
         });
     } catch (error) {
+        if (error.tranzakResponse) {
+            console.log('Tranzak API complete error response:', error.tranzakResponse);
+        }
         console.error('Create Tranzak course payment error:', {
             message: error.message,
             code: error.code,
