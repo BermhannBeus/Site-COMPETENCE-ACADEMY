@@ -16,76 +16,21 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
-const TRANZAK_BASE_URL = 'https://dsapi.tranzak.me';
-let tranzakTokenCache = null;
-const getTranzakCheckoutUrl = () => `${TRANZAK_BASE_URL}/xp021/request/create`;
-const getTranzakHeaders = (appId, token) => ({
-    Authorization: `Bearer: ${token}`,
-    'X-App-ID': appId,
+const getTranzakApiBaseUrl = () => {
+    const configuredUrl = String(process.env.TRANZAK_API_URL || 'https://api.tranzak.co').trim();
+    const parsedUrl = new URL(configuredUrl);
+    if (parsedUrl.protocol !== 'https:' || parsedUrl.search || parsedUrl.hash
+        || parsedUrl.username || parsedUrl.password) {
+        throw new Error('TRANZAK_API_URL must be an HTTPS base URL without credentials, query, or fragment.');
+    }
+    return parsedUrl.toString().replace(/\/+$/, '');
+};
+const getTranzakPaymentsUrl = () => `${getTranzakApiBaseUrl()}/api/gateway/v1/payments`;
+const getTranzakHeaders = (apiKey) => ({
+    'X-Api-Key': apiKey,
+    Accept: 'application/json',
     'Content-Type': 'application/json'
 });
-const getTranzakAccessToken = async (appId, appKey) => {
-    const baseUrl = TRANZAK_BASE_URL;
-    if (tranzakTokenCache
-        && tranzakTokenCache.baseUrl === baseUrl
-        && tranzakTokenCache.appId === appId
-        && tranzakTokenCache.expiresAt > Date.now()) {
-        return tranzakTokenCache.token;
-    }
-
-    let response;
-    try {
-        response = await fetch(`${baseUrl}/auth/token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appId, appKey }),
-            signal: AbortSignal.timeout(20000)
-        });
-    } catch (cause) {
-        const error = new Error('Tranzak authentication endpoint could not be reached.');
-        error.cause = cause;
-        error.code = 'TRANZAK_UNAVAILABLE';
-        throw error;
-    }
-    const responseBody = await response.text();
-    let auth;
-    try {
-        auth = JSON.parse(responseBody);
-    } catch (cause) {
-        const error = new Error(`Tranzak authentication returned an invalid response (${response.status}).`);
-        error.tranzakResponse = {
-            endpoint: '/auth/token',
-            status: response.status,
-            statusText: response.statusText,
-            body: responseBody
-        };
-        throw error;
-    }
-
-    const token = String(auth.data?.token || '').trim();
-    if (!response.ok || auth.success !== true || !token) {
-        const error = new Error('Tranzak authentication failed.');
-        error.tranzakResponse = {
-            endpoint: '/auth/token',
-            status: response.status,
-            statusText: response.statusText,
-            body: responseBody
-        };
-        throw error;
-    }
-
-    const expiresInSeconds = Number(auth.data?.expiresIn || auth.data?.expires);
-    const cacheDurationMs = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
-        ? expiresInSeconds * 1000 * 0.9
-        : 55 * 60 * 1000;
-    tranzakTokenCache = {
-        baseUrl,
-        appId,
-        token,
-        expiresAt: Date.now() + cacheDurationMs
-    };
-    return token;
-};
 
 const app = express();
 const server = http.createServer(app);
@@ -535,44 +480,56 @@ app.post('/api/tranzak-webhook', express.raw({ type: 'application/json', limit: 
         return res.status(400).json({ status: 'ERROR', message: 'Le contenu du webhook Tranzak est invalide.' });
     }
     const eventName = String(event.event || '').toLowerCase();
-    const paymentStatus = String(event.data?.status || '').toUpperCase();
-    const isPaymentCompleted = eventName === 'payment_completed'
-        || eventName === 'payment.collection.completed';
-    if (!isPaymentCompleted || !['SUCCESS', 'SUCCESSFUL'].includes(paymentStatus)) {
+    const paymentStatus = String(event.data?.status || '').toLowerCase();
+    if (!['payment.success', 'payment.failed'].includes(eventName)) {
         return res.status(200).json({ status: 'SUCCESS', ignored: true });
     }
 
     try {
-        const requestId = String(event.data.requestId || '').trim();
-        const mchTransactionRef = String(event.data.mchTransactionRef || '').trim();
-        const customId = String(event.data.customId || '');
-        if ((!requestId && !mchTransactionRef)
-            || requestId.length > 128
-            || mchTransactionRef.length > 128
-            || customId.length > 256) {
+        const transactionId = String(event.data?.transaction_id || '').trim();
+        const reference = String(event.data?.reference || '').trim();
+        if (!transactionId || transactionId.length > 128 || !reference || reference.length > 128) {
             return res.status(400).json({ status: 'ERROR', message: 'Les références du paiement Tranzak sont invalides.' });
         }
 
-        const paymentReferenceQuery = [];
-        if (requestId) paymentReferenceQuery.push({ requestId });
-        if (mchTransactionRef) paymentReferenceQuery.push({ mchTransactionRef });
         const payment = await CoursePayment.findOne({
             provider: 'tranzak',
-            $or: paymentReferenceQuery
+            mchTransactionRef: reference
         });
         if (!payment) {
             return res.status(404).json({ status: 'ERROR', message: 'Paiement Tranzak introuvable.' });
         }
-        const expectedCustomId = `userId:${payment.userId}|courseId:${payment.courseId}`;
-        if (customId && customId !== expectedCustomId) {
-            console.error('Rejected Tranzak webhook with mismatched customId:', requestId);
+        if (payment.requestId && payment.requestId !== transactionId) {
+            console.error('Rejected Tranzak webhook with mismatched transaction ID:', reference);
             return res.status(400).json({ status: 'ERROR', message: 'Les informations du paiement Tranzak ne correspondent pas.' });
+        }
+
+        if (eventName === 'payment.failed' || paymentStatus === 'failed') {
+            await CoursePayment.updateOne(
+                { _id: payment._id, status: 'PENDING' },
+                { $set: { requestId: transactionId, status: 'REJECTED' } }
+            );
+            return res.status(200).json({ status: 'SUCCESS' });
+        }
+        if (eventName !== 'payment.success' || paymentStatus !== 'completed') {
+            return res.status(200).json({ status: 'SUCCESS', ignored: true });
+        }
+        const eventAmount = Number(event.data?.amount);
+        if (!Number.isFinite(eventAmount)
+            || eventAmount !== payment.amount
+            || String(event.data?.currency || '').toUpperCase() !== payment.currencyCode) {
+            console.error('Rejected Tranzak webhook with mismatched amount or currency:', reference);
+            return res.status(400).json({ status: 'ERROR', message: 'Le montant ou la devise du paiement ne correspond pas.' });
+        }
+        if (payment.status === 'SUCCESSFUL' && payment.accessGrantedAt) {
+            return res.status(200).json({ status: 'SUCCESS', duplicate: true });
         }
 
         const user = await User.findById(payment.userId).select('_id name email');
         if (!user) throw new Error('Successful Tranzak payment references a missing student account.');
 
         payment.status = 'SUCCESSFUL';
+        payment.requestId = transactionId;
         payment.paidAt = payment.paidAt || new Date();
         await payment.save();
 
@@ -772,6 +729,7 @@ const coursePaymentSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     courseId: { type: String, required: true, enum: COURSE_ACCESS_CATEGORIES, index: true },
     provider: { type: String, enum: ['tranzak', 'stripe', 'moncash', 'natcash'], default: 'tranzak', index: true },
+    paymentMethod: { type: String, enum: ['moncash', 'natcash', 'card'], default: 'moncash' },
     amount: { type: Number, required: true, min: 1 },
     currencyCode: { type: String, required: true, enum: [COURSE_PAYMENT_CURRENCY] },
     mchTransactionRef: { type: String, required: true, unique: true, index: true },
@@ -894,7 +852,7 @@ const sendCoursePaymentReceipt = async (payment) => {
         ]
     }, {
         $set: { receiptEmailClaimedAt: claimTime }
-    }, { new: true     }).select('userId courseId provider amount currencyCode mchTransactionRef requestId paidAt');
+    }, { new: true     }).select('userId courseId provider paymentMethod amount currencyCode mchTransactionRef requestId paidAt');
     if (!claim) return;
 
     try {
@@ -919,7 +877,11 @@ const sendCoursePaymentReceipt = async (payment) => {
         const safeAmount = escapeHtml(formattedAmount);
         const accessCode = decryptCourseAccessCode(access.encryptedCode);
         const safeAccessCode = escapeHtml(accessCode);
-        const safeProvider = escapeHtml(claim.provider === 'tranzak' ? 'Tranzak' : claim.provider.toUpperCase());
+        const paymentMethodLabel = claim.paymentMethod === 'natcash' ? 'NatCash'
+            : claim.paymentMethod === 'card' ? 'Carte bancaire'
+                : claim.paymentMethod === 'moncash' ? 'MonCash'
+                    : claim.provider.toUpperCase();
+        const safeProvider = escapeHtml(paymentMethodLabel);
         const transactionReference = claim.requestId || claim.mchTransactionRef;
         const safeReference = escapeHtml(transactionReference);
 
@@ -932,7 +894,7 @@ const sendCoursePaymentReceipt = async (payment) => {
                 `Date : ${formattedDate}`,
                 `Montant : ${formattedAmount}`,
                 `Formation : ${COURSE_TITLES[claim.courseId]}`,
-                `Mode de paiement : ${claim.provider === 'tranzak' ? 'Tranzak' : claim.provider.toUpperCase()}`,
+                `Mode de paiement : ${paymentMethodLabel}`,
                 `Référence de transaction : ${transactionReference}`,
                 `Code d’accès : ${accessCode}`,
                 'Statut : Paiement confirmé'
@@ -2880,14 +2842,17 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
     let payment;
     try {
         const apiKey = String(process.env.TRANZAK_API_KEY || '').trim();
-        const appId = String(process.env.TRANZAK_APP_ID || '').trim();
-        if (!appId || !apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        if (!apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
             return res.status(503).json({ success: false, message: 'Le paiement Tranzak n’est pas encore configuré.' });
         }
 
         const courseId = String(req.body?.courseId || '');
         if (!COURSE_ACCESS_CATEGORIES.includes(courseId)) {
             return res.status(400).json({ success: false, message: 'Choisissez une formation valide.' });
+        }
+        const paymentMethod = String(req.body?.paymentMethod || 'moncash').trim().toLowerCase();
+        if (!['moncash', 'natcash', 'card'].includes(paymentMethod)) {
+            return res.status(400).json({ success: false, message: 'Choisissez un moyen de paiement Tranzak valide.' });
         }
         const user = await User.findById(req.user.id).select('_id name email');
         if (!user) {
@@ -2906,27 +2871,29 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             userId: user._id,
             courseId,
             provider: 'tranzak',
+            paymentMethod,
             amount: price.amount,
             currencyCode: COURSE_PAYMENT_CURRENCY,
             mchTransactionRef
         });
-        const returnUrl = new URL(getFrontendUrl('/Cours%20en%20Ligne.html'));
-        returnUrl.searchParams.set('payment', 'success');
-        returnUrl.searchParams.set('reference', mchTransactionRef);
-        const tranzakToken = await getTranzakAccessToken(appId, apiKey);
 
         let tranzakResponse;
         try {
-            tranzakResponse = await fetch(getTranzakCheckoutUrl(), {
+            tranzakResponse = await fetch(getTranzakPaymentsUrl(), {
                 method: 'POST',
-                headers: getTranzakHeaders(appId, tranzakToken),
+                headers: getTranzakHeaders(apiKey),
                 body: JSON.stringify({
                     amount: price.amount,
-                    currencyCode: COURSE_PAYMENT_CURRENCY,
+                    currency: COURSE_PAYMENT_CURRENCY,
+                    payment_method: paymentMethod,
+                    customer_name: user.name,
+                    customer_email: user.email,
+                    reference: mchTransactionRef,
                     description: `Paiement du cours ${COURSE_TITLES[courseId]}`,
-                    mchTransactionRef,
-                    serviceDiscountAmount: 0,
-                    returnUrl: returnUrl.toString()
+                    metadata: {
+                        user_id: String(user._id),
+                        course_id: courseId
+                    }
                 }),
                 signal: AbortSignal.timeout(20000)
             });
@@ -2942,21 +2909,27 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
         try {
             checkout = JSON.parse(responseBody);
         } catch (cause) {
-            const error = new Error(`Tranzak returned an invalid checkout response (${tranzakResponse.status}).`);
+            const error = new Error(`Tranzak returned an invalid payment response (${tranzakResponse.status}).`);
             error.tranzakResponse = {
-                endpoint: getTranzakCheckoutUrl(),
+                endpoint: getTranzakPaymentsUrl(),
                 status: tranzakResponse.status,
                 statusText: tranzakResponse.statusText,
                 body: responseBody
             };
             throw error;
         }
-        const requestId = String(checkout.data?.requestId || '').trim();
-        const paymentUrl = String(checkout.data?.links?.paymentAuthUrl || checkout.data?.paymentUrl || '').trim();
-        if (!tranzakResponse.ok || checkout.success !== true || !requestId || !paymentUrl) {
-            const error = new Error('Tranzak did not return a valid checkout session.');
+        const transactionId = String(checkout.transaction_id || '').trim();
+        const paymentUrl = String(checkout.payment_url || '').trim();
+        const hasCardWidget = Boolean(
+            checkout.client_secret
+            && checkout.publishable_key
+            && checkout.payment_intent_id
+        );
+        if (!tranzakResponse.ok || !transactionId
+            || (paymentMethod === 'card' ? !hasCardWidget : !paymentUrl)) {
+            const error = new Error('Tranzak did not return a valid payment session.');
             error.tranzakResponse = {
-                endpoint: getTranzakCheckoutUrl(),
+                endpoint: getTranzakPaymentsUrl(),
                 status: tranzakResponse.status,
                 statusText: tranzakResponse.statusText,
                 body: responseBody
@@ -2965,28 +2938,42 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
         }
 
         let securePaymentUrl;
-        try {
-            securePaymentUrl = new URL(paymentUrl);
-        } catch (cause) {
-            throw new Error('Tranzak returned an invalid checkout URL.');
-        }
-        if (securePaymentUrl.protocol !== 'https:') {
-            throw new Error('Tranzak returned a non-secure checkout URL.');
+        if (paymentMethod !== 'card') {
+            try {
+                securePaymentUrl = new URL(paymentUrl);
+            } catch (cause) {
+                throw new Error('Tranzak returned an invalid payment URL.');
+            }
+            if (securePaymentUrl.protocol !== 'https:') {
+                throw new Error('Tranzak returned a non-secure payment URL.');
+            }
         }
 
         const storedCheckout = await CoursePayment.updateOne({ _id: payment._id }, {
-            $set: { requestId }
+            $set: {
+                requestId: transactionId,
+                ...(checkout.status === 'completed' ? { status: 'SUCCESSFUL', paidAt: new Date() } : {})
+            }
         });
         if (!storedCheckout.matchedCount) {
             throw new Error('The Tranzak checkout reference could not be saved.');
         }
-        res.json({
+        const response = {
             success: true,
-            paymentUrl: securePaymentUrl.href,
             reference: mchTransactionRef,
+            transactionId,
+            paymentMethod,
             amount: price.amount,
             currencyCode: COURSE_PAYMENT_CURRENCY
-        });
+        };
+        if (paymentMethod === 'card') {
+            response.clientSecret = checkout.client_secret;
+            response.publishableKey = checkout.publishable_key;
+            response.paymentIntentId = checkout.payment_intent_id;
+        } else {
+            response.paymentUrl = securePaymentUrl.href;
+        }
+        res.json(response);
     } catch (error) {
         if (error.tranzakResponse) {
             console.log('Tranzak API complete error response:', error.tranzakResponse);
@@ -3026,7 +3013,7 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
                 { mchTransactionRef: reference },
                 { requestId: reference }
             ]
-        }).select('courseId amount currencyCode status accessGrantedAt paidAt provider mchTransactionRef requestId');
+        }).select('courseId amount currencyCode status accessGrantedAt paidAt provider paymentMethod mchTransactionRef requestId userId');
         if (!payment) {
             return res.status(404).json({ success: false, message: 'Aucun paiement ne correspond à cette référence.' });
         }
@@ -3050,7 +3037,9 @@ app.get('/api/payments/status', authenticate, async (req, res) => {
         if (payment.status === 'SUCCESSFUL' && payment.accessGrantedAt) {
             const student = await User.findById(payment.userId).select('name');
             response.studentName = student?.name || '';
-            response.providerName = payment.provider === 'tranzak' ? 'Tranzak'
+            response.providerName = payment.provider === 'tranzak'
+                ? payment.paymentMethod === 'natcash' ? 'NatCash'
+                    : payment.paymentMethod === 'card' ? 'Carte bancaire' : 'MonCash'
                 : payment.provider === 'stripe' ? 'Carte bancaire (Visa / Mastercard)'
                     : payment.provider === 'moncash' ? 'MonCash' : 'Natcash';
             response.transactionReference = payment.requestId || payment.mchTransactionRef;
@@ -3416,10 +3405,10 @@ const startServer = async () => {
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
-    if (!process.env.TRANZAK_APP_ID || !process.env.TRANZAK_API_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
-        console.warn('Tranzak live payments require TRANZAK_APP_ID, TRANZAK_API_KEY, and TRANZAK_WEBHOOK_SECRET.');
+    if (!process.env.TRANZAK_API_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        console.warn('Tranzak payments require TRANZAK_API_KEY and TRANZAK_WEBHOOK_SECRET.');
     } else {
-        console.log(`Tranzak live mode configured (${TRANZAK_BASE_URL}).`);
+        console.log(`Tranzak API configured (${getTranzakApiBaseUrl()}).`);
     }
 
     await mongoose.connect(MONGODB_URI, {
