@@ -324,7 +324,7 @@
            activeAccessChallengeId = '';
            switchView('login');
            const notice = document.getElementById('loginSessionNotice');
-           notice.querySelector('span').textContent = SINGLE_SESSION_MESSAGE;
+           notice.querySelector('span:last-child').textContent = SINGLE_SESSION_MESSAGE;
            notice.hidden = false;
            return true;
        }
@@ -706,7 +706,6 @@
         }
 
         // Afficher le formulaire de connexion au chargement sans ouvrir automatiquement les formations.
-        
         window.addEventListener('DOMContentLoaded', () => {
             const signupPassword = document.getElementById('signupPassword');
             const signupPasswordConfirm = document.getElementById('signupPasswordConfirm');
