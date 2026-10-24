@@ -212,7 +212,7 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm2.1-7.75-.9.92A3 3 0 0 0 13 12.5V13h-2v-1a4 4 0 0 1 1.2-2.8l1.2-1.22A1.98 1.98 0 0 0 14 6.5a2 2 0 0 0-4 0H8a4 4 0 1 1 8 0 3.9 3.9 0 0 1-.9 2.75z"/></svg>
                     </div>
                     <h2>En attente de confirmation</h2>
-                    <p id="accessConfirmationMessage" class="access-confirmation-message" role="status">Un code de confirmation sera envoyé à votre adresse e-mail. Il reste valide 15 minutes. Après 3 codes incorrects, un nouveau code est envoyé; réessayez après 10 minutes.</p>
+                    <p id="accessConfirmationMessage" class="access-confirmation-message" role="status">Un code de confirmation sera envoyé à votre adresse e-mail. Il reste valide 10 minutes. Après 3 codes incorrects, un nouveau code est envoyé; réessayez après 10 minutes.</p>
                 </div>
                 <form onsubmit="confirmAccessCode(event)">
                     <div class="input-group">
@@ -768,7 +768,7 @@
             if (pendingChallengeId) {
                 showAccessConfirmation(
                     pendingChallengeId,
-                    'Un code de confirmation a été envoyé à votre adresse e-mail. Il expire après 15 minutes; saisissez-le ci-dessous.'
+                    'Un code de confirmation a été envoyé à votre adresse e-mail. Il expire après 10 minutes; saisissez-le ci-dessous.'
                 );
             } else {
                 switchView('login');
