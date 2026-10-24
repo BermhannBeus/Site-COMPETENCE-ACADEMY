@@ -965,13 +965,17 @@
     });
 
     document.querySelectorAll('.password-box input[type="password"]').forEach(function(input) {
+        const fieldWrapper = document.createElement('div');
+        fieldWrapper.className = 'password-input-wrapper';
+        input.parentElement.insertBefore(fieldWrapper, input);
+        fieldWrapper.appendChild(input);
+
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'password-toggle';
         toggle.setAttribute('aria-label', 'Afficher le code d’accès');
         toggle.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
-        input.parentElement.classList.add('has-password-toggle');
-        input.parentElement.appendChild(toggle);
+        fieldWrapper.appendChild(toggle);
         toggle.addEventListener('click', function() {
             const isHidden = input.type === 'password';
             input.type = isHidden ? 'text' : 'password';
