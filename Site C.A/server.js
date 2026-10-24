@@ -16,19 +16,76 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 
-const TRANZAK_BASE_URLS = {
-    sandbox: 'https://sandbox.dsapi.tranzak.me',
-    live: 'https://dsapi.tranzak.me'
-};
-const getTranzakBaseUrl = () => {
-    const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
-    return TRANZAK_BASE_URLS[mode] || TRANZAK_BASE_URLS.sandbox;
-};
-const getTranzakCheckoutUrl = () => `${getTranzakBaseUrl().replace(/\/$/, '')}/v1/request-collection`;
-const getTranzakHeaders = (apiKey) => ({
-    Authorization: `Bearer ${apiKey}`,
+const TRANZAK_BASE_URL = 'https://dsapi.tranzak.me';
+let tranzakTokenCache = null;
+const getTranzakCheckoutUrl = () => `${TRANZAK_BASE_URL}/xp021/request/create`;
+const getTranzakHeaders = (appId, token) => ({
+    Authorization: `Bearer: ${token}`,
+    'X-App-ID': appId,
     'Content-Type': 'application/json'
 });
+const getTranzakAccessToken = async (appId, appKey) => {
+    const baseUrl = TRANZAK_BASE_URL;
+    if (tranzakTokenCache
+        && tranzakTokenCache.baseUrl === baseUrl
+        && tranzakTokenCache.appId === appId
+        && tranzakTokenCache.expiresAt > Date.now()) {
+        return tranzakTokenCache.token;
+    }
+
+    let response;
+    try {
+        response = await fetch(`${baseUrl}/auth/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appId, appKey }),
+            signal: AbortSignal.timeout(20000)
+        });
+    } catch (cause) {
+        const error = new Error('Tranzak authentication endpoint could not be reached.');
+        error.cause = cause;
+        error.code = 'TRANZAK_UNAVAILABLE';
+        throw error;
+    }
+    const responseBody = await response.text();
+    let auth;
+    try {
+        auth = JSON.parse(responseBody);
+    } catch (cause) {
+        const error = new Error(`Tranzak authentication returned an invalid response (${response.status}).`);
+        error.tranzakResponse = {
+            endpoint: '/auth/token',
+            status: response.status,
+            statusText: response.statusText,
+            body: responseBody
+        };
+        throw error;
+    }
+
+    const token = String(auth.data?.token || '').trim();
+    if (!response.ok || auth.success !== true || !token) {
+        const error = new Error('Tranzak authentication failed.');
+        error.tranzakResponse = {
+            endpoint: '/auth/token',
+            status: response.status,
+            statusText: response.statusText,
+            body: responseBody
+        };
+        throw error;
+    }
+
+    const expiresInSeconds = Number(auth.data?.expiresIn || auth.data?.expires);
+    const cacheDurationMs = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+        ? expiresInSeconds * 1000 * 0.9
+        : 55 * 60 * 1000;
+    tranzakTokenCache = {
+        baseUrl,
+        appId,
+        token,
+        expiresAt: Date.now() + cacheDurationMs
+    };
+    return token;
+};
 
 const app = express();
 const server = http.createServer(app);
@@ -477,23 +534,37 @@ app.post('/api/tranzak-webhook', express.raw({ type: 'application/json', limit: 
     } catch (error) {
         return res.status(400).json({ status: 'ERROR', message: 'Le contenu du webhook Tranzak est invalide.' });
     }
-    if (event.event !== 'PAYMENT_COMPLETED' || event.data?.status !== 'SUCCESS') {
+    const eventName = String(event.event || '').toLowerCase();
+    const paymentStatus = String(event.data?.status || '').toUpperCase();
+    const isPaymentCompleted = eventName === 'payment_completed'
+        || eventName === 'payment.collection.completed';
+    if (!isPaymentCompleted || !['SUCCESS', 'SUCCESSFUL'].includes(paymentStatus)) {
         return res.status(200).json({ status: 'SUCCESS', ignored: true });
     }
 
     try {
         const requestId = String(event.data.requestId || '').trim();
+        const mchTransactionRef = String(event.data.mchTransactionRef || '').trim();
         const customId = String(event.data.customId || '');
-        if (!requestId || requestId.length > 128 || customId.length > 256) {
+        if ((!requestId && !mchTransactionRef)
+            || requestId.length > 128
+            || mchTransactionRef.length > 128
+            || customId.length > 256) {
             return res.status(400).json({ status: 'ERROR', message: 'Les références du paiement Tranzak sont invalides.' });
         }
 
-        const payment = await CoursePayment.findOne({ requestId, provider: 'tranzak' });
+        const paymentReferenceQuery = [];
+        if (requestId) paymentReferenceQuery.push({ requestId });
+        if (mchTransactionRef) paymentReferenceQuery.push({ mchTransactionRef });
+        const payment = await CoursePayment.findOne({
+            provider: 'tranzak',
+            $or: paymentReferenceQuery
+        });
         if (!payment) {
             return res.status(404).json({ status: 'ERROR', message: 'Paiement Tranzak introuvable.' });
         }
         const expectedCustomId = `userId:${payment.userId}|courseId:${payment.courseId}`;
-        if (customId !== expectedCustomId) {
+        if (customId && customId !== expectedCustomId) {
             console.error('Rejected Tranzak webhook with mismatched customId:', requestId);
             return res.status(400).json({ status: 'ERROR', message: 'Les informations du paiement Tranzak ne correspondent pas.' });
         }
@@ -2808,13 +2879,10 @@ app.put('/api/admin/course-prices/:courseId', requireCourseAdmin, async (req, re
 app.post('/api/pay-tranzak', authenticate, async (req, res) => {
     let payment;
     try {
-        const apiKey = process.env.TRANZAK_API_KEY;
-        const mode = String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase();
-        if (!apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        const apiKey = String(process.env.TRANZAK_API_KEY || '').trim();
+        const appId = String(process.env.TRANZAK_APP_ID || '').trim();
+        if (!appId || !apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
             return res.status(503).json({ success: false, message: 'Le paiement Tranzak n’est pas encore configuré.' });
-        }
-        if (!Object.prototype.hasOwnProperty.call(TRANZAK_BASE_URLS, mode)) {
-            return res.status(503).json({ success: false, message: 'Le mode Tranzak doit être « live » ou « sandbox ».' });
         }
 
         const courseId = String(req.body?.courseId || '');
@@ -2845,28 +2913,20 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
         const returnUrl = new URL(getFrontendUrl('/Cours%20en%20Ligne.html'));
         returnUrl.searchParams.set('payment', 'success');
         returnUrl.searchParams.set('reference', mchTransactionRef);
-        const cancelUrl = new URL(getFrontendUrl('/Cours%20en%20Ligne.html'));
-        cancelUrl.searchParams.set('payment', 'cancel');
-        cancelUrl.searchParams.set('reference', mchTransactionRef);
-        const customId = `userId:${user._id}|courseId:${courseId}`;
-        const callbackUrl = process.env.TRANZAK_CALLBACK_URL
-            || (process.env.RENDER_EXTERNAL_URL
-                ? new URL('/api/tranzak-webhook', process.env.RENDER_EXTERNAL_URL).toString()
-                : '');
+        const tranzakToken = await getTranzakAccessToken(appId, apiKey);
 
         let tranzakResponse;
         try {
             tranzakResponse = await fetch(getTranzakCheckoutUrl(), {
                 method: 'POST',
-                headers: getTranzakHeaders(apiKey),
+                headers: getTranzakHeaders(appId, tranzakToken),
                 body: JSON.stringify({
                     amount: price.amount,
-                    currency: COURSE_PAYMENT_CURRENCY,
+                    currencyCode: COURSE_PAYMENT_CURRENCY,
                     description: `Paiement du cours ${COURSE_TITLES[courseId]}`,
-                    customId,
-                    returnUrl: returnUrl.toString(),
-                    cancelUrl: cancelUrl.toString(),
-                    ...(callbackUrl ? { callbackUrl } : {})
+                    mchTransactionRef,
+                    serviceDiscountAmount: 0,
+                    returnUrl: returnUrl.toString()
                 }),
                 signal: AbortSignal.timeout(20000)
             });
@@ -2884,6 +2944,7 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
         } catch (cause) {
             const error = new Error(`Tranzak returned an invalid checkout response (${tranzakResponse.status}).`);
             error.tranzakResponse = {
+                endpoint: getTranzakCheckoutUrl(),
                 status: tranzakResponse.status,
                 statusText: tranzakResponse.statusText,
                 body: responseBody
@@ -2891,10 +2952,11 @@ app.post('/api/pay-tranzak', authenticate, async (req, res) => {
             throw error;
         }
         const requestId = String(checkout.data?.requestId || '').trim();
-        const paymentUrl = String(checkout.data?.paymentUrl || '').trim();
-        if (!tranzakResponse.ok || checkout.status !== 'SUCCESS' || !requestId || !paymentUrl) {
+        const paymentUrl = String(checkout.data?.links?.paymentAuthUrl || checkout.data?.paymentUrl || '').trim();
+        if (!tranzakResponse.ok || checkout.success !== true || !requestId || !paymentUrl) {
             const error = new Error('Tranzak did not return a valid checkout session.');
             error.tranzakResponse = {
+                endpoint: getTranzakCheckoutUrl(),
                 status: tranzakResponse.status,
                 statusText: tranzakResponse.statusText,
                 body: responseBody
@@ -3354,10 +3416,10 @@ const startServer = async () => {
     if (missingEnvironment.length > 0) {
         throw new Error(`Missing environment variables: ${missingEnvironment.join(', ')}`);
     }
-    if (!process.env.TRANZAK_API_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
-        console.warn('Tranzak payments require TRANZAK_API_KEY and TRANZAK_WEBHOOK_SECRET.');
+    if (!process.env.TRANZAK_APP_ID || !process.env.TRANZAK_API_KEY || !process.env.TRANZAK_WEBHOOK_SECRET) {
+        console.warn('Tranzak live payments require TRANZAK_APP_ID, TRANZAK_API_KEY, and TRANZAK_WEBHOOK_SECRET.');
     } else {
-        console.log(`Tranzak ${String(process.env.TRANZAK_MODE || 'sandbox').trim().toLowerCase()} mode configured.`);
+        console.log(`Tranzak live mode configured (${TRANZAK_BASE_URL}).`);
     }
 
     await mongoose.connect(MONGODB_URI, {
