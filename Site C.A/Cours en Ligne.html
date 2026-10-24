@@ -835,9 +835,25 @@
         <h2 id="paymentMethodTitle">Paiement sécurisé Tranzak</h2>
         <p id="paymentMethodCourse"></p>
         <div class="payment-method-options">
-            <button class="payment-method-option" type="button" data-tranzak-checkout>
+            <button class="payment-method-option" type="button" data-tranzak-checkout data-payment-method="moncash">
+                <img class="payment-provider-logo" src="Logo/Moncash.png" alt="" aria-hidden="true">
+                <span>Payer avec MonCash</span>
+            </button>
+            <button class="payment-method-option" type="button" data-tranzak-checkout data-payment-method="natcash">
+                <img class="payment-provider-logo" src="Logo/Natcash.png" alt="" aria-hidden="true">
+                <span>Payer avec NatCash</span>
+            </button>
+            <button class="payment-method-option" type="button" data-tranzak-checkout data-payment-method="card">
+                <i class="fa-regular fa-credit-card" aria-hidden="true"></i>
+                <span>Payer par carte bancaire</span>
+            </button>
+        </div>
+        <div id="tranzakCardPanel" hidden>
+            <p>Entrez les informations de votre carte dans le formulaire sécurisé Tranzak.</p>
+            <div id="tranzak-card-element"></div>
+            <button id="confirmTranzakCard" class="payment-method-option" type="button">
                 <i class="fa-solid fa-lock" aria-hidden="true"></i>
-                <span>Payer en ligne (MonCash, Natcash, Carte, Zelle)</span>
+                <span>Confirmer le paiement par carte</span>
             </button>
         </div>
         <p id="paymentMethodNotice" class="payment-method-notice" role="status" aria-live="polite" hidden></p>
@@ -1009,6 +1025,9 @@
     const paymentMethodDialog = document.getElementById('paymentMethodDialog');
     const paymentMethodCourse = document.getElementById('paymentMethodCourse');
     const paymentMethodNotice = document.getElementById('paymentMethodNotice');
+    const paymentMethodOptions = paymentMethodDialog.querySelector('.payment-method-options');
+    const tranzakCardPanel = document.getElementById('tranzakCardPanel');
+    const confirmTranzakCardButton = document.getElementById('confirmTranzakCard');
     const paymentConfirmationDialog = document.getElementById('paymentConfirmationDialog');
     const paymentConfirmationMessage = document.getElementById('paymentConfirmationMessage');
     const paymentAccessCode = document.getElementById('paymentAccessCode');
@@ -1017,9 +1036,16 @@
     const paymentReturnNotice = document.getElementById('paymentReturnNotice');
     const coursePrices = new Map();
     let selectedPaymentCourseId = '';
+    let pendingTranzakCardPayment = null;
+    let tranzakCardScriptPromise = null;
 
     function ouvrirChoixPaiement(courseId) {
         selectedPaymentCourseId = courseId;
+        pendingTranzakCardPayment = null;
+        paymentMethodOptions.hidden = false;
+        tranzakCardPanel.hidden = true;
+        document.getElementById('tranzak-card-element').replaceChildren();
+        confirmTranzakCardButton.disabled = false;
         const price = coursePrices.get(courseId);
         const courseName = document.querySelector(`.course-card-wrapper[data-category="${courseId}"] .category-badge`)?.textContent.trim()
             || courseId;
@@ -1030,13 +1056,34 @@
         paymentMethodDialog.showModal();
     }
 
-    async function payerFormation(courseId, button) {
+    function loadTranzakCardSdk() {
+        if (window.TranzakCard) return Promise.resolve(window.TranzakCard);
+        if (!tranzakCardScriptPromise) {
+            tranzakCardScriptPromise = new Promise(function(resolve, reject) {
+                const script = document.createElement('script');
+                script.src = 'https://api.tranzak.co/js/tranzak-card.js';
+                script.async = true;
+                script.onload = function() {
+                    if (window.TranzakCard) resolve(window.TranzakCard);
+                    else reject(new Error('Le formulaire sécurisé Tranzak n’a pas pu être chargé.'));
+                };
+                script.onerror = function() {
+                    tranzakCardScriptPromise = null;
+                    reject(new Error('Impossible de charger le formulaire de carte Tranzak.'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+        return tranzakCardScriptPromise;
+    }
+
+    async function payerFormation(courseId, button, paymentMethod) {
         button.disabled = true;
         paymentMethodNotice.hidden = true;
         try {
             const payment = await courseApiRequest('/pay-tranzak', {
                 method: 'POST',
-                body: JSON.stringify({ courseId })
+                body: JSON.stringify({ courseId, paymentMethod })
             });
             if (payment.accessCode) {
                 paymentMethodDialog.close();
@@ -1056,6 +1103,18 @@
                 window.location.assign(paymentUrl.href);
                 return;
             }
+            if (paymentMethod === 'card' && payment.clientSecret && payment.publishableKey) {
+                const cardSdk = await loadTranzakCardSdk();
+                pendingTranzakCardPayment = payment;
+                paymentMethodOptions.hidden = true;
+                tranzakCardPanel.hidden = false;
+                cardSdk.mount({
+                    containerId: 'tranzak-card-element',
+                    clientSecret: payment.clientSecret,
+                    publishableKey: payment.publishableKey
+                });
+                return;
+            }
             if (payment.reference) {
                 paymentMethodDialog.close();
                 await attendreConfirmationPaiement(payment.reference);
@@ -1070,6 +1129,38 @@
             button.disabled = false;
         }
     }
+
+    confirmTranzakCardButton.addEventListener('click', async function() {
+        if (!pendingTranzakCardPayment || confirmTranzakCardButton.disabled) return;
+        confirmTranzakCardButton.disabled = true;
+        paymentMethodNotice.hidden = true;
+        try {
+            const cardSdk = await loadTranzakCardSdk();
+            cardSdk.confirm({
+                onSuccess: function() {
+                    const reference = pendingTranzakCardPayment.reference;
+                    paymentMethodDialog.close();
+                    attendreConfirmationPaiement(reference).catch(function(error) {
+                        console.error('Could not confirm Tranzak card payment:', error);
+                        paymentReturnNotice.textContent = error.message
+                            || 'Le paiement est en cours de vérification. Vos leçons se débloqueront après confirmation.';
+                        paymentReturnNotice.hidden = false;
+                    });
+                },
+                onError: function(error) {
+                    paymentMethodNotice.textContent = error?.message
+                        || 'Le paiement par carte n’a pas abouti. Vérifiez les informations et réessayez.';
+                    paymentMethodNotice.hidden = false;
+                    confirmTranzakCardButton.disabled = false;
+                }
+            });
+        } catch (error) {
+            console.error('Could not confirm Tranzak card payment:', error);
+            paymentMethodNotice.textContent = error.message || 'Impossible de confirmer le paiement par carte.';
+            paymentMethodNotice.hidden = false;
+            confirmTranzakCardButton.disabled = false;
+        }
+    });
 
     let paymentFailureNoticeTimer = null;
     function afficherEchecPaiement() {
@@ -1114,7 +1205,7 @@
     });
     paymentMethodDialog.querySelectorAll('[data-tranzak-checkout]').forEach(function(button) {
         button.addEventListener('click', function() {
-            payerFormation(selectedPaymentCourseId, button);
+            payerFormation(selectedPaymentCourseId, button, button.dataset.paymentMethod);
         });
     });
     paymentConfirmationDialog.querySelectorAll('[data-close-payment-confirmation]').forEach(function(button) {
@@ -1190,7 +1281,7 @@
     }
 
     async function attendreConfirmationPaiement(reference) {
-        const maxAttempts = 30;
+        const maxAttempts = 75;
         for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
             const data = await courseApiRequest(
                 '/payments/status?reference=' + encodeURIComponent(reference),
@@ -1225,14 +1316,16 @@
     async function traiterRetourPaiement() {
         const url = new URL(window.location.href);
         const paymentResult = url.searchParams.get('payment');
-        const reference = url.searchParams.get('reference');
-        if (!paymentResult) return;
+        const reference = url.searchParams.get('reference')
+            || url.searchParams.get('transaction_id');
+        const tranzakReturnStatus = url.searchParams.get('status');
+        if (!paymentResult && !reference) return;
 
-        url.searchParams.delete('payment');
-        url.searchParams.delete('reference');
+        ['payment', 'reference', 'transaction_id', 'status', 'amount', 'currency', 'timestamp', 'signature']
+            .forEach((parameter) => url.searchParams.delete(parameter));
         history.replaceState(null, '', url.pathname + url.search + url.hash);
         if (paymentMethodDialog.open) paymentMethodDialog.close();
-        if (paymentResult === 'cancel') {
+        if (paymentResult === 'cancel' && !tranzakReturnStatus) {
             if (reference) {
                 courseApiRequest('/payments/cancel', {
                     method: 'POST',
@@ -1244,7 +1337,7 @@
             afficherEchecPaiement();
             return;
         }
-        if (paymentResult !== 'success' || !reference) return;
+        if (!reference) return;
 
         try {
             await attendreConfirmationPaiement(reference);
