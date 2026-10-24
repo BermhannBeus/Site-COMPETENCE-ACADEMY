@@ -82,6 +82,29 @@ body {
     display: none;
 }
 
+#loginForm > .session-conflict-banner {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 24px;
+}
+
+.session-conflict-banner > span:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#loginForm > form,
+#loginForm .input-group,
+#loginForm .input-field-wrapper {
+    width: 100%;
+    min-width: 0;
+}
+
+#loginForm .input-field-wrapper input {
+    min-width: 0;
+}
+
 .session-conflict-icon {
     display: grid;
     flex: 0 0 22px;
@@ -293,7 +316,8 @@ body {
 /* Bouton d’affichage du mot de passe */
 .toggle-password {
     position: absolute;
-    right: 14px;
+    z-index: 2;
+    right: 15px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -383,7 +407,14 @@ body {
 @media (max-width: 768px) {
     body {
         min-height: 100svh;
-        padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+        align-items: flex-start;
+        padding: 16px clamp(10px, 4vw, 18px) calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .auth-wrapper {
+        width: 100%;
+        min-width: 0;
+        margin-block: auto;
     }
 
     .auth-wrapper.signup-layout {
@@ -393,7 +424,23 @@ body {
     }
 
     .auth-container {
+        min-width: 0;
         padding: clamp(22px, 5vw, 30px) clamp(18px, 4vw, 24px);
+    }
+
+    #loginForm .form-header h2 {
+        font-size: clamp(1.35rem, 6vw, 1.7rem);
+        overflow-wrap: anywhere;
+    }
+
+    .session-conflict-banner {
+        gap: 8px;
+        padding: 10px clamp(10px, 3vw, 14px);
+        font-size: clamp(0.78rem, 3.2vw, 0.9rem);
+    }
+
+    .input-group label {
+        overflow-wrap: anywhere;
     }
 
     .signup-grid {
@@ -442,10 +489,30 @@ body {
     gap: 12px;
     justify-content: center;
     width: 100%;
+    min-width: 0;
 }
 
 #googleSignInButton {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+#googleSignInButton [role="button"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+#googleSignInButton [role="button"] > div,
+#googleSignInButton [role="button"] span {
+    min-width: 0;
+    max-width: 100%;
+}
+
+#googleSignInButton [role="button"] span {
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .social-btn {
@@ -550,18 +617,36 @@ body {
 /* Adaptation aux petits téléphones (iPhone SE, Galaxy 360px, etc.) */
 @media (max-width: 420px) {
     body {
-        padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+        padding-right: clamp(8px, 3vw, 14px);
+        padding-left: clamp(8px, 3vw, 14px);
     }
+
     .auth-container {
-        padding: 24px 16px;
-        border-radius: 20px;
+        padding: clamp(18px, 6vw, 24px) clamp(12px, 4.5vw, 16px);
+        border-radius: clamp(16px, 5vw, 20px);
     }
+
     .form-header h2 {
-        font-size: 1.5rem;
+        font-size: clamp(1.25rem, 6vw, 1.5rem);
     }
+
     .avatar-icon {
-        width: 70px;
-        height: 70px;
+        width: clamp(60px, 19vw, 70px);
+        height: clamp(60px, 19vw, 70px);
+    }
+}
+
+@media (max-height: 560px) {
+    body {
+        align-items: flex-start;
+    }
+
+    .auth-wrapper {
+        margin-block: auto;
+    }
+
+    .auth-container {
+        transition: none;
     }
 }
 /* Style du champ de code de vérification */
