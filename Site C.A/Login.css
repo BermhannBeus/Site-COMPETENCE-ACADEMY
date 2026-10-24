@@ -90,6 +90,7 @@ body {
 }
 
 .session-conflict-banner > span:last-child {
+    flex: 1 1 auto;
     min-width: 0;
     overflow-wrap: anywhere;
 }
@@ -650,7 +651,6 @@ body {
     }
 }
 /* Style du champ de code de vérification */
-
 #resetCodeForm .input-field-wrapper input[type="text"] {
     letter-spacing: 4px;
     font-weight: bold;
