@@ -723,6 +723,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .payment-method-option:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--academy-orange); color: var(--academy-blue); background: #fff7ed; box-shadow: 0 8px 18px rgba(0, 6, 65, .14); }
 .payment-method-option:disabled { cursor: not-allowed; opacity: .55; }
 .payment-method-option > i { flex: 0 0 auto; font-size: 1.15rem; }
+.payment-method-option > .payment-provider-logo { flex: 0 0 52px; width: 52px; height: 44px; padding: 3px; border-radius: 7px; background: #fff; object-fit: contain; }
 .payment-method-option > span { flex: 1; }
 .payment-method-option:focus-visible { outline: 3px solid rgba(0, 86, 179, .35); outline-offset: 3px; }
 .payment-method-option:active:not(:disabled) { transform: translateY(0); }
@@ -2032,5 +2033,217 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
         align-items: flex-start;
         flex-direction: column;
         gap: 5px;
+    }
+}
+
+.payment-method-options[hidden] {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    body {
+        padding-right: clamp(6px, 2.5vw, 10px);
+        padding-left: clamp(6px, 2.5vw, 10px);
+    }
+
+    .navbar {
+        gap: clamp(4px, 1.5vw, 12px);
+        padding-right: clamp(8px, 2.5vw, 16px);
+        padding-left: clamp(8px, 2.5vw, 16px);
+    }
+
+    .navbar .logo img {
+        width: clamp(40px, 12vw, 72px) !important;
+        height: clamp(40px, 12vw, 72px) !important;
+        max-width: 100%;
+    }
+
+    .nav-marquee {
+        flex: 1 1 0;
+        min-width: 0;
+        margin-right: clamp(4px, 1.5vw, 12px);
+        margin-left: clamp(4px, 1.5vw, 12px);
+    }
+
+    .nav-marquee marquee {
+        font-size: clamp(0.6rem, 2.5vw, 0.9rem);
+    }
+
+    .btn-logout {
+        flex: 0 0 auto;
+        gap: 5px;
+        padding: clamp(5px, 1.6vw, 8px) clamp(6px, 2vw, 12px);
+        font-size: clamp(0.62rem, 2.4vw, 0.8rem);
+    }
+
+    .online-panel,
+    .course-card-wrapper,
+    .course-card,
+    .video-wrapper,
+    .course-info,
+    .resources-section {
+        min-width: 0;
+    }
+
+    .online-panel-title,
+    .profile-identity {
+        min-width: 0;
+    }
+
+    .online-panel-title h2,
+    .profile-identity p,
+    .course-info h2,
+    .course-description,
+    .category-badge {
+        overflow-wrap: anywhere;
+    }
+
+    .main-header {
+        padding-right: 4px;
+        padding-left: 4px;
+    }
+
+    .main-header h1 {
+        font-size: clamp(1.15rem, 5vw, 2rem);
+        line-height: 1.2;
+    }
+
+    .main-header p {
+        font-size: clamp(0.78rem, 2.8vw, 0.95rem);
+    }
+
+    .filter-container {
+        min-width: 0;
+        padding-right: 4px;
+        padding-left: 4px;
+    }
+
+    .filter-btn {
+        max-width: 100%;
+        padding: clamp(7px, 2vw, 10px) clamp(10px, 3vw, 18px);
+        font-size: clamp(0.7rem, 2.8vw, 0.9rem);
+    }
+
+    .courses-container {
+        gap: clamp(18px, 4vw, 35px);
+    }
+
+    .category-badge {
+        max-width: 100%;
+        font-size: clamp(0.68rem, 2.6vw, 0.8rem);
+    }
+
+    .overlay-lock {
+        overflow-y: auto;
+        padding: clamp(4px, 1.5vw, 12px);
+    }
+
+    .lock-form-container {
+        max-width: 280px;
+        padding: clamp(2px, 1vw, 8px);
+    }
+
+    .lock-form-container > i {
+        margin-bottom: clamp(1px, 0.5vw, 6px);
+        font-size: clamp(0.7rem, 3.5vw, 1.3rem);
+    }
+
+    .lock-form-container p {
+        margin-bottom: clamp(3px, 1vw, 9px);
+        font-size: clamp(0.68rem, 2.8vw, 0.9rem);
+        line-height: 1.2;
+    }
+
+    .password-box {
+        gap: clamp(3px, 1vw, 8px);
+    }
+
+    .password-box input {
+        padding: clamp(5px, 1.5vw, 10px) 38px clamp(5px, 1.5vw, 10px) 10px;
+        font-size: clamp(0.68rem, 2.7vw, 0.9rem);
+    }
+
+    .password-box button {
+        min-height: clamp(28px, 9vw, 42px);
+        padding: clamp(5px, 1.5vw, 10px) 8px;
+        font-size: clamp(0.68rem, 2.8vw, 0.9rem);
+        line-height: 1.2;
+    }
+
+    .badge-status {
+        top: clamp(8px, 2vw, 12px);
+        right: clamp(8px, 2vw, 12px);
+        padding: 4px clamp(8px, 2.5vw, 14px);
+        font-size: clamp(0.65rem, 2.4vw, 0.8rem);
+    }
+
+    .course-info {
+        padding: clamp(16px, 4vw, 25px) clamp(14px, 4vw, 20px);
+    }
+
+    .course-info h2 {
+        font-size: clamp(1.05rem, 4.5vw, 1.4rem);
+        line-height: 1.3;
+    }
+
+    .course-description {
+        margin-bottom: clamp(16px, 5vw, 25px);
+        font-size: clamp(0.8rem, 2.8vw, 0.9rem);
+    }
+
+    .payment-method-dialog {
+        width: calc(100vw - 16px);
+        padding: clamp(16px, 5vw, 28px);
+    }
+}
+
+@media (max-width: 360px) {
+    .overlay-lock {
+        padding: 3px;
+    }
+
+    .lock-form-container {
+        padding: 2px;
+    }
+
+    .lock-form-container > i {
+        margin-bottom: 0;
+        font-size: 0.7rem;
+    }
+
+    .lock-form-container p {
+        margin-bottom: 3px;
+    }
+
+    .password-box {
+        gap: 3px;
+    }
+
+    .password-box button {
+        min-height: 28px;
+    }
+}
+
+@media (max-height: 480px) and (max-width: 767px) {
+    .navbar {
+        height: 60px;
+    }
+
+    .navbar .logo img {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .nav-spacer {
+        height: 76px;
+    }
+
+    .overlay-lock {
+        padding-top: 3px;
+        padding-bottom: 3px;
+    }
+
+    .lock-form-container > i {
+        display: none;
     }
 }
