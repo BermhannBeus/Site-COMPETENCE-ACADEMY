@@ -659,7 +659,7 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
 .lock-form-container p { font-size: 0.95rem; font-weight: 600; margin-bottom: 15px; }
 
 .password-box { display: flex; flex-direction: column; gap: 10px; }
-.password-box.has-password-toggle { position: relative; }
+.password-input-wrapper { position: relative; width: 100%; }
 .password-box input {
     width: 100%;
     box-sizing: border-box;
@@ -678,13 +678,13 @@ body { background-color: var(--light-gray); color: var(--text-color); padding: 2
     display: none;
 }
 .password-box input:focus { border-color: var(--academy-orange); box-shadow: 0 0 10px rgba(247, 107, 0, 0.4); }
-.password-box .password-toggle {
+.password-input-wrapper .password-toggle {
     position: absolute;
-    top: 7px;
-    right: 10px;
+    top: 50%;
+    right: 12px;
     width: 32px;
     height: 32px;
-    transform: none;
+    transform: translateY(-50%);
     display: grid;
     place-items: center;
     border: 0;
