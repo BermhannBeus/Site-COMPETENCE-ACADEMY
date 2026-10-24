@@ -57,7 +57,7 @@ const ADMIN_JWT_EXPIRES_IN = '1h';
 const ADMIN_OTP_TTL_MS = 2 * 60 * 1000;
 const ADMIN_OTP_RESEND_INTERVAL_MS = ADMIN_OTP_TTL_MS;
 const ADMIN_OTP_MAX_ATTEMPTS = 5;
-const ACCESS_CONFIRMATION_TTL_MS = 15 * 60 * 1000;
+const ACCESS_CONFIRMATION_TTL_MS = 10 * 60 * 1000;
 const ACCESS_CONFIRMATION_RESEND_INTERVAL_MS = 5 * 60 * 1000;
 const ACCESS_CONFIRMATION_MAX_ATTEMPTS = 3;
 const ACCESS_CONFIRMATION_LOCKOUT_MS = 10 * 60 * 1000;
@@ -991,7 +991,7 @@ const sendAccessConfirmationCode = async (user, code) => {
             code,
             buttonLabel: 'Retourner à la connexion',
             buttonUrl: getFrontendUrl('/Login.html'),
-            note: 'Ce code est personnel et expire dans 15 minutes. Ne le partagez avec personne.'
+            note: 'Ce code est personnel et expire dans 10 minutes. Ne le partagez avec personne.'
         })
     });
 };
@@ -1034,7 +1034,7 @@ const createAccessConfirmation = async (user) => {
 
     return {
         challengeId,
-        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 15 minutes.'
+        message: 'Un code de confirmation vient d’être envoyé à votre adresse e-mail. Saisissez-le dans les 10 minutes.'
     };
 };
 
