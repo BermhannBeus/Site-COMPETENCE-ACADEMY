@@ -164,7 +164,17 @@
         <section class="payment-resume-card" id="paymentResumeCard" aria-live="polite">
             <h2>Reprendre votre paiement</h2>
             <p id="paymentResumeMessage">Vérification de votre inscription...</p>
-            <a class="resume-payment-button" id="resumePaymentButton" href="#" hidden>Continuer le paiement</a>
+            <button class="resume-payment-button" id="resumePaymentButton" type="button" hidden>Choisir une méthode de paiement</button>
+            <div class="resume-payment-methods" id="resumePaymentMethods" hidden>
+                <button class="resume-method-button" type="button" data-payment-method="moncash">
+                    <img src="Logo/Moncash.png" alt="">
+                    <span>Continuer avec MonCash</span>
+                </button>
+                <button class="resume-method-button" type="button" data-payment-method="natcash">
+                    <img src="Logo/Natcash.png" alt="">
+                    <span>Continuer avec NatCash</span>
+                </button>
+            </div>
             <a class="resume-payment-button secondary-resume-button" id="downloadPendingPdfButton" href="#" download hidden>Télécharger le formulaire PDF</a>
         </section>
 
@@ -196,6 +206,7 @@
     const resumeCard = document.getElementById('paymentResumeCard');
     const resumeMessage = document.getElementById('paymentResumeMessage');
     const resumeButton = document.getElementById('resumePaymentButton');
+    const resumePaymentMethods = document.getElementById('resumePaymentMethods');
     const downloadPendingPdfButton = document.getElementById('downloadPendingPdfButton');
     const draftKey = 'competence-academy-registration-draft';
     const pendingKey = 'competence-academy-registration-payment';
@@ -255,14 +266,13 @@
         sessionStorage.setItem(pendingKey, JSON.stringify({ reference, paymentUrl }));
     }
 
-    function showPendingPayment(paymentUrl, reference) {
+    function showPendingPayment(paymentUrl, reference, canRetry = true) {
         document.getElementById('registrationCard').style.display = 'none';
         resumeCard.classList.add('visible');
-        resumeMessage.textContent = paymentUrl
-            ? 'Votre demande est enregistrée, mais le paiement n’est pas encore confirmé. Vous pouvez reprendre le paiement sans créer une nouvelle inscription.'
-            : 'Votre paiement est encore en cours de vérification. Nous ne pouvons pas ouvrir un nouveau paiement pour éviter une inscription en double.';
-        resumeButton.hidden = !paymentUrl;
-        if (paymentUrl) resumeButton.href = paymentUrl;
+        resumeMessage.textContent = 'Votre inscription est enregistrée. Choisissez MonCash ou NatCash pour reprendre le paiement sans créer une nouvelle inscription.';
+        resumeButton.hidden = !canRetry;
+        resumePaymentMethods.hidden = true;
+        resumeButton.dataset.reference = reference || '';
         downloadPendingPdfButton.hidden = !reference;
         if (reference) {
             downloadPendingPdfButton.href =
@@ -287,7 +297,10 @@
                 }
                 if (data.status === 'PENDING') {
                     setPendingPayment(reference, data.paymentUrl || '');
-                    showPendingPayment(data.paymentUrl || '', reference);
+                    showPendingPayment(data.paymentUrl || '', reference, data.canRetryPayment !== false);
+                } else if (['REJECTED', 'CANCELLED'].includes(data.status) && data.canRetryPayment) {
+                    setPendingPayment(reference);
+                    showPendingPayment('', reference, true);
                 } else {
                     sessionStorage.removeItem(pendingKey);
                     showFormAgain(data.status === 'CANCELLED'
@@ -328,6 +341,39 @@
     form.addEventListener('input', saveDraft);
     form.addEventListener('change', saveDraft);
     restoreDraft();
+
+    resumeButton.addEventListener('click', () => {
+        resumePaymentMethods.hidden = !resumePaymentMethods.hidden;
+    });
+
+    resumePaymentMethods.addEventListener('click', async (event) => {
+        const methodButton = event.target.closest('[data-payment-method]');
+        if (!methodButton) return;
+        const reference = resumeButton.dataset.reference;
+        if (!reference) return;
+        resumePaymentMethods.querySelectorAll('button').forEach((button) => {
+            button.disabled = true;
+        });
+        resumeMessage.textContent = 'Préparation du paiement avec ' +
+            (methodButton.dataset.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash') + '...';
+        try {
+            const data = await requestJson(
+                `${apiBase}/api/registrations/${encodeURIComponent(reference)}/retry-payment`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentMethod: methodButton.dataset.paymentMethod })
+                }
+            );
+            setPendingPayment(data.reference, data.paymentUrl);
+            window.location.assign(data.paymentUrl);
+        } catch (error) {
+            resumeMessage.textContent = error.message;
+            resumePaymentMethods.querySelectorAll('button').forEach((button) => {
+                button.disabled = false;
+            });
+        }
+    });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
