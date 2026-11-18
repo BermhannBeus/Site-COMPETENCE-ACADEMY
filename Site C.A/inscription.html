@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inscription - Competence Academy</title>
+    <link rel="stylesheet" href="inscription.css">
+</head>
+<body>
+<main class="registration-page">
+    <div class="registration-shell">
+        <a class="registration-back" href="index.html" aria-label="Retourner à la page d'accueil">
+            <span aria-hidden="true">←</span> Retour à l'accueil
+        </a>
+        <header class="registration-header">
+            <img class="registration-logo" src="Logo.png" alt="Competence Academy">
+            <div>
+                <h1>Inscription</h1>
+                <p>Competence Academy - Inscrivez-vous à une formation professionnelle</p>
+            </div>
+        </header>
+
+        <section class="registration-card" id="registrationCard">
+            <form class="registration-form" id="registrationForm" novalidate>
+                <section class="form-section">
+                    <h2 data-step="1">Informations personnelles</h2>
+                    <div class="form-grid three-columns">
+                        <div class="field">
+                            <label for="civilite">Civilité *</label>
+                            <select id="civilite" name="civilite" required>
+                                <option value="">Sélectionner</option>
+                                <option>Monsieur</option>
+                                <option>Madame</option>
+                                <option>Mademoiselle</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="lastName">Nom *</label>
+                            <input id="lastName" name="lastName" maxlength="50" required>
+                        </div>
+                        <div class="field">
+                            <label for="firstName">Prénom *</label>
+                            <input id="firstName" name="firstName" autocomplete="given-name" maxlength="50" required>
+                        </div>
+                    </div>
+                    <div class="form-grid three-columns">
+                        <div class="field birth-field full-birth">
+                            <label>Date de naissance *</label>
+                            <input id="birthDate" name="birthDate" type="date" required>
+                        </div>
+                        <div class="field">
+                            <label for="gender">Genre *</label>
+                            <select id="gender" name="gender" required>
+                                <option value="">Sélectionner</option>
+                                <option>Masculin</option>
+                                <option>Féminin</option>
+                                <option>Autre</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="field full">
+                            <label for="address">Adresse complète *</label>
+                            <input id="address" name="address" autocomplete="street-address" maxlength="200" placeholder="Adresse complète" required>
+                        </div>
+                        <div class="field">
+                            <label for="city">Ville *</label>
+                            <input id="city" name="city" autocomplete="address-level2" maxlength="80" required>
+                        </div>
+                        <div class="field">
+                            <label for="department">Département *</label>
+                            <input id="department" name="department" maxlength="80" required>
+                        </div>
+                        <div class="field">
+                            <label for="email">E-mail du postulant *</label>
+                            <input id="email" name="email" type="email" autocomplete="email" maxlength="150" placeholder="ex: nom@competenceacademie.com" required>
+                        </div>
+                        <div class="field">
+                            <label for="phone">Téléphone principal *</label>
+                            <input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30" placeholder="(509) 000-0000" required>
+                        </div>
+                        <div class="field">
+                            <label for="secondaryPhone">Téléphone secondaire</label>
+                            <input id="secondaryPhone" name="secondaryPhone" type="tel" maxlength="30" placeholder="(509) 000-0000">
+                        </div>
+                        <div class="field">
+                            <label for="educationLevel">Niveau d'études *</label>
+                            <select id="educationLevel" name="educationLevel" required>
+                                <option value="">Sélectionner</option>
+                                <option>Primaire</option>
+                                <option>Secondaire</option>
+                                <option>Universitaire</option>
+                                <option>Professionnel</option>
+                                <option>Autre</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2 data-step="2">Formation choisie</h2>
+                    <div class="field">
+                        <label for="formation">Formation</label>
+                        <select id="formation" name="formation" required>
+                            <option value="">Sélectionner une formation</option>
+                            <option>Informatique</option>
+                            <option>Infographie</option>
+                            <option>Photographie</option>
+                            <option>Vidéographie</option>
+                            <option>Montage Vidéo</option>
+                            <option>QuickBooks</option>
+                            <option>Caméra de surveillance</option>
+                        </select>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2 data-step="3">Personne à contacter en cas d'urgence</h2>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="emergencyLastName">Nom *</label>
+                            <input id="emergencyLastName" name="emergencyLastName" maxlength="50" required>
+                        </div>
+                        <div class="field">
+                            <label for="emergencyFirstName">Prénom *</label>
+                            <input id="emergencyFirstName" name="emergencyFirstName" maxlength="50" required>
+                        </div>
+                        <div class="field full">
+                            <label for="emergencyAddress">Adresse *</label>
+                            <input id="emergencyAddress" name="emergencyAddress" maxlength="200" required>
+                        </div>
+                        <div class="field">
+                            <label for="emergencyName">Nom complet de référence</label>
+                            <input id="emergencyName" name="emergencyName" maxlength="100">
+                        </div>
+                        <div class="field">
+                            <label for="emergencyPhone">Téléphone *</label>
+                            <input id="emergencyPhone" name="emergencyPhone" type="tel" maxlength="30" required>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2 data-step="4">Méthode de paiement</h2>
+                    <div class="payment-methods">
+                        <div class="payment-choice">
+                            <input id="moncash" type="radio" name="paymentMethod" value="moncash" checked>
+                            <label for="moncash">
+                                <img src="Logo/Moncash.png" alt="MonCash">
+                                <span><strong>MonCash</strong><small>Payer avec MonCash</small></span>
+                                <i aria-hidden="true">✓</i>
+                            </label>
+                        </div>
+                        <div class="payment-choice">
+                            <input id="natcash" type="radio" name="paymentMethod" value="natcash">
+                            <label for="natcash">
+                                <img src="Logo/Natcash.png" alt="NatCash">
+                                <span><strong>NatCash</strong><small>Payer avec NatCash</small></span>
+                                <i aria-hidden="true">✓</i>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="consent-section">
+                    <label class="consent-choice" for="registrationConsent">
+                        <input id="registrationConsent" name="registrationConsent" type="checkbox" required>
+                        <span>Je reconnais que les trois informations suivantes sont vraies et exactes. Toute information fausse ou incomplète pourra entraîner le rejet de l'inscription. <strong>J'accepte les conditions</strong>.</span>
+                    </label>
+                </section>
+
+                <button class="submit-button" id="submitButton" type="submit">Continuer vers le paiement</button>
+                <p class="form-message" id="formMessage" role="alert" aria-live="polite"></p>
+            </form>
+        </section>
+
+        <section class="receipt-card" id="receiptCard" aria-live="polite">
+            <div class="receipt-success">Paiement confirmé - inscription enregistrée</div>
+            <article class="e-ticket" id="eTicket">
+                <div class="ticket-head">
+                    <span>COMPETENCE ACADEMY</span>
+                    <strong id="receiptTicket">E-TICKET</strong>
+                </div>
+                <div class="ticket-details">
+                    <div class="ticket-detail"><span>Étudiant</span><strong id="receiptName"></strong></div>
+                    <div class="ticket-detail"><span>Email</span><strong id="receiptEmail"></strong></div>
+                    <div class="ticket-detail"><span>Formation</span><strong id="receiptFormation"></strong></div>
+                    <div class="ticket-detail"><span>Méthode</span><strong id="receiptMethod"></strong></div>
+                    <div class="ticket-detail"><span>Montant payé</span><strong id="receiptAmount"></strong></div>
+                    <div class="ticket-detail"><span>Date</span><strong id="receiptDate"></strong></div>
+                </div>
+            </article>
+            <button class="print-button" id="printButton" type="button">Télécharger / Imprimer le reçu</button>
+        </section>
+    </div>
+</main>
+<script>
+    const form = document.getElementById('registrationForm');
+    const submitButton = document.getElementById('submitButton');
+    const formMessage = document.getElementById('formMessage');
+    const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5000'
+        : 'https://site-competence-academy-backend.onrender.com';
+
+    const currentYear = new Date().getFullYear();
+    const birthDateInput = document.getElementById('birthDate');
+    birthDateInput.max = `${currentYear}-12-31`;
+
+    function setMessage(message, type = '') {
+        formMessage.textContent = message;
+        formMessage.className = `form-message ${type}`;
+    }
+
+    async function requestJson(url, options) {
+        const response = await fetch(url, options);
+        let data = {};
+        try { data = await response.json(); } catch (_) {}
+        if (!response.ok || data.success === false) {
+            throw new Error(data.message || 'Une erreur est survenue.');
+        }
+        return data;
+    }
+
+    async function pollPayment(reference) {
+        for (let attempt = 0; attempt < 60; attempt += 1) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            try {
+                const data = await requestJson(`${apiBase}/api/registrations/status/${encodeURIComponent(reference)}`);
+                if (data.status === 'SUCCESSFUL') {
+                    showReceipt(data.registration);
+                    return;
+                }
+            } catch (error) {
+                setMessage(error.message, 'error');
+            }
+        }
+        setMessage('Le paiement est en cours de confirmation. Vous pouvez revenir sur cette page avec votre référence.', 'error');
+    }
+
+    function showReceipt(registration) {
+        document.getElementById('registrationCard').style.display = 'none';
+        document.getElementById('receiptCard').classList.add('visible');
+        document.getElementById('receiptTicket').textContent = registration.ticketCode;
+        document.getElementById('receiptName').textContent = registration.fullName;
+        document.getElementById('receiptEmail').textContent = registration.email;
+        document.getElementById('receiptFormation').textContent = registration.formation;
+        document.getElementById('receiptMethod').textContent =
+            registration.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash';
+        document.getElementById('receiptAmount').textContent =
+            `${Number(registration.amount).toLocaleString('fr-FR')} HTG`;
+        document.getElementById('receiptDate').textContent =
+            new Date(registration.paidAt).toLocaleString('fr-FR');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+        setMessage('Préparation du paiement...');
+
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        try {
+            if (!formData.get('registrationConsent')) {
+                throw new Error("Vous devez accepter les conditions pour poursuivre l'inscription.");
+            }
+            if (!payload.email || !payload.formation) {
+                throw new Error('L’adresse e-mail et la formation sont obligatoires.');
+            }
+            payload.fullName = `${payload.lastName || ''} ${payload.firstName || ''}`.trim();
+            const data = await requestJson(`${apiBase}/api/registrations/payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            setMessage('Paiement créé. Redirection vers Tranzak...');
+            window.location.href = data.paymentUrl;
+            pollPayment(data.reference).catch(() => {});
+        } catch (error) {
+            setMessage(error.message, 'error');
+            submitButton.disabled = false;
+        }
+    });
+
+    document.getElementById('printButton').addEventListener('click', () => window.print());
+
+    const returnReference = new URLSearchParams(window.location.search).get('reference');
+    if (returnReference) {
+        pollPayment(returnReference).catch(() => {});
+    }
+</script>
+</body>
+</html>
