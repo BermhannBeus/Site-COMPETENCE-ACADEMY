@@ -77,9 +77,9 @@ body {
 .registration-logo {
     position: relative;
     z-index: 2;
-    width: 150px;
-    height: 150px;
-    flex: 0 0 150px;
+    width: 96px;
+    height: 96px;
+    flex: 0 0 96px;
     object-fit: contain;
     border-radius: 0;
     padding: 0;
@@ -140,7 +140,8 @@ body {
 }
 
 .registration-card,
-.receipt-card {
+.receipt-card,
+.payment-resume-card {
     overflow: hidden;
     border: 1px solid rgba(0, 6, 65, .08);
     border-radius: 20px;
@@ -421,6 +422,55 @@ body {
 
 .receipt-card.visible { display: block; }
 
+.payment-resume-card {
+    display: none;
+    margin-bottom: 24px;
+    padding: clamp(22px, 4vw, 36px);
+}
+
+.payment-resume-card.visible { display: block; }
+
+.payment-resume-card h2 {
+    margin: 0 0 10px;
+    color: var(--navy);
+    font-size: clamp(21px, 4vw, 28px);
+}
+
+.payment-resume-card p {
+    margin: 0 0 20px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.resume-payment-button {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    padding: 11px 20px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--navy), var(--navy-soft));
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 10px 22px rgba(0, 6, 65, .18);
+}
+
+.resume-payment-button:hover { background: var(--orange-dark); }
+
+.secondary-resume-button {
+    margin-left: 8px;
+    color: var(--navy);
+    border: 1px solid var(--border);
+    background: #fff;
+    box-shadow: none;
+}
+
+.secondary-resume-button:hover {
+    color: #fff;
+    background: var(--orange-dark);
+}
+
 .receipt-success {
     margin-bottom: 20px;
     color: #087830;
@@ -476,16 +526,19 @@ body {
 
 .print-button { margin-top: 18px; }
 
+.download-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    text-decoration: none;
+}
+
 @media (max-width: 760px) {
     .registration-page { padding: 24px 12px 48px; }
     .registration-header { padding: 24px 22px; border-radius: 16px; }
     .registration-form { padding: 16px; }
     .form-section { padding: 18px 14px; border-radius: 14px; }
-    .registration-logo {
-        width: 96px;
-        height: 96px;
-        flex-basis: 96px;
-    }
     .form-grid,
     .form-grid.three-columns,
     .form-grid.three-columns + .form-grid.three-columns {
@@ -515,6 +568,7 @@ body {
     .field.full { grid-column: auto; }
     .ticket-detail { border-right: 0; }
     .payment-choice label { min-height: 68px; }
+    .secondary-resume-button { margin: 10px 0 0; }
 }
 
 @media (max-width: 320px) {
