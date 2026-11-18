@@ -458,6 +458,50 @@ body {
 
 .resume-payment-button:hover { background: var(--orange-dark); }
 
+.resume-payment-methods {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+#resumePaymentButton[hidden],
+#resumePaymentMethods[hidden],
+#downloadPendingPdfButton[hidden] { display: none !important; }
+
+.resume-method-button {
+    display: flex;
+    min-width: 0;
+    min-height: 58px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--navy);
+    background: #fff;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.resume-method-button:hover {
+    transform: translateY(-2px);
+    border-color: var(--orange);
+    box-shadow: 0 8px 18px rgba(0, 6, 65, .1);
+}
+
+.resume-method-button:disabled { opacity: .6; cursor: wait; }
+
+.resume-method-button img {
+    width: 62px;
+    height: 34px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
 .secondary-resume-button {
     margin-left: 8px;
     color: var(--navy);
@@ -569,6 +613,8 @@ body {
     .ticket-detail { border-right: 0; }
     .payment-choice label { min-height: 68px; }
     .secondary-resume-button { margin: 10px 0 0; }
+    .resume-payment-methods { grid-template-columns: 1fr; }
+    .resume-method-button { justify-content: flex-start; }
 }
 
 @media (max-width: 320px) {
