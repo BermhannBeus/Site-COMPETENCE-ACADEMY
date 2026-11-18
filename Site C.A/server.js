@@ -5,7 +5,6 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
-const path = require('path');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
@@ -508,19 +507,30 @@ app.post('/api/tranzak-webhook', express.raw({ type: 'application/json', limit: 
 
         if (reference.startsWith('CARE')) {
             const registration = await Registration.findOne({
-                paymentReference: reference
+                $or: [
+                    { paymentReference: reference },
+                    { paymentAttemptReference: reference }
+                ]
             });
             if (!registration) {
                 return res.status(404).json({ status: 'ERROR', message: 'Inscription Tranzak introuvable.' });
             }
-            if (registration.requestId && registration.requestId !== transactionId) {
+            const isKnownAttempt = registration.paymentAttempts?.some((attempt) =>
+                attempt.reference === reference && attempt.transactionId === transactionId
+            ) || (
+                registration.paymentAttemptReference === reference
+                && registration.requestId === transactionId
+            );
+            if (!isKnownAttempt) {
                 return res.status(400).json({ status: 'ERROR', message: 'Les informations de l’inscription ne correspondent pas.' });
             }
             if (eventName === 'payment.failed' || paymentStatus === 'failed') {
-                await Registration.updateOne(
-                    { _id: registration._id, status: 'PENDING' },
-                    { $set: { requestId: transactionId, status: 'REJECTED' } }
-                );
+                if (registration.requestId === transactionId && registration.status === 'PENDING') {
+                    await Registration.updateOne(
+                        { _id: registration._id, status: 'PENDING' },
+                        { $set: { status: 'REJECTED' } }
+                    );
+                }
                 return res.status(200).json({ status: 'SUCCESS' });
             }
             if (eventName !== 'payment.success' || paymentStatus !== 'completed') {
@@ -531,8 +541,15 @@ app.post('/api/tranzak-webhook', express.raw({ type: 'application/json', limit: 
                 || String(event.data?.currency || '').toUpperCase() !== registration.currencyCode) {
                 return res.status(400).json({ status: 'ERROR', message: 'Le montant ou la devise de l’inscription ne correspond pas.' });
             }
+            if (registration.status === 'SUCCESSFUL') {
+                return res.status(200).json({ status: 'SUCCESS', duplicate: true });
+            }
             registration.status = 'SUCCESSFUL';
             registration.requestId = transactionId;
+            registration.paymentAttemptReference = reference;
+            registration.paymentMethod = registration.paymentAttempts?.find((attempt) =>
+                attempt.reference === reference && attempt.transactionId === transactionId
+            )?.paymentMethod || registration.paymentMethod;
             registration.paidAt = registration.paidAt || new Date();
             await registration.save();
             await sendRegistrationReceipt(registration);
@@ -799,6 +816,15 @@ const registrationSettingSchema = new mongoose.Schema({
 const registrationSchema = new mongoose.Schema({
     ticketCode: { type: String, required: true, unique: true, index: true },
     paymentReference: { type: String, required: true, unique: true, index: true },
+    paymentAttemptReference: { type: String, default: '', index: true },
+    paymentAttempts: {
+        type: [{
+            reference: { type: String, required: true },
+            transactionId: { type: String, required: true },
+            paymentMethod: { type: String, enum: ['moncash', 'natcash'], required: true }
+        }],
+        default: []
+    },
     paymentUrl: { type: String, default: '' },
     requestId: { type: String, default: '', index: true },
     fullName: { type: String, required: true, trim: true, maxlength: 100 },
@@ -1907,19 +1933,21 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
     doc.on('error', reject);
     doc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    doc.rect(0, 0, doc.page.width, 104).fill('#000641');
-    doc.image(path.join(__dirname, 'Logo.png'), 42, 24, { fit: [54, 54] });
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(18)
-        .text('COMPETENCE ACADEMY', 108, 30, { width: 420 });
-    doc.font('Helvetica').fontSize(10).fillColor('#dbeafe')
-        .text('FORMULAIRE D’INSCRIPTION / E-TICKET', 108, 56, { width: 420 });
-    doc.fillColor('#f76b00').roundedRect(42, 119, 528, 56, 8).fill();
-    doc.fillColor('#ffffff').font('Helvetica').fontSize(9)
-        .text('CODE ETUDIANT', 56, 129);
-    doc.font('Helvetica-Bold').fontSize(18)
-        .text(registration.ticketCode, 56, 143, { width: 500 });
-    doc.fillColor('#000641').font('Helvetica-Bold').fontSize(13)
-        .text(`Statut du paiement : ${registration.status === 'SUCCESSFUL' ? 'PAYE' : 'EN ATTENTE'}`, 42, 190);
+    doc.rect(0, 0, doc.page.width, 78).fill('#000641');
+    doc.fillColor('#f76b00').roundedRect(42, 15, 46, 46, 8).fill();
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(13)
+        .text('CA', 42, 31, { width: 46, align: 'center', lineBreak: false });
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17)
+        .text('COMPETENCE ACADEMY', 100, 24, { width: 450 });
+    doc.font('Helvetica').fontSize(9).fillColor('#dbeafe')
+        .text('FORMULAIRE D’INSCRIPTION', 100, 48, { width: 450 });
+    doc.fillColor('#f76b00').roundedRect(42, 91, 528, 52, 8).fill();
+    doc.fillColor('#ffffff').font('Helvetica').fontSize(8)
+        .text('CODE ETUDIANT', 55, 101);
+    doc.font('Helvetica-Bold').fontSize(17)
+        .text(registration.ticketCode, 55, 116, { width: 500 });
+    doc.fillColor('#000641').font('Helvetica-Bold').fontSize(10)
+        .text(`Statut du paiement : ${registration.status === 'SUCCESSFUL' ? 'PAYE' : 'EN ATTENTE'}`, 42, 154);
 
     const fields = [
         ['Nom complet', registration.fullName],
@@ -1941,31 +1969,41 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
             ? [['Date du paiement', new Date(registration.paidAt).toLocaleString('fr-FR')]]
             : [])
     ];
-    let y = 218;
-    fields.forEach(([label, value], index) => {
-        const labelWidth = 172;
-        const valueWidth = 330;
-        const valueText = String(value || '—');
-        const rowHeight = Math.max(
-            27,
-            doc.heightOfString(valueText, { width: valueWidth, font: 'Helvetica', fontSize: 9 }) + 12
-        );
-        if (y + rowHeight > doc.page.height - 54) {
-            doc.addPage();
-            y = 50;
-        }
-        doc.rect(42, y, 528, rowHeight).fill(index % 2 ? '#f4f7fb' : '#ffffff');
-        doc.fillColor('#475467').font('Helvetica-Bold').fontSize(9)
-            .text(label, 52, y + 8, { width: labelWidth - 12 });
-        doc.fillColor('#14182b').font('Helvetica').fontSize(9)
-            .text(valueText, 52 + labelWidth, y + 8, { width: valueWidth });
+    const columnWidth = 264;
+    const cellPadding = 9;
+    let y = 177;
+    for (let index = 0; index < fields.length; index += 2) {
+        const rowFields = fields.slice(index, index + 2).map(([label, value]) => ({
+            label,
+            value: String(value || '—')
+        }));
+        const valueHeights = rowFields.map(({ value }) => doc.heightOfString(value, {
+            width: columnWidth - cellPadding * 2,
+            font: 'Helvetica',
+            fontSize: 8.5,
+            lineGap: 1
+        }));
+        const rowHeight = Math.max(34, ...valueHeights.map((height) => height + 20));
+        doc.rect(42, y, 528, rowHeight).fill(index % 4 === 0 ? '#f4f7fb' : '#ffffff');
+        rowFields.forEach(({ label, value }, columnIndex) => {
+            const x = 42 + columnIndex * columnWidth + cellPadding;
+            doc.fillColor('#475467').font('Helvetica-Bold').fontSize(7.5)
+                .text(label, x, y + 5, { width: columnWidth - cellPadding * 2, lineBreak: false });
+            doc.fillColor('#14182b').font('Helvetica').fontSize(8.5)
+                .text(value, x, y + 17, {
+                    width: columnWidth - cellPadding * 2,
+                    height: rowHeight - 18,
+                    lineGap: 1
+                });
+        });
         doc.strokeColor('#e5e7eb').moveTo(42, y + rowHeight).lineTo(570, y + rowHeight).stroke();
         y += rowHeight;
-    });
+    }
     doc.font('Helvetica').fontSize(8).fillColor('#667085')
-        .text('Conservez ce document et presentez votre code etudiant a l’administration.', 42, doc.page.height - 38, {
+        .text('Conservez ce formulaire et presentez votre code etudiant a l’administration.', 42, y + 12, {
             width: 528,
-            align: 'center'
+            align: 'center',
+            lineBreak: false
         });
     doc.end();
 });
@@ -2089,6 +2127,7 @@ app.post('/api/registrations/payment', async (req, res) => {
         registration = await Registration.create({
             ticketCode: await createRegistrationTicket(fullName),
             paymentReference,
+            paymentAttemptReference: paymentReference,
             fullName,
             email,
             lastName: String(req.body?.lastName || '').trim(),
@@ -2149,7 +2188,16 @@ app.post('/api/registrations/payment', async (req, res) => {
             throw new Error('Tranzak returned an invalid payment URL.');
         }
         if (securePaymentUrl.protocol !== 'https:') throw new Error('Tranzak returned a non-secure payment URL.');
-        await Registration.updateOne({ _id: registration._id }, { $set: { requestId: transactionId, paymentUrl: securePaymentUrl.href } });
+        await Registration.updateOne({ _id: registration._id }, {
+            $set: { requestId: transactionId, paymentUrl: securePaymentUrl.href },
+            $push: {
+                paymentAttempts: {
+                    reference: paymentReference,
+                    transactionId,
+                    paymentMethod
+                }
+            }
+        });
         registration.paymentUrl = securePaymentUrl.href;
         try {
             await sendRegistrationApplicationEmail(registration);
@@ -2172,6 +2220,94 @@ app.post('/api/registrations/payment', async (req, res) => {
             await Registration.updateOne({ _id: registration._id }, { $set: { status: 'REJECTED' } });
         }
         return res.status(502).json({ success: false, message: 'Impossible de démarrer le paiement. Réessayez dans quelques instants.' });
+    }
+});
+
+app.post('/api/registrations/:reference/retry-payment', async (req, res) => {
+    try {
+        const reference = String(req.params.reference || '');
+        const paymentMethod = String(req.body?.paymentMethod || '').trim().toLowerCase();
+        if (!/^CARE[A-F0-9]{36}$/.test(reference)) {
+            return res.status(400).json({ success: false, message: 'Référence invalide.' });
+        }
+        if (!['moncash', 'natcash'].includes(paymentMethod)) {
+            return res.status(400).json({ success: false, message: 'Choisissez MonCash ou NatCash.' });
+        }
+        const apiKey = String(process.env.TRANZAK_API_KEY || '').trim();
+        if (!apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
+            return res.status(503).json({ success: false, message: 'Le paiement Tranzak n’est pas encore configuré.' });
+        }
+        const registration = await Registration.findOne({ paymentReference: reference });
+        if (!registration) return res.status(404).json({ success: false, message: 'Inscription introuvable.' });
+        if (!['PENDING', 'REJECTED', 'CANCELLED'].includes(registration.status)) {
+            return res.status(409).json({ success: false, message: 'Cette inscription ne peut plus reprendre un paiement.' });
+        }
+
+        const attemptReference = `${reference}-R${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+        const returnUrl = new URL('/inscription.html', (FRONTEND_URLS[0] || `${req.protocol}://${req.get('host')}`).replace(/\/$/, ''));
+        returnUrl.searchParams.set('reference', reference);
+        const tranzakResponse = await fetch(getTranzakPaymentsUrl(), {
+            method: 'POST',
+            headers: getTranzakHeaders(apiKey),
+            body: JSON.stringify({
+                amount: registration.amount,
+                currency: registration.currencyCode,
+                payment_method: paymentMethod,
+                customer_name: registration.fullName,
+                customer_email: registration.email,
+                reference: attemptReference,
+                description: `Inscription Competence Academy - ${registration.formation}`,
+                return_url: returnUrl.toString(),
+                metadata: { ticket_code: registration.ticketCode, registration: true }
+            }),
+            signal: AbortSignal.timeout(20000)
+        });
+        const responseBody = await tranzakResponse.text();
+        let checkout;
+        try { checkout = JSON.parse(responseBody); } catch (error) {
+            throw new Error('Tranzak returned an invalid registration payment response.');
+        }
+        const transactionId = String(checkout.transaction_id || '').trim();
+        const paymentUrl = String(checkout.payment_url || '').trim();
+        if (!tranzakResponse.ok || !transactionId || !paymentUrl) {
+            console.error('Tranzak registration retry failed:', {
+                status: tranzakResponse.status,
+                body: responseBody
+            });
+            return res.status(502).json({ success: false, message: 'Impossible de démarrer le paiement. Réessayez dans quelques instants.' });
+        }
+        let securePaymentUrl;
+        try { securePaymentUrl = new URL(paymentUrl); } catch (error) {
+            return res.status(502).json({ success: false, message: 'Tranzak a retourné un lien de paiement invalide.' });
+        }
+        if (securePaymentUrl.protocol !== 'https:') {
+            return res.status(502).json({ success: false, message: 'Tranzak a retourné un lien de paiement non sécurisé.' });
+        }
+        await Registration.updateOne({ _id: registration._id }, {
+            $set: {
+                requestId: transactionId,
+                paymentAttemptReference: attemptReference,
+                paymentUrl: securePaymentUrl.href,
+                paymentMethod,
+                status: 'PENDING'
+            },
+            $push: {
+                paymentAttempts: {
+                    reference: attemptReference,
+                    transactionId,
+                    paymentMethod
+                }
+            }
+        });
+        return res.json({
+            success: true,
+            reference,
+            paymentUrl: securePaymentUrl.href,
+            paymentMethod
+        });
+    } catch (error) {
+        console.error('Retry registration payment error:', error);
+        return res.status(502).json({ success: false, message: 'Impossible de reprendre le paiement. Réessayez dans quelques instants.' });
     }
 });
 
@@ -2206,6 +2342,8 @@ app.get('/api/registrations/status/:reference', async (req, res) => {
         success: true,
         status: registration.status,
         paymentUrl: registration.status === 'PENDING' ? registration.paymentUrl : undefined,
+        canRetryPayment: ['PENDING', 'REJECTED', 'CANCELLED'].includes(registration.status),
+        paymentMethod: registration.paymentMethod,
         registration: registration.status === 'SUCCESSFUL' ? {
             ticketCode: registration.ticketCode,
             fullName: registration.fullName,
