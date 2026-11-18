@@ -492,6 +492,39 @@ app.post('/api/tranzak-webhook', express.raw({ type: 'application/json', limit: 
             return res.status(400).json({ status: 'ERROR', message: 'Les références du paiement Tranzak sont invalides.' });
         }
 
+        if (reference.startsWith('CARE')) {
+            const registration = await Registration.findOne({
+                paymentReference: reference
+            });
+            if (!registration) {
+                return res.status(404).json({ status: 'ERROR', message: 'Inscription Tranzak introuvable.' });
+            }
+            if (registration.requestId && registration.requestId !== transactionId) {
+                return res.status(400).json({ status: 'ERROR', message: 'Les informations de l’inscription ne correspondent pas.' });
+            }
+            if (eventName === 'payment.failed' || paymentStatus === 'failed') {
+                await Registration.updateOne(
+                    { _id: registration._id, status: 'PENDING' },
+                    { $set: { requestId: transactionId, status: 'REJECTED' } }
+                );
+                return res.status(200).json({ status: 'SUCCESS' });
+            }
+            if (eventName !== 'payment.success' || paymentStatus !== 'completed') {
+                return res.status(200).json({ status: 'SUCCESS', ignored: true });
+            }
+            const eventAmount = Number(event.data?.amount);
+            if (!Number.isFinite(eventAmount) || eventAmount !== registration.amount
+                || String(event.data?.currency || '').toUpperCase() !== registration.currencyCode) {
+                return res.status(400).json({ status: 'ERROR', message: 'Le montant ou la devise de l’inscription ne correspond pas.' });
+            }
+            registration.status = 'SUCCESSFUL';
+            registration.requestId = transactionId;
+            registration.paidAt = registration.paidAt || new Date();
+            await registration.save();
+            await sendRegistrationReceipt(registration);
+            return res.status(200).json({ status: 'SUCCESS' });
+        }
+
         const payment = await CoursePayment.findOne({
             provider: 'tranzak',
             mchTransactionRef: reference
@@ -745,6 +778,40 @@ const coursePaymentSchema = new mongoose.Schema({
     receiptEmailSentAt: { type: Date, default: null },
     receiptEmailClaimedAt: { type: Date, default: null }
 }, { timestamps: true });
+const registrationSettingSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true },
+    amount: { type: Number, required: true, min: 1, max: 100000000 }
+}, { timestamps: true });
+const registrationSchema = new mongoose.Schema({
+    ticketCode: { type: String, required: true, unique: true, index: true },
+    paymentReference: { type: String, required: true, unique: true, index: true },
+    requestId: { type: String, default: '', index: true },
+    fullName: { type: String, required: true, trim: true, maxlength: 100 },
+    email: { type: String, required: true, lowercase: true, trim: true, maxlength: 150 },
+    civilite: { type: String, default: '', trim: true, maxlength: 30 },
+    lastName: { type: String, default: '', trim: true, maxlength: 50 },
+    firstName: { type: String, default: '', trim: true, maxlength: 50 },
+    birthDate: { type: String, default: '', trim: true, maxlength: 20 },
+    gender: { type: String, default: '', trim: true, maxlength: 30 },
+    phone: { type: String, default: '', trim: true, maxlength: 30 },
+    secondaryPhone: { type: String, default: '', trim: true, maxlength: 30 },
+    address: { type: String, default: '', trim: true, maxlength: 200 },
+    city: { type: String, default: '', trim: true, maxlength: 80 },
+    department: { type: String, default: '', trim: true, maxlength: 80 },
+    educationLevel: { type: String, default: '', trim: true, maxlength: 50 },
+    formation: { type: String, required: true, trim: true, maxlength: 100 },
+    emergencyName: { type: String, default: '', trim: true, maxlength: 100 },
+    emergencyLastName: { type: String, default: '', trim: true, maxlength: 50 },
+    emergencyFirstName: { type: String, default: '', trim: true, maxlength: 50 },
+    emergencyAddress: { type: String, default: '', trim: true, maxlength: 200 },
+    emergencyPhone: { type: String, default: '', trim: true, maxlength: 30 },
+    paymentMethod: { type: String, required: true, enum: ['moncash', 'natcash'], index: true },
+    amount: { type: Number, required: true, min: 1 },
+    currencyCode: { type: String, required: true, enum: ['HTG'], default: 'HTG' },
+    status: { type: String, enum: ['PENDING', 'SUCCESSFUL', 'REJECTED', 'CANCELLED'], default: 'PENDING', index: true },
+    paidAt: { type: Date, default: null },
+    receiptEmailSentAt: { type: Date, default: null }
+}, { timestamps: true });
 const accessConfirmationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
     challengeId: { type: String, required: true, unique: true },
@@ -761,6 +828,8 @@ const VideoWatchSession = mongoose.model('VideoWatchSession', videoWatchSessionS
 const CourseEnrollmentAccess = mongoose.model('CourseEnrollmentAccess', courseAccessCodeSchema);
 const CoursePrice = mongoose.model('CoursePrice', coursePriceSchema);
 const CoursePayment = mongoose.model('CoursePayment', coursePaymentSchema);
+const Registration = mongoose.model('Registration', registrationSchema);
+const RegistrationSetting = mongoose.model('RegistrationSetting', registrationSettingSchema);
 const AccessConfirmation = mongoose.model('AccessConfirmation', accessConfirmationSchema);
 const studentResultSchema = new mongoose.Schema({
     accessCodeHash: { type: String, required: true, unique: true, index: true },
@@ -1789,6 +1858,272 @@ app.get('/api/inscription-status', async (req, res) => {
         console.error('Inscription status check error:', error);
         return res.status(200).json(getRegistrationStatusPayload());
     }
+});
+
+const REGISTRATION_FORMATIONS = [
+    'Informatique',
+    'Infographie',
+    'Photographie',
+    'Vidéographie',
+    'Montage Vidéo',
+    'QuickBooks',
+    'Caméra de surveillance'
+];
+
+const createRegistrationTicket = async (fullName) => {
+    const normalizedName = String(fullName || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Za-z\s]/g, ' ')
+        .trim();
+    const words = normalizedName.split(/\s+/).filter(Boolean);
+    const initials = `${words[0]?.[0] || 'X'}${words[1]?.[0] || words[0]?.[1] || 'X'}`
+        .toUpperCase();
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+        const code = `ECA-${new Date().getFullYear()}-${initials}-${crypto.randomInt(1000, 10000)}`;
+        if (!await Registration.exists({ ticketCode: code })) return code;
+    }
+    throw new Error('Impossible de générer un code de ticket unique.');
+};
+
+const sendRegistrationReceipt = async (registration) => {
+    const alreadyClaimed = await Registration.findOneAndUpdate(
+        { _id: registration._id, status: 'SUCCESSFUL', receiptEmailSentAt: null },
+        { $set: {} },
+        { new: true }
+    );
+    if (!alreadyClaimed) return;
+    const adminEmail = sanitizeEmail(process.env.ACCESS_APPROVAL_EMAIL || process.env.EMAIL_USER);
+    const logoUrl = 'https://competenceacademy.netlify.app/Logo.png';
+    const ticketHtml = escapeHtml(alreadyClaimed.ticketCode);
+    const detailRows = [
+        ['Code ticket', alreadyClaimed.ticketCode],
+        ['Étudiant', alreadyClaimed.fullName],
+        ['Email', alreadyClaimed.email],
+        ['Formation', alreadyClaimed.formation],
+        ['Montant', `${Number(alreadyClaimed.amount).toLocaleString('fr-FR')} HTG`],
+        ['Paiement', alreadyClaimed.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash']
+    ].map(([label, value]) => `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb"><strong>${escapeHtml(label)}</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(value)}</td></tr>`).join('');
+    const html = `<div style="max-width:680px;margin:auto;background:#f4f7fb;padding:24px;font-family:Arial,sans-serif;color:#050505">
+        <div style="overflow:hidden;border-radius:18px;background:#fff;border:1px solid #dfe5ef">
+        <div style="padding:28px;text-align:center;background:#000641"><img src="${logoUrl}" alt="Competence Academy" style="width:96px;height:96px;object-fit:contain;background:#fff;border-radius:18px;padding:7px"><h1 style="margin:16px 0 5px;color:#fff;font-size:28px">Votre e-ticket d’inscription</h1><p style="margin:0;color:#dbeafe">Paiement confirmé par Competence Academy</p></div>
+        <div style="padding:28px"><div style="margin-bottom:22px;text-align:center;border:2px dashed #f76b00;border-radius:14px;padding:18px;background:#fff9f4"><span style="display:block;color:#64748b;font-size:12px;letter-spacing:.12em;text-transform:uppercase">Code ticket</span><strong style="display:block;color:#000641;font-size:28px;letter-spacing:.08em;margin-top:5px">${ticketHtml}</strong></div>
+        <table style="width:100%;border-collapse:collapse">${detailRows}</table><p style="margin:22px 0 0;color:#64748b;line-height:1.6">Conservez cet e-ticket. Il doit être présenté lors de votre inscription administrative.</p></div>
+        <div style="padding:16px;text-align:center;color:#fff;background:#000641;font-size:13px">Competence Academy — Formation pratique et professionnelle</div></div></div>`;
+    await sendEmail({
+        to: alreadyClaimed.email,
+        subject: `E-ticket Competence Academy - ${alreadyClaimed.ticketCode}`,
+        text: `Paiement confirmé. Code ticket: ${alreadyClaimed.ticketCode}. Formation: ${alreadyClaimed.formation}. Montant: ${alreadyClaimed.amount} HTG.`,
+        html
+    });
+    if (adminEmail && adminEmail !== alreadyClaimed.email) {
+        await sendEmail({
+            to: adminEmail,
+            subject: `Nouvelle inscription payée - ${alreadyClaimed.ticketCode}`,
+            text: `${alreadyClaimed.fullName} (${alreadyClaimed.email}) a payé l'inscription à ${alreadyClaimed.formation}. Ticket: ${alreadyClaimed.ticketCode}.`,
+            html
+        });
+    }
+    await Registration.updateOne({ _id: alreadyClaimed._id }, { $set: { receiptEmailSentAt: new Date() } });
+};
+
+const sendRegistrationApplicationEmail = async (registration) => {
+    const adminEmail = sanitizeEmail(process.env.ACCESS_APPROVAL_EMAIL || process.env.EMAIL_USER);
+    const fields = [
+        ['Nom complet', registration.fullName], ['Civilité', registration.civilite],
+        ['Date de naissance', registration.birthDate], ['Genre', registration.gender],
+        ['Adresse', registration.address], ['Ville', registration.city],
+        ['Département', registration.department], ['E-mail', registration.email],
+        ['Téléphone principal', registration.phone], ['Téléphone secondaire', registration.secondaryPhone],
+        ['Niveau d’études', registration.educationLevel], ['Formation', registration.formation],
+        ['Référence urgence', registration.emergencyName || `${registration.emergencyFirstName} ${registration.emergencyLastName}`],
+        ['Téléphone urgence', registration.emergencyPhone],
+        ['Adresse urgence', registration.emergencyAddress],
+        ['Montant demandé', `${Number(registration.amount).toLocaleString('fr-FR')} HTG`]
+    ].map(([label, value]) => `<tr><td style="padding:9px;border-bottom:1px solid #e5e7eb;width:38%"><strong>${escapeHtml(label)}</strong></td><td style="padding:9px;border-bottom:1px solid #e5e7eb">${escapeHtml(value || '—')}</td></tr>`).join('');
+    const html = `<div style="max-width:680px;margin:auto;background:#f4f7fb;padding:24px;font-family:Arial,sans-serif;color:#050505"><div style="overflow:hidden;border-radius:18px;background:#fff;border:1px solid #dfe5ef"><div style="padding:26px;text-align:center;background:#000641"><img src="https://competenceacademy.netlify.app/Logo.png" alt="Competence Academy" style="width:90px;height:90px;object-fit:contain;background:#fff;border-radius:16px;padding:7px"><h1 style="color:#fff;font-size:25px;margin:14px 0 5px">Demande d’inscription reçue</h1><p style="color:#dbeafe;margin:0">Votre formulaire est enregistré</p></div><div style="padding:26px"><p>Bonjour ${escapeHtml(registration.fullName)},</p><p>Votre demande d’inscription à <strong>${escapeHtml(registration.formation)}</strong> a bien été enregistrée. Effectuez le paiement pour recevoir votre e-ticket officiel.</p><table style="width:100%;border-collapse:collapse">${fields}</table><p style="margin-top:20px;color:#64748b;line-height:1.6">Référence: <strong>${escapeHtml(registration.paymentReference)}</strong></p></div><div style="padding:15px;text-align:center;color:#fff;background:#000641;font-size:13px">Competence Academy</div></div></div>`;
+    await sendEmail({
+        to: registration.email,
+        subject: `Demande d’inscription reçue - ${registration.ticketCode}`,
+        text: `Bonjour ${registration.fullName}. Votre demande d'inscription à ${registration.formation} a été enregistrée. Référence: ${registration.paymentReference}.`,
+        html
+    });
+    if (adminEmail && adminEmail !== registration.email) {
+        await sendEmail({
+            to: adminEmail,
+            subject: `Nouvelle demande d’inscription - ${registration.fullName}`,
+            text: `Nouvelle demande: ${registration.fullName}, ${registration.email}, ${registration.phone}, formation ${registration.formation}. Référence: ${registration.paymentReference}.`,
+            html
+        });
+    }
+};
+
+app.post('/api/registrations/payment', async (req, res) => {
+    let registration;
+    try {
+        const apiKey = String(process.env.TRANZAK_API_KEY || '').trim();
+        if (!apiKey || !process.env.TRANZAK_WEBHOOK_SECRET) {
+            return res.status(503).json({ success: false, message: 'Le paiement Tranzak n’est pas encore configuré.' });
+        }
+        const fullName = String(req.body?.fullName || `${req.body?.firstName || ''} ${req.body?.lastName || ''}`).trim();
+        const email = sanitizeEmail(req.body?.email);
+        const formation = String(req.body?.formation || '').trim();
+        const paymentMethod = String(req.body?.paymentMethod || '').trim().toLowerCase();
+        if (req.body?.registrationConsent !== true && req.body?.registrationConsent !== 'on') {
+            return res.status(400).json({ success: false, message: "L’acceptation des conditions est obligatoire pour poursuivre l’inscription." });
+        }
+        if (!fullName || !email || !formation || !req.body?.civilite || !req.body?.firstName || !req.body?.lastName
+            || !req.body?.birthDate || !req.body?.gender
+            || !req.body?.address || !req.body?.city || !req.body?.department || !req.body?.phone
+            || !req.body?.educationLevel || !req.body?.emergencyLastName || !req.body?.emergencyFirstName
+            || !req.body?.emergencyAddress || !req.body?.emergencyPhone) {
+            return res.status(400).json({ success: false, message: 'Veuillez remplir tous les champs obligatoires du formulaire.' });
+        }
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Adresse e-mail invalide.' });
+        }
+        if (!REGISTRATION_FORMATIONS.includes(formation)) {
+            return res.status(400).json({ success: false, message: 'Choisissez une formation valide.' });
+        }
+        if (!['moncash', 'natcash'].includes(paymentMethod)) {
+            return res.status(400).json({ success: false, message: 'Choisissez MonCash ou NatCash.' });
+        }
+        const registrationSetting = await RegistrationSetting.findOne({ key: 'registration_price_htg' }).select('amount');
+        const amount = Number(registrationSetting?.amount ?? process.env.REGISTRATION_AMOUNT_HTG ?? 2500);
+        if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000000) {
+            return res.status(503).json({ success: false, message: 'Le montant d’inscription n’est pas configuré correctement.' });
+        }
+        const paymentReference = `CARE${crypto.randomBytes(18).toString('hex').toUpperCase()}`;
+        registration = await Registration.create({
+            ticketCode: await createRegistrationTicket(fullName),
+            paymentReference,
+            fullName,
+            email,
+            civilite: String(req.body?.civilite || '').trim(),
+            lastName: String(req.body?.lastName || '').trim(),
+            firstName: String(req.body?.firstName || '').trim(),
+            birthDate: String(req.body?.birthDate || ''),
+            gender: String(req.body?.gender || '').trim(),
+            phone: String(req.body?.phone || '').trim(),
+            secondaryPhone: String(req.body?.secondaryPhone || '').trim(),
+            address: String(req.body?.address || '').trim(),
+            city: String(req.body?.city || '').trim(),
+            department: String(req.body?.department || '').trim(),
+            educationLevel: String(req.body?.educationLevel || '').trim(),
+            formation,
+            emergencyName: String(req.body?.emergencyName || '').trim(),
+            emergencyLastName: String(req.body?.emergencyLastName || '').trim(),
+            emergencyFirstName: String(req.body?.emergencyFirstName || '').trim(),
+            emergencyAddress: String(req.body?.emergencyAddress || '').trim(),
+            emergencyPhone: String(req.body?.emergencyPhone || '').trim(),
+            paymentMethod,
+            amount,
+            currencyCode: 'HTG'
+        });
+        const configuredFrontend = FRONTEND_URLS[0] || `${req.protocol}://${req.get('host')}`;
+        const returnUrl = new URL('/inscription.html', configuredFrontend.replace(/\/$/, '')).toString();
+        const returnUrlObject = new URL(returnUrl);
+        returnUrlObject.searchParams.set('reference', paymentReference);
+        const tranzakResponse = await fetch(getTranzakPaymentsUrl(), {
+            method: 'POST',
+            headers: getTranzakHeaders(apiKey),
+            body: JSON.stringify({
+                amount,
+                currency: 'HTG',
+                payment_method: paymentMethod,
+                customer_name: fullName,
+                customer_email: email,
+                reference: paymentReference,
+                description: `Inscription Competence Academy - ${formation}`,
+                return_url: returnUrlObject.toString(),
+                metadata: { ticket_code: registration.ticketCode, registration: true }
+            }),
+            signal: AbortSignal.timeout(20000)
+        });
+        const responseBody = await tranzakResponse.text();
+        let checkout;
+        try { checkout = JSON.parse(responseBody); } catch (error) {
+            throw Object.assign(new Error('Tranzak returned an invalid registration payment response.'), {
+                tranzakResponse: { endpoint: getTranzakPaymentsUrl(), status: tranzakResponse.status, body: responseBody }
+            });
+        }
+        const transactionId = String(checkout.transaction_id || '').trim();
+        const paymentUrl = String(checkout.payment_url || '').trim();
+        if (!tranzakResponse.ok || !transactionId || !paymentUrl) {
+            throw Object.assign(new Error('Tranzak did not create the registration payment session.'), {
+                tranzakResponse: { endpoint: getTranzakPaymentsUrl(), status: tranzakResponse.status, body: responseBody }
+            });
+        }
+        let securePaymentUrl;
+        try { securePaymentUrl = new URL(paymentUrl); } catch (error) {
+            throw new Error('Tranzak returned an invalid payment URL.');
+        }
+        if (securePaymentUrl.protocol !== 'https:') throw new Error('Tranzak returned a non-secure payment URL.');
+        await Registration.updateOne({ _id: registration._id }, { $set: { requestId: transactionId } });
+        try {
+            await sendRegistrationApplicationEmail(registration);
+        } catch (emailError) {
+            console.error('Registration application email could not be sent:', emailError);
+        }
+        return res.json({
+            success: true,
+            reference: paymentReference,
+            transactionId,
+            paymentUrl: securePaymentUrl.href,
+            ticketCode: registration.ticketCode,
+            amount,
+            currencyCode: 'HTG'
+        });
+    } catch (error) {
+        if (error.tranzakResponse) console.log('Tranzak registration complete error response:', error.tranzakResponse);
+        console.error('Create registration payment error:', error);
+        if (registration && registration.status === 'PENDING') {
+            await Registration.updateOne({ _id: registration._id }, { $set: { status: 'REJECTED' } });
+        }
+        return res.status(502).json({ success: false, message: 'Impossible de démarrer le paiement. Réessayez dans quelques instants.' });
+    }
+});
+
+app.get('/api/admin/registration-price', requireCourseAdmin, async (req, res) => {
+    const setting = await RegistrationSetting.findOne({ key: 'registration_price_htg' }).select('amount updatedAt');
+    const amount = Number(setting?.amount ?? process.env.REGISTRATION_AMOUNT_HTG ?? 2500);
+    res.json({ success: true, amount, currencyCode: 'HTG', updatedAt: setting?.updatedAt || null });
+});
+
+app.put('/api/admin/registration-price', requireCourseAdmin, async (req, res) => {
+    const amount = Number(req.body?.amount);
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000000) {
+        return res.status(400).json({ success: false, message: 'Le prix d’inscription doit être un montant entier compris entre 1 et 100 000 000 HTG.' });
+    }
+    const setting = await RegistrationSetting.findOneAndUpdate(
+        { key: 'registration_price_htg' },
+        { $set: { amount } },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    ).select('amount updatedAt');
+    res.json({ success: true, amount: setting.amount, currencyCode: 'HTG', updatedAt: setting.updatedAt });
+});
+
+app.get('/api/registrations/status/:reference', async (req, res) => {
+    const reference = String(req.params.reference || '');
+    if (!reference || reference.length > 128) {
+        return res.status(400).json({ success: false, message: 'Référence invalide.' });
+    }
+    const registration = await Registration.findOne({ paymentReference: reference });
+    if (!registration) return res.status(404).json({ success: false, message: 'Inscription introuvable.' });
+    if (registration.status === 'SUCCESSFUL') await sendRegistrationReceipt(registration);
+    return res.json({
+        success: true,
+        status: registration.status,
+        registration: registration.status === 'SUCCESSFUL' ? {
+            ticketCode: registration.ticketCode,
+            fullName: registration.fullName,
+            email: registration.email,
+            formation: registration.formation,
+            paymentMethod: registration.paymentMethod,
+            amount: registration.amount,
+            paidAt: registration.paidAt
+        } : undefined
+    });
 });
 
 app.post('/api/signup', signupLimiter, async (req, res) => {
