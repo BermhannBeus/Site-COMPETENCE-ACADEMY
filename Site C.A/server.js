@@ -1923,7 +1923,6 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
 
     const fields = [
         ['Nom complet', registration.fullName],
-        ['Civilite', registration.civilite],
         ['Date de naissance', registration.birthDate],
         ['Genre', registration.gender],
         ['E-mail de l’etudiant', registration.email],
@@ -2021,7 +2020,7 @@ const sendRegistrationApplicationEmail = async (registration) => {
     const resumeUrl = new URL(getFrontendUrl('/inscription.html'));
     resumeUrl.searchParams.set('reference', registration.paymentReference);
     const fields = [
-        ['Nom complet', registration.fullName], ['Civilité', registration.civilite],
+        ['Nom complet', registration.fullName],
         ['Date de naissance', registration.birthDate], ['Genre', registration.gender],
         ['Adresse', registration.address], ['Ville', registration.city],
         ['Département', registration.department], ['E-mail', registration.email],
@@ -2065,7 +2064,7 @@ app.post('/api/registrations/payment', async (req, res) => {
         if (req.body?.registrationConsent !== true && req.body?.registrationConsent !== 'on') {
             return res.status(400).json({ success: false, message: "L’acceptation des conditions est obligatoire pour poursuivre l’inscription." });
         }
-        if (!fullName || !email || !formation || !req.body?.civilite || !req.body?.firstName || !req.body?.lastName
+        if (!fullName || !email || !formation || !req.body?.firstName || !req.body?.lastName
             || !req.body?.birthDate || !req.body?.gender
             || !req.body?.address || !req.body?.city || !req.body?.department || !req.body?.phone
             || !req.body?.educationLevel || !req.body?.emergencyLastName || !req.body?.emergencyFirstName
@@ -2092,7 +2091,6 @@ app.post('/api/registrations/payment', async (req, res) => {
             paymentReference,
             fullName,
             email,
-            civilite: String(req.body?.civilite || '').trim(),
             lastName: String(req.body?.lastName || '').trim(),
             firstName: String(req.body?.firstName || '').trim(),
             birthDate: String(req.body?.birthDate || ''),
