@@ -5,6 +5,7 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
+const path = require('path');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
@@ -15,6 +16,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
+const PDFDocument = require('pdfkit');
 
 const getTranzakApiBaseUrl = () => {
     const configuredUrl = String(process.env.TRANZAK_API_URL || 'https://api.tranzak.co').trim();
@@ -319,7 +321,13 @@ const sendEmail = async (mailOptions) => {
                     } : {}),
                     subject: mailOptions.subject,
                     ...(mailOptions.text ? { textContent: mailOptions.text } : {}),
-                    ...(mailOptions.html ? { htmlContent: mailOptions.html } : {})
+                    ...(mailOptions.html ? { htmlContent: mailOptions.html } : {}),
+                    ...(mailOptions.attachments ? {
+                        attachment: mailOptions.attachments.map((attachment) => ({
+                            name: attachment.filename,
+                            content: Buffer.from(attachment.content).toString('base64')
+                        }))
+                    } : {})
                 }),
                 signal: AbortSignal.timeout(15000)
             });
@@ -361,7 +369,13 @@ const sendEmail = async (mailOptions) => {
                     ...(mailOptions.bcc ? { bcc: mailOptions.bcc } : {}),
                     subject: mailOptions.subject,
                     ...(mailOptions.text ? { text: mailOptions.text } : {}),
-                    ...(mailOptions.html ? { html: mailOptions.html } : {})
+                    ...(mailOptions.html ? { html: mailOptions.html } : {}),
+                    ...(mailOptions.attachments ? {
+                        attachments: mailOptions.attachments.map((attachment) => ({
+                            filename: attachment.filename,
+                            content: Buffer.from(attachment.content).toString('base64')
+                        }))
+                    } : {})
                 }),
                 signal: AbortSignal.timeout(15000)
             });
@@ -785,6 +799,7 @@ const registrationSettingSchema = new mongoose.Schema({
 const registrationSchema = new mongoose.Schema({
     ticketCode: { type: String, required: true, unique: true, index: true },
     paymentReference: { type: String, required: true, unique: true, index: true },
+    paymentUrl: { type: String, default: '' },
     requestId: { type: String, default: '', index: true },
     fullName: { type: String, required: true, trim: true, maxlength: 100 },
     email: { type: String, required: true, lowercase: true, trim: true, maxlength: 150 },
@@ -800,7 +815,6 @@ const registrationSchema = new mongoose.Schema({
     department: { type: String, default: '', trim: true, maxlength: 80 },
     educationLevel: { type: String, default: '', trim: true, maxlength: 50 },
     formation: { type: String, required: true, trim: true, maxlength: 100 },
-    emergencyName: { type: String, default: '', trim: true, maxlength: 100 },
     emergencyLastName: { type: String, default: '', trim: true, maxlength: 50 },
     emergencyFirstName: { type: String, default: '', trim: true, maxlength: 50 },
     emergencyAddress: { type: String, default: '', trim: true, maxlength: 200 },
@@ -1886,6 +1900,77 @@ const createRegistrationTicket = async (fullName) => {
     throw new Error('Impossible de générer un code de ticket unique.');
 };
 
+const createRegistrationPdf = (registration) => new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'LETTER', margins: { top: 42, right: 42, bottom: 42, left: 42 } });
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('error', reject);
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+    doc.rect(0, 0, doc.page.width, 104).fill('#000641');
+    doc.image(path.join(__dirname, 'Logo.png'), 42, 24, { fit: [54, 54] });
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(18)
+        .text('COMPETENCE ACADEMY', 108, 30, { width: 420 });
+    doc.font('Helvetica').fontSize(10).fillColor('#dbeafe')
+        .text('FORMULAIRE D’INSCRIPTION / E-TICKET', 108, 56, { width: 420 });
+    doc.fillColor('#f76b00').roundedRect(42, 119, 528, 56, 8).fill();
+    doc.fillColor('#ffffff').font('Helvetica').fontSize(9)
+        .text('CODE ETUDIANT', 56, 129);
+    doc.font('Helvetica-Bold').fontSize(18)
+        .text(registration.ticketCode, 56, 143, { width: 500 });
+    doc.fillColor('#000641').font('Helvetica-Bold').fontSize(13)
+        .text(`Statut du paiement : ${registration.status === 'SUCCESSFUL' ? 'PAYE' : 'EN ATTENTE'}`, 42, 190);
+
+    const fields = [
+        ['Nom complet', registration.fullName],
+        ['Civilite', registration.civilite],
+        ['Date de naissance', registration.birthDate],
+        ['Genre', registration.gender],
+        ['E-mail de l’etudiant', registration.email],
+        ['Telephone principal', registration.phone],
+        ['Telephone secondaire', registration.secondaryPhone],
+        ['Adresse', registration.address],
+        ['Ville / Departement', [registration.city, registration.department].filter(Boolean).join(' / ')],
+        ['Niveau d’etudes', registration.educationLevel],
+        ['Formation choisie', registration.formation],
+        ['Personne a contacter', `${registration.emergencyFirstName || ''} ${registration.emergencyLastName || ''}`.trim()],
+        ['Telephone d’urgence', registration.emergencyPhone],
+        ['Adresse de la personne a contacter', registration.emergencyAddress],
+        ['Methode de paiement', registration.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash'],
+        ['Montant', `${Number(registration.amount).toLocaleString('fr-FR')} HTG`],
+        ...(registration.status === 'SUCCESSFUL' && registration.paidAt
+            ? [['Date du paiement', new Date(registration.paidAt).toLocaleString('fr-FR')]]
+            : [])
+    ];
+    let y = 218;
+    fields.forEach(([label, value], index) => {
+        const labelWidth = 172;
+        const valueWidth = 330;
+        const valueText = String(value || '—');
+        const rowHeight = Math.max(
+            27,
+            doc.heightOfString(valueText, { width: valueWidth, font: 'Helvetica', fontSize: 9 }) + 12
+        );
+        if (y + rowHeight > doc.page.height - 54) {
+            doc.addPage();
+            y = 50;
+        }
+        doc.rect(42, y, 528, rowHeight).fill(index % 2 ? '#f4f7fb' : '#ffffff');
+        doc.fillColor('#475467').font('Helvetica-Bold').fontSize(9)
+            .text(label, 52, y + 8, { width: labelWidth - 12 });
+        doc.fillColor('#14182b').font('Helvetica').fontSize(9)
+            .text(valueText, 52 + labelWidth, y + 8, { width: valueWidth });
+        doc.strokeColor('#e5e7eb').moveTo(42, y + rowHeight).lineTo(570, y + rowHeight).stroke();
+        y += rowHeight;
+    });
+    doc.font('Helvetica').fontSize(8).fillColor('#667085')
+        .text('Conservez ce document et presentez votre code etudiant a l’administration.', 42, doc.page.height - 38, {
+            width: 528,
+            align: 'center'
+        });
+    doc.end();
+});
+
 const sendRegistrationReceipt = async (registration) => {
     const alreadyClaimed = await Registration.findOneAndUpdate(
         { _id: registration._id, status: 'SUCCESSFUL', receiptEmailSentAt: null },
@@ -1895,6 +1980,7 @@ const sendRegistrationReceipt = async (registration) => {
     if (!alreadyClaimed) return;
     const adminEmail = sanitizeEmail(process.env.ACCESS_APPROVAL_EMAIL || process.env.EMAIL_USER);
     const logoUrl = 'https://competenceacademy.netlify.app/Logo.png';
+    const registrationPdf = await createRegistrationPdf(alreadyClaimed);
     const ticketHtml = escapeHtml(alreadyClaimed.ticketCode);
     const detailRows = [
         ['Code ticket', alreadyClaimed.ticketCode],
@@ -1906,22 +1992,24 @@ const sendRegistrationReceipt = async (registration) => {
     ].map(([label, value]) => `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb"><strong>${escapeHtml(label)}</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(value)}</td></tr>`).join('');
     const html = `<div style="max-width:680px;margin:auto;background:#f4f7fb;padding:24px;font-family:Arial,sans-serif;color:#050505">
         <div style="overflow:hidden;border-radius:18px;background:#fff;border:1px solid #dfe5ef">
-        <div style="padding:28px;text-align:center;background:#000641"><img src="${logoUrl}" alt="Competence Academy" style="width:96px;height:96px;object-fit:contain;background:#fff;border-radius:18px;padding:7px"><h1 style="margin:16px 0 5px;color:#fff;font-size:28px">Votre e-ticket d’inscription</h1><p style="margin:0;color:#dbeafe">Paiement confirmé par Competence Academy</p></div>
+        <div style="padding:28px;text-align:center;background:#000641"><img src="${logoUrl}" alt="Competence Academy" style="width:72px;height:72px;object-fit:contain;background:transparent;border:0;border-radius:0;padding:0"><h1 style="margin:12px 0 5px;color:#fff;font-size:28px">Votre e-ticket d’inscription</h1><p style="margin:0;color:#dbeafe">Paiement confirmé par Competence Academy</p></div>
         <div style="padding:28px"><div style="margin-bottom:22px;text-align:center;border:2px dashed #f76b00;border-radius:14px;padding:18px;background:#fff9f4"><span style="display:block;color:#64748b;font-size:12px;letter-spacing:.12em;text-transform:uppercase">Code ticket</span><strong style="display:block;color:#000641;font-size:28px;letter-spacing:.08em;margin-top:5px">${ticketHtml}</strong></div>
         <table style="width:100%;border-collapse:collapse">${detailRows}</table><p style="margin:22px 0 0;color:#64748b;line-height:1.6">Conservez cet e-ticket. Il doit être présenté lors de votre inscription administrative.</p></div>
         <div style="padding:16px;text-align:center;color:#fff;background:#000641;font-size:13px">Competence Academy — Formation pratique et professionnelle</div></div></div>`;
     await sendEmail({
         to: alreadyClaimed.email,
         subject: `E-ticket Competence Academy - ${alreadyClaimed.ticketCode}`,
-        text: `Paiement confirmé. Code ticket: ${alreadyClaimed.ticketCode}. Formation: ${alreadyClaimed.formation}. Montant: ${alreadyClaimed.amount} HTG.`,
-        html
+        text: `Paiement confirmé.\nCode étudiant: ${alreadyClaimed.ticketCode}\nFormation: ${alreadyClaimed.formation}\nMontant: ${alreadyClaimed.amount} HTG.`,
+        html,
+        attachments: [{ filename: `Inscription-${alreadyClaimed.ticketCode}.pdf`, content: registrationPdf }]
     });
     if (adminEmail && adminEmail !== alreadyClaimed.email) {
         await sendEmail({
             to: adminEmail,
             subject: `Nouvelle inscription payée - ${alreadyClaimed.ticketCode}`,
-            text: `${alreadyClaimed.fullName} (${alreadyClaimed.email}) a payé l'inscription à ${alreadyClaimed.formation}. Ticket: ${alreadyClaimed.ticketCode}.`,
-            html
+            text: `${alreadyClaimed.fullName} (${alreadyClaimed.email}) a payé l'inscription à ${alreadyClaimed.formation}.\nCode étudiant: ${alreadyClaimed.ticketCode}.`,
+            html,
+            attachments: [{ filename: `Inscription-${alreadyClaimed.ticketCode}.pdf`, content: registrationPdf }]
         });
     }
     await Registration.updateOne({ _id: alreadyClaimed._id }, { $set: { receiptEmailSentAt: new Date() } });
@@ -1929,6 +2017,9 @@ const sendRegistrationReceipt = async (registration) => {
 
 const sendRegistrationApplicationEmail = async (registration) => {
     const adminEmail = sanitizeEmail(process.env.ACCESS_APPROVAL_EMAIL || process.env.EMAIL_USER);
+    const registrationPdf = await createRegistrationPdf(registration);
+    const resumeUrl = new URL(getFrontendUrl('/inscription.html'));
+    resumeUrl.searchParams.set('reference', registration.paymentReference);
     const fields = [
         ['Nom complet', registration.fullName], ['Civilité', registration.civilite],
         ['Date de naissance', registration.birthDate], ['Genre', registration.gender],
@@ -1936,24 +2027,26 @@ const sendRegistrationApplicationEmail = async (registration) => {
         ['Département', registration.department], ['E-mail', registration.email],
         ['Téléphone principal', registration.phone], ['Téléphone secondaire', registration.secondaryPhone],
         ['Niveau d’études', registration.educationLevel], ['Formation', registration.formation],
-        ['Référence urgence', registration.emergencyName || `${registration.emergencyFirstName} ${registration.emergencyLastName}`],
+        ['Personne à contacter', `${registration.emergencyFirstName} ${registration.emergencyLastName}`],
         ['Téléphone urgence', registration.emergencyPhone],
         ['Adresse urgence', registration.emergencyAddress],
         ['Montant demandé', `${Number(registration.amount).toLocaleString('fr-FR')} HTG`]
     ].map(([label, value]) => `<tr><td style="padding:9px;border-bottom:1px solid #e5e7eb;width:38%"><strong>${escapeHtml(label)}</strong></td><td style="padding:9px;border-bottom:1px solid #e5e7eb">${escapeHtml(value || '—')}</td></tr>`).join('');
-    const html = `<div style="max-width:680px;margin:auto;background:#f4f7fb;padding:24px;font-family:Arial,sans-serif;color:#050505"><div style="overflow:hidden;border-radius:18px;background:#fff;border:1px solid #dfe5ef"><div style="padding:26px;text-align:center;background:#000641"><img src="https://competenceacademy.netlify.app/Logo.png" alt="Competence Academy" style="width:90px;height:90px;object-fit:contain;background:#fff;border-radius:16px;padding:7px"><h1 style="color:#fff;font-size:25px;margin:14px 0 5px">Demande d’inscription reçue</h1><p style="color:#dbeafe;margin:0">Votre formulaire est enregistré</p></div><div style="padding:26px"><p>Bonjour ${escapeHtml(registration.fullName)},</p><p>Votre demande d’inscription à <strong>${escapeHtml(registration.formation)}</strong> a bien été enregistrée. Effectuez le paiement pour recevoir votre e-ticket officiel.</p><table style="width:100%;border-collapse:collapse">${fields}</table><p style="margin-top:20px;color:#64748b;line-height:1.6">Référence: <strong>${escapeHtml(registration.paymentReference)}</strong></p></div><div style="padding:15px;text-align:center;color:#fff;background:#000641;font-size:13px">Competence Academy</div></div></div>`;
+    const html = `<div style="max-width:680px;margin:auto;background:#f4f7fb;padding:24px;font-family:Arial,sans-serif;color:#050505"><div style="overflow:hidden;border-radius:18px;background:#fff;border:1px solid #dfe5ef"><div style="padding:26px;text-align:center;background:#000641"><img src="https://competenceacademy.netlify.app/Logo.png" alt="Competence Academy" style="width:72px;height:72px;object-fit:contain;background:transparent;border:0;border-radius:0;padding:0"><h1 style="color:#fff;font-size:25px;margin:12px 0 5px">Demande d’inscription reçue</h1><p style="color:#dbeafe;margin:0">Votre formulaire est enregistré</p></div><div style="padding:26px"><p>Bonjour ${escapeHtml(registration.fullName)},</p><p>Votre demande d’inscription à <strong>${escapeHtml(registration.formation)}</strong> a bien été enregistrée. Effectuez le paiement pour recevoir votre e-ticket officiel.</p><p>Code étudiant : <strong style="color:#000641">${escapeHtml(registration.ticketCode)}</strong></p><a href="${escapeHtml(resumeUrl.toString())}" style="display:inline-block;margin:8px 0 20px;padding:12px 20px;border-radius:8px;color:#fff;background:#000641;text-decoration:none;font-weight:bold">Reprendre le paiement</a><table style="width:100%;border-collapse:collapse">${fields}</table><p style="margin-top:20px;color:#64748b;line-height:1.6">Référence de reprise du paiement : <strong>${escapeHtml(registration.paymentReference)}</strong></p></div><div style="padding:15px;text-align:center;color:#fff;background:#000641;font-size:13px">Competence Academy</div></div></div>`;
     await sendEmail({
         to: registration.email,
         subject: `Demande d’inscription reçue - ${registration.ticketCode}`,
-        text: `Bonjour ${registration.fullName}. Votre demande d'inscription à ${registration.formation} a été enregistrée. Référence: ${registration.paymentReference}.`,
-        html
+        text: `Bonjour ${registration.fullName}.\nVotre demande d'inscription à ${registration.formation} a été enregistrée.\nCode étudiant: ${registration.ticketCode}.\nReprendre le paiement: ${resumeUrl.toString()}`,
+        html,
+        attachments: [{ filename: `Inscription-${registration.ticketCode}.pdf`, content: registrationPdf }]
     });
     if (adminEmail && adminEmail !== registration.email) {
         await sendEmail({
             to: adminEmail,
             subject: `Nouvelle demande d’inscription - ${registration.fullName}`,
-            text: `Nouvelle demande: ${registration.fullName}, ${registration.email}, ${registration.phone}, formation ${registration.formation}. Référence: ${registration.paymentReference}.`,
-            html
+            text: `Nouvelle demande: ${registration.fullName}, ${registration.email}, ${registration.phone}, formation ${registration.formation}.\nCode étudiant: ${registration.ticketCode}.\nRéférence: ${registration.paymentReference}.`,
+            html,
+            attachments: [{ filename: `Inscription-${registration.ticketCode}.pdf`, content: registrationPdf }]
         });
     }
 };
@@ -2011,7 +2104,6 @@ app.post('/api/registrations/payment', async (req, res) => {
             department: String(req.body?.department || '').trim(),
             educationLevel: String(req.body?.educationLevel || '').trim(),
             formation,
-            emergencyName: String(req.body?.emergencyName || '').trim(),
             emergencyLastName: String(req.body?.emergencyLastName || '').trim(),
             emergencyFirstName: String(req.body?.emergencyFirstName || '').trim(),
             emergencyAddress: String(req.body?.emergencyAddress || '').trim(),
@@ -2059,7 +2151,8 @@ app.post('/api/registrations/payment', async (req, res) => {
             throw new Error('Tranzak returned an invalid payment URL.');
         }
         if (securePaymentUrl.protocol !== 'https:') throw new Error('Tranzak returned a non-secure payment URL.');
-        await Registration.updateOne({ _id: registration._id }, { $set: { requestId: transactionId } });
+        await Registration.updateOne({ _id: registration._id }, { $set: { requestId: transactionId, paymentUrl: securePaymentUrl.href } });
+        registration.paymentUrl = securePaymentUrl.href;
         try {
             await sendRegistrationApplicationEmail(registration);
         } catch (emailError) {
@@ -2114,6 +2207,7 @@ app.get('/api/registrations/status/:reference', async (req, res) => {
     return res.json({
         success: true,
         status: registration.status,
+        paymentUrl: registration.status === 'PENDING' ? registration.paymentUrl : undefined,
         registration: registration.status === 'SUCCESSFUL' ? {
             ticketCode: registration.ticketCode,
             fullName: registration.fullName,
@@ -2124,6 +2218,28 @@ app.get('/api/registrations/status/:reference', async (req, res) => {
             paidAt: registration.paidAt
         } : undefined
     });
+});
+
+app.get('/api/registrations/:reference/pdf', async (req, res) => {
+    const reference = String(req.params.reference || '');
+    if (!/^CARE[A-F0-9]{36}$/.test(reference)) {
+        return res.status(400).json({ success: false, message: 'Référence invalide.' });
+    }
+    const registration = await Registration.findOne({ paymentReference: reference });
+    if (!registration) return res.status(404).json({ success: false, message: 'Inscription introuvable.' });
+    let pdf;
+    try {
+        pdf = await createRegistrationPdf(registration);
+    } catch (error) {
+        console.error('Registration PDF generation failed:', error);
+        return res.status(500).json({ success: false, message: 'Impossible de générer le document PDF.' });
+    }
+    res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="Inscription-${registration.ticketCode}.pdf"`,
+        'Cache-Control': 'private, no-store'
+    });
+    return res.send(pdf);
 });
 
 app.post('/api/signup', signupLimiter, async (req, res) => {
