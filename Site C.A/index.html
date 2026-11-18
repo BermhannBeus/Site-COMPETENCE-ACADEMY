@@ -484,15 +484,15 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 
   <ul class="nav-links" id="nav-links" tabindex="0" aria-label="Navigation principale">
-    <li><a href="#" data-label="Accueil" aria-label="Accueil" title="Accueil"><i class="fa-solid fa-house" aria-hidden="true"></i></a></li>
-    <li><a href="En savoir plus sur l'entreprise.html" data-label="Notre histoire" aria-label="Notre histoire" title="Notre histoire"><i class="fa-solid fa-landmark" aria-hidden="true"></i></a></li>
-    <li><a href="#notre-vision" data-label="Notre Vision" aria-label="Notre Vision" title="Notre Vision"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></a></li>
-    <li><a href="#formations" data-label="Nos cours" aria-label="Nos cours" title="Nos cours"><i class="fa-solid fa-book-open" aria-hidden="true"></i></a></li>
-    <li><a href="#why-choose-us" data-label="Pourquoi nous choisir" aria-label="Pourquoi nous choisir" title="Pourquoi nous choisir"><i class="fa-solid fa-star" aria-hidden="true"></i></a></li>
-    <li><a href="#founders" data-label="Nos fondateurs" aria-label="Nos fondateurs" title="Nos fondateurs"><i class="fa-solid fa-users" aria-hidden="true"></i></a></li>
-    <li><a href="Cours en Ligne.html" data-label="Cours en ligne" aria-label="Cours en ligne" title="Cours en ligne"><i class="fa-solid fa-circle-play" aria-hidden="true"></i></a></li>
-    <li><a href="resultats.html" data-label="Résultats" aria-label="Résultats" title="Résultats"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i></a></li>
-    <li><a href="#Contact" data-label="Contact" aria-label="Contact" title="Contact"><i class="fa-solid fa-envelope" aria-hidden="true"></i></a></li>
+    <li><a href="#" data-label="Accueil" aria-label="Accueil" title="Accueil"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Accueil</span></a></li>
+    <li><a href="En savoir plus sur l'entreprise.html" data-label="Notre histoire" aria-label="Notre histoire" title="Notre histoire"><i class="fa-solid fa-landmark" aria-hidden="true"></i><span>Notre histoire</span></a></li>
+    <li><a href="#notre-vision" data-label="Notre Vision" aria-label="Notre Vision" title="Notre Vision"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span>Notre vision</span></a></li>
+    <li><a href="#formations" data-label="Nos cours" aria-label="Nos cours" title="Nos cours"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Nos cours</span></a></li>
+    <li><a href="#why-choose-us" data-label="Pourquoi nous choisir" aria-label="Pourquoi nous choisir" title="Pourquoi nous choisir"><i class="fa-solid fa-star" aria-hidden="true"></i><span>Pourquoi nous choisir</span></a></li>
+    <li><a href="#founders" data-label="Nos fondateurs" aria-label="Nos fondateurs" title="Nos fondateurs"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Fondateurs</span></a></li>
+    <li><a href="Cours en Ligne.html" data-label="Cours en ligne" aria-label="Cours en ligne" title="Cours en ligne"><i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Cours en ligne</span></a></li>
+    <li><a href="resultats.html" data-label="Résultats" aria-label="Résultats" title="Résultats"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><span>Résultats</span></a></li>
+    <li><a href="#Contact" data-label="Contact" aria-label="Contact" title="Contact"><i class="fa-solid fa-envelope" aria-hidden="true"></i><span>Contact</span></a></li>
   </ul>
 
   <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Passer au mode sombre" aria-pressed="false" title="Passer au mode sombre">
@@ -512,10 +512,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <img src="Slider/IMG_9721.jpg" alt="Slide 1" class="slide-img">
             <div class="slide-info">
                 <h2>Formations Pratiques & Professionnelles</h2>
+                <div class="slide-tagline">Apprendre • Pratiquer • Réussir</div>
                 <p>Développez des compétences réelles pour propulser votre avenir.</p>
-                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
-                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
-                </a>
+                <div class="hero-actions">
+                    <a href="inscription.html" class="btn-decouvrir"><i class="fa-solid fa-user-pen"></i> S'inscrire en ligne</a>
+                    <a href="#formations" class="btn-decouvrir btn-decouvrir-secondary">Découvrir nos formations</a>
+                </div>
             </div>
         </div>
 
@@ -523,10 +525,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <img src="Slider/IMG_9828.jpg" alt="Slide 2" class="slide-img">
             <div class="slide-info">
                 <h2>Informatique Bureautique</h2>
+                <div class="slide-tagline">Maîtriser • Organiser • Progresser</div>
                 <p>Maîtrisez Word, Excel, PowerPoint et les outils numériques essentiels.</p>
-                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
-                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
-                </a>
+                <div class="hero-actions">
+                    <a href="inscription.html" class="btn-decouvrir"><i class="fa-solid fa-user-pen"></i> S'inscrire en ligne</a>
+                    <a href="#formations" class="btn-decouvrir btn-decouvrir-secondary">Découvrir nos formations</a>
+                </div>
             </div>
         </div>
 
@@ -534,10 +538,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <img src="Slider/IMG_9827.jpg" alt="Slide 3" class="slide-img">
             <div class="slide-info">
                 <h2>Photographie Professionnelle</h2>
+                <div class="slide-tagline">Observer • Créer • Capturer</div>
                 <p>Capturez chaque instant avec technique et créativité.</p>
-                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
-                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
-                </a>
+                <div class="hero-actions">
+                    <a href="inscription.html" class="btn-decouvrir"><i class="fa-solid fa-user-pen"></i> S'inscrire en ligne</a>
+                    <a href="#formations" class="btn-decouvrir btn-decouvrir-secondary">Découvrir nos formations</a>
+                </div>
             </div>
         </div>
 
@@ -545,10 +551,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <img src="Slider/IMG_9729.jpg" alt="Slide 4" class="slide-img">
             <div class="slide-info">
                 <h2>Vidéographie & Montage Vidéo</h2>
+                <div class="slide-tagline">Filmer • Raconter • Inspirer</div>
                 <p>Créez des contenus captivants pour le monde moderne.</p>
-                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
-                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
-                </a>
+                <div class="hero-actions">
+                    <a href="inscription.html" class="btn-decouvrir"><i class="fa-solid fa-user-pen"></i> S'inscrire en ligne</a>
+                    <a href="#formations" class="btn-decouvrir btn-decouvrir-secondary">Découvrir nos formations</a>
+                </div>
             </div>
         </div>
 
@@ -557,10 +565,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <img src="Slider/IMG_9824.jpg" alt="Slide 5" class="slide-img">
             <div class="slide-info">
                 <h2>Infographie Créative</h2>
+                <div class="slide-tagline">Imaginer • Concevoir • Innover</div>
                 <p>Créez des graphismes percutants et engageants pour votre communication.</p>
-                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
-                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
-                </a>
+                <div class="hero-actions">
+                    <a href="inscription.html" class="btn-decouvrir"><i class="fa-solid fa-user-pen"></i> S'inscrire en ligne</a>
+                    <a href="#formations" class="btn-decouvrir btn-decouvrir-secondary">Découvrir nos formations</a>
+                </div>
             </div>
         </div>
 
@@ -568,10 +578,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <img src="Slider/IMG_9784.jpg" alt="Slide 5" class="slide-img">
             <div class="slide-info">
                 <h2>Rejoignez la Famille COMPETENCE ACADEMY</h2>
+                <div class="slide-tagline">Se former • Grandir • S'épanouir</div>
                 <p>Inscrivez-vous dès aujourd'hui et développez votre potentiel.</p>
-                <a href="https://form.jotform.com/261485567334869" class="btn-decouvrir">
-                    <i class="fa-solid fa-user-pen"></i> S'inscrire en ligne
-                </a>
+                <div class="hero-actions">
+                    <a href="inscription.html" class="btn-decouvrir"><i class="fa-solid fa-user-pen"></i> S'inscrire en ligne</a>
+                    <a href="#formations" class="btn-decouvrir btn-decouvrir-secondary">Découvrir nos formations</a>
+                </div>
             </div>
         </div>
 
@@ -585,7 +597,37 @@ document.addEventListener("DOMContentLoaded", () => {
     <div class="video-overlay"></div>
 </header>
 
-  
+<section class="about-academy" id="a-propos">
+    <div class="about-academy-visual">
+        <img src="Slider/IMG_9721.jpg" alt="Étudiants de Competence Academy en formation">
+        <div class="about-academy-features" aria-label="Nos engagements">
+            <div>
+                <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+                <span>Enseignement<br>de qualité</span>
+            </div>
+            <div>
+                <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+                <span>Recherche et<br>innovation</span>
+            </div>
+            <div>
+                <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
+                <span>Épanouissement<br>de l'étudiant</span>
+            </div>
+            <div>
+                <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i>
+                <span>Engagement<br>social</span>
+            </div>
+        </div>
+    </div>
+    <div class="about-academy-content">
+        <p class="about-academy-kicker">À propos de l'académie</p>
+        <h2>Une formation pratique pour <span>construire l'avenir</span></h2>
+        <p>Competence Academy accompagne les étudiants, professionnels et entrepreneurs dans le développement de compétences techniques solides, utiles et immédiatement applicables.</p>
+        <p>À travers un encadrement exigeant, des équipements modernes et des projets concrets, nous préparons chaque apprenant à réussir dans un monde professionnel en constante évolution.</p>
+        <a class="about-academy-link" href="En savoir plus sur l'entreprise.html">Lire plus <span aria-hidden="true">→</span></a>
+    </div>
+</section>
+
 <section class="vision-section" id="notre-vision">
     <h2 class="section-title">Bâtir l'Avenir par l'Excellence et l'Innovation Technologique.</h2>
     <p class="section-intro">Chez Competence Academy, nous transformons le potentiel en expertise. Notre mission est de former une nouvelle génération de leaders et de professionnels qualifiés dans les technologies de l'information, la gestion réseau, les énergies renouvelables et la création numérique.</p>
@@ -608,45 +650,82 @@ document.addEventListener("DOMContentLoaded", () => {
     </div>
 
     <div class="cards">
-        <div class="card">
-            <h3>Informatique</h3>
-            <button onclick="ouvrirPDF('Syllabus informatique.pdf')">Voir Syllabus</button>
-        </div>
-        
-        <div class="card">
-            <h3>Infographie</h3>
-            <button onclick="ouvrirPDF('Syllabus INFOGRAPHIE.pdf')">Voir Syllabus</button>
-        </div>
-        
-        <div class="card">
-            <h3>Photographie</h3>
-            <button onclick="ouvrirPDF('Syllabus photographie.pdf')">Voir Syllabus</button>
-        </div>
-        
-        <div class="card">
-            <h3>Vidéographie</h3>
-            <button onclick="ouvrirPDF('Syllabus Videographie.pdf')">Voir Syllabus</button>
-        </div>
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-computer"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>Informatique</h3>
+                <p>Maîtrisez les outils numériques et les fondamentaux de l’informatique.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus informatique.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
 
-        <div class="card">
-            <h3>Montage Vidéo</h3>
-            <button onclick="ouvrirPDF('Syllabus Montage Video.pdf')">Voir Syllabus</button>
-        </div>
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-pen-nib"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>Infographie</h3>
+                <p>Concevez des visuels professionnels et développez votre créativité graphique.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus INFOGRAPHIE.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
 
-        <div class="card">
-            <h3>QuickBooks</h3>
-            <button onclick="ouvrirPDF('Syllabus QuickBooks.pdf')">Voir Syllabus</button>
-        </div>
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>Photographie</h3>
+                <p>Maîtrisez la lumière, le cadrage et la composition d’images de qualité.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus photographie.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
 
-        <div class="card">
-            <h3>Caméra de surveillance</h3>
-            <button onclick="ouvrirPDF('Syllabus Camera de surveillance.pdf')">Voir Syllabus</button>
-        </div>
-    </div>
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-video"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>Vidéographie</h3>
+                <p>Réalisez des vidéos soignées grâce aux techniques essentielles de tournage.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus Videographie.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
 
-    <div class="courses-more">
-        <p>Et ce n'est pas tout ! Plusieurs autres formations et modules spécialisés sont également disponibles au sein de notre académie.</p>
-        <a class="courses-more-link" href="Cours en Ligne.html">Explorer toutes nos formations disponibles</a>
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-film"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>Montage Vidéo</h3>
+                <p>Assemblez vos séquences et donnez du rythme à vos projets vidéo.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus Montage Video.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
+
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-calculator"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>QuickBooks</h3>
+                <p>Organisez les opérations comptables et le suivi financier avec QuickBooks.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus QuickBooks.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
+
+        <article class="card course-card">
+            <div class="course-card-heading">
+                <span class="course-icon" aria-hidden="true"><i class="fa-solid fa-video"></i></span>
+            </div>
+            <div class="course-card-content">
+                <h3>Caméra de surveillance</h3>
+                <p>Installez et configurez les éléments d’un système de vidéosurveillance.</p>
+            </div>
+            <button type="button" onclick="ouvrirPDF('Syllabus Camera de surveillance.pdf')">Voir le syllabus <span aria-hidden="true">→</span></button>
+        </article>
     </div>
 
     <div class="stats-section">
@@ -671,12 +750,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <h2 id="services" class="section-title" style="scroll-margin-top: 120px;">NOS SERVICES</h2>
   <div class="services-grid">
-    <div class="service-card"><h3>Branding</h3><p>Identité visuelle complète.</p></div>
-    <div class="service-card"><h3>Graphisme</h3><p>Création pour réseaux sociaux, bannières, affiches, supports de communication.</p></div>
-    <div class="service-card"><h3>Vidéographie</h3><p>Montage vidéo professionnel.</p></div>
-    <div class="service-card"><h3>Photographie</h3><p>Evennementiels, portraits, reportages.</p></div>
-    <div class="service-card"><h3>Reseaux Informatique</h3><p>Cablage, configuration, maintenance.</p></div>
-    <div class="service-card"><h3>Assistance</h3><p>Dépannage informatique, support technique.</p></div>
+    <article class="service-card">
+      <i class="fa-solid fa-fingerprint service-icon" aria-hidden="true"></i>
+      <h3>Branding</h3>
+      <p>Identité visuelle complète pour construire une marque cohérente et mémorable.</p>
+    </article>
+    <article class="service-card">
+      <i class="fa-solid fa-pen-nib service-icon" aria-hidden="true"></i>
+      <h3>Graphisme</h3>
+      <p>Création de visuels pour les réseaux sociaux, affiches et supports de communication.</p>
+    </article>
+    <article class="service-card">
+      <i class="fa-solid fa-video service-icon" aria-hidden="true"></i>
+      <h3>Vidéographie</h3>
+      <p>Captation et montage vidéo pour donner vie à vos idées et à vos projets.</p>
+    </article>
+    <article class="service-card">
+      <i class="fa-solid fa-camera service-icon" aria-hidden="true"></i>
+      <h3>Photographie</h3>
+      <p>Photographie événementielle, portraits et reportages réalisés avec soin.</p>
+    </article>
+    <article class="service-card">
+      <i class="fa-solid fa-network-wired service-icon" aria-hidden="true"></i>
+      <h3>Réseaux informatiques</h3>
+      <p>Câblage, configuration et maintenance de vos infrastructures réseau.</p>
+    </article>
+    <article class="service-card">
+      <i class="fa-solid fa-headset service-icon" aria-hidden="true"></i>
+      <h3>Assistance</h3>
+      <p>Dépannage informatique et support technique adaptés à vos besoins.</p>
+    </article>
   </div>
 </section>
 
