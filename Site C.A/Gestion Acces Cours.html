@@ -301,6 +301,22 @@
         </div>
 
         <div id="paymentsPanel" class="admin-tabpanel" role="tabpanel" aria-labelledby="paymentsTab" hidden>
+        <section class="panel" aria-labelledby="registrationPriceTitle">
+            <div class="section-heading"><i class="fa-solid fa-file-signature" aria-hidden="true"></i><h2 id="registrationPriceTitle">Prix des inscriptions — HTG</h2></div>
+            <p class="muted">Ce prix est utilisé sur la page publique d’inscription et s’applique aux prochaines demandes de paiement.</p>
+            <form id="registrationPriceForm" style="margin-top:18px;">
+                <div class="field-grid">
+                    <div>
+                        <label for="registrationPriceAmount">Prix d’inscription (HTG)</label>
+                        <input id="registrationPriceAmount" type="number" min="1" max="100000000" step="1" required>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="saveRegistrationPrice" class="primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer le prix</button>
+                </div>
+            </form>
+            <div id="registrationPriceNotice" class="notice" role="status" hidden></div>
+        </section>
         <section class="panel" aria-labelledby="coursePricesTitle">
             <div class="section-heading"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i><h2 id="coursePricesTitle">Tarifs des formations — gourdes haïtiennes (HTG)</h2></div>
             <p class="muted">Modifiez le prix indépendamment pour chaque formation. Le nouveau tarif s’applique aux prochaines demandes de paiement.</p>
@@ -477,7 +493,10 @@
                 adminTabPanels[index].hidden = !isSelected;
             });
             if (moveFocus) selectedTab.focus();
-            if (selectedTab.id === 'paymentsTab') loadCoursePrices();
+            if (selectedTab.id === 'paymentsTab') {
+                loadCoursePrices();
+                loadRegistrationPrice();
+            }
             if (selectedTab.id === 'accountsTab') loadAccounts();
         }
 
@@ -935,6 +954,38 @@
             }
         });
         document.getElementById('refreshCoursePrices').addEventListener('click', loadCoursePrices);
+
+        const registrationPriceForm = document.getElementById('registrationPriceForm');
+        const registrationPriceAmountInput = document.getElementById('registrationPriceAmount');
+        const registrationPriceNotice = document.getElementById('registrationPriceNotice');
+        const saveRegistrationPriceButton = document.getElementById('saveRegistrationPrice');
+
+        async function loadRegistrationPrice() {
+            try {
+                const data = await adminRequest('/admin/registration-price', { method: 'GET' });
+                registrationPriceAmountInput.value = String(data.amount);
+            } catch (error) {
+                showNotice(registrationPriceNotice, error.message, true);
+            }
+        }
+
+        registrationPriceForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            event.preventDefault();
+            saveRegistrationPriceButton.disabled = true;
+            try {
+                const data = await adminRequest('/admin/registration-price', {
+                    method: 'PUT',
+                    body: JSON.stringify({ amount: Number(registrationPriceAmountInput.value) })
+                });
+                registrationPriceAmountInput.value = String(data.amount);
+                showNotice(registrationPriceNotice, 'Le prix d’inscription a été enregistré.', false);
+            } catch (error) {
+                showNotice(registrationPriceNotice, error.message, true);
+            } finally {
+                saveRegistrationPriceButton.disabled = false;
+            }
+        });
 
         function addResultModule(name, score) {
             const row = document.createElement('div');
