@@ -130,10 +130,6 @@
                             <input id="emergencyAddress" name="emergencyAddress" maxlength="200" required>
                         </div>
                         <div class="field">
-                            <label for="emergencyName">Nom complet de référence</label>
-                            <input id="emergencyName" name="emergencyName" maxlength="100">
-                        </div>
-                        <div class="field">
                             <label for="emergencyPhone">Téléphone *</label>
                             <input id="emergencyPhone" name="emergencyPhone" type="tel" maxlength="30" required>
                         </div>
@@ -174,6 +170,13 @@
             </form>
         </section>
 
+        <section class="payment-resume-card" id="paymentResumeCard" aria-live="polite">
+            <h2>Reprendre votre paiement</h2>
+            <p id="paymentResumeMessage">Vérification de votre inscription...</p>
+            <a class="resume-payment-button" id="resumePaymentButton" href="#" hidden>Continuer le paiement</a>
+            <a class="resume-payment-button secondary-resume-button" id="downloadPendingPdfButton" href="#" download hidden>Télécharger le formulaire PDF</a>
+        </section>
+
         <section class="receipt-card" id="receiptCard" aria-live="polite">
             <div class="receipt-success">Paiement confirmé - inscription enregistrée</div>
             <article class="e-ticket" id="eTicket">
@@ -190,6 +193,7 @@
                     <div class="ticket-detail"><span>Date</span><strong id="receiptDate"></strong></div>
                 </div>
             </article>
+            <a class="print-button download-button" id="downloadPdfButton" href="#" download>Télécharger le PDF</a>
             <button class="print-button" id="printButton" type="button">Télécharger / Imprimer le reçu</button>
         </section>
     </div>
@@ -198,6 +202,12 @@
     const form = document.getElementById('registrationForm');
     const submitButton = document.getElementById('submitButton');
     const formMessage = document.getElementById('formMessage');
+    const resumeCard = document.getElementById('paymentResumeCard');
+    const resumeMessage = document.getElementById('paymentResumeMessage');
+    const resumeButton = document.getElementById('resumePaymentButton');
+    const downloadPendingPdfButton = document.getElementById('downloadPendingPdfButton');
+    const draftKey = 'competence-academy-registration-draft';
+    const pendingKey = 'competence-academy-registration-payment';
     const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:5000'
         : 'https://site-competence-academy-backend.onrender.com';
@@ -221,25 +231,96 @@
         return data;
     }
 
+    function saveDraft() {
+        const draft = {};
+        for (const field of form.elements) {
+            if (!field.name) continue;
+            if (field.type === 'checkbox') draft[field.name] = field.checked;
+            else if (field.type === 'radio') {
+                if (field.checked) draft[field.name] = field.value;
+            } else draft[field.name] = field.value;
+        }
+        sessionStorage.setItem(draftKey, JSON.stringify(draft));
+    }
+
+    function restoreDraft() {
+        const storedDraft = sessionStorage.getItem(draftKey);
+        if (!storedDraft) return;
+        try {
+            const draft = JSON.parse(storedDraft);
+            for (const field of form.elements) {
+                if (!field.name || !Object.prototype.hasOwnProperty.call(draft, field.name)) continue;
+                if (field.type === 'checkbox') field.checked = Boolean(draft[field.name]);
+                else if (field.type === 'radio') field.checked = field.value === draft[field.name];
+                else field.value = draft[field.name];
+            }
+        } catch (error) {
+            sessionStorage.removeItem(draftKey);
+            console.error('Impossible de restaurer le brouillon d’inscription:', error);
+        }
+    }
+
+    function setPendingPayment(reference, paymentUrl = '') {
+        sessionStorage.setItem(pendingKey, JSON.stringify({ reference, paymentUrl }));
+    }
+
+    function showPendingPayment(paymentUrl, reference) {
+        document.getElementById('registrationCard').style.display = 'none';
+        resumeCard.classList.add('visible');
+        resumeMessage.textContent = paymentUrl
+            ? 'Votre demande est enregistrée, mais le paiement n’est pas encore confirmé. Vous pouvez reprendre le paiement sans créer une nouvelle inscription.'
+            : 'Votre paiement est encore en cours de vérification. Nous ne pouvons pas ouvrir un nouveau paiement pour éviter une inscription en double.';
+        resumeButton.hidden = !paymentUrl;
+        if (paymentUrl) resumeButton.href = paymentUrl;
+        downloadPendingPdfButton.hidden = !reference;
+        if (reference) {
+            downloadPendingPdfButton.href =
+                `${apiBase}/api/registrations/${encodeURIComponent(reference)}/pdf`;
+        }
+    }
+
+    function showFormAgain(message) {
+        resumeCard.classList.remove('visible');
+        document.getElementById('registrationCard').style.display = '';
+        submitButton.disabled = false;
+        setMessage(message, 'error');
+    }
+
     async function pollPayment(reference) {
         for (let attempt = 0; attempt < 60; attempt += 1) {
-            await new Promise(resolve => setTimeout(resolve, 5000));
             try {
                 const data = await requestJson(`${apiBase}/api/registrations/status/${encodeURIComponent(reference)}`);
                 if (data.status === 'SUCCESSFUL') {
-                    showReceipt(data.registration);
+                    showReceipt(data.registration, reference);
+                    return;
+                }
+                if (data.status === 'PENDING') {
+                    setPendingPayment(reference, data.paymentUrl || '');
+                    showPendingPayment(data.paymentUrl || '', reference);
+                } else {
+                    sessionStorage.removeItem(pendingKey);
+                    showFormAgain(data.status === 'CANCELLED'
+                        ? 'Le paiement a été annulé. Vos informations restent enregistrées; vous pouvez recommencer.'
+                        : 'Le paiement n’a pas abouti. Vos informations restent enregistrées; vous pouvez recommencer.');
                     return;
                 }
             } catch (error) {
-                setMessage(error.message, 'error');
+                resumeMessage.textContent = error.message;
+                resumeCard.classList.add('visible');
             }
+            if (attempt < 59) await new Promise(resolve => setTimeout(resolve, 5000));
         }
-        setMessage('Le paiement est en cours de confirmation. Vous pouvez revenir sur cette page avec votre référence.', 'error');
+        resumeMessage.textContent = 'Le paiement est toujours en cours de confirmation. Vous pouvez reprendre le paiement ou revenir plus tard sur cette page.';
     }
 
-    function showReceipt(registration) {
+    function showReceipt(registration, reference) {
+        sessionStorage.removeItem(draftKey);
+        sessionStorage.removeItem(pendingKey);
+        resumeCard.classList.remove('visible');
         document.getElementById('registrationCard').style.display = 'none';
         document.getElementById('receiptCard').classList.add('visible');
+        document.getElementById('downloadPdfButton').href =
+            `${apiBase}/api/registrations/${encodeURIComponent(reference)}/pdf`;
         document.getElementById('receiptTicket').textContent = registration.ticketCode;
         document.getElementById('receiptName').textContent = registration.fullName;
         document.getElementById('receiptEmail').textContent = registration.email;
@@ -253,8 +334,14 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    form.addEventListener('input', saveDraft);
+    form.addEventListener('change', saveDraft);
+    restoreDraft();
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (!form.reportValidity()) return;
+        saveDraft();
         submitButton.disabled = true;
         setMessage('Préparation du paiement...');
 
@@ -273,9 +360,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            setMessage('Paiement créé. Redirection vers Tranzak...');
-            window.location.href = data.paymentUrl;
-            pollPayment(data.reference).catch(() => {});
+            setPendingPayment(data.reference, data.paymentUrl);
+            window.location.assign(data.paymentUrl);
         } catch (error) {
             setMessage(error.message, 'error');
             submitButton.disabled = false;
@@ -286,7 +372,27 @@
 
     const returnReference = new URLSearchParams(window.location.search).get('reference');
     if (returnReference) {
-        pollPayment(returnReference).catch(() => {});
+        setPendingPayment(returnReference);
+        showPendingPayment('', returnReference);
+        pollPayment(returnReference).catch((error) => {
+            showFormAgain(error.message);
+        });
+    } else {
+        const savedPayment = sessionStorage.getItem(pendingKey);
+        if (savedPayment) {
+            try {
+                const payment = JSON.parse(savedPayment);
+                if (payment.reference) {
+                    showPendingPayment(payment.paymentUrl || '', payment.reference);
+                    pollPayment(payment.reference).catch((error) => {
+                        resumeMessage.textContent = error.message;
+                    });
+                }
+            } catch (error) {
+                sessionStorage.removeItem(pendingKey);
+                console.error('Impossible de restaurer le paiement en attente:', error);
+            }
+        }
     }
 </script>
 </body>
