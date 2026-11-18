@@ -5395,6 +5395,10 @@ body.dark-theme .services-grid > .service-card p,
     object-position: center;
   }
 
+  .slide-featured-img {
+    object-position: center 27%;
+  }
+
   .slide-info {
     top: 50% !important;
     left: 50% !important;
@@ -5604,4 +5608,29 @@ body.dark-theme .courses-section .courses-more-link,
     align-self: center;
     justify-content: center;
   }
+}
+
+.about-academy-visual {
+  display: flex;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  flex-direction: column;
+  padding: 0;
+}
+
+.about-academy-visual > img {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  background: #e8f5fb;
+  object-fit: contain;
+  object-position: center;
+}
+
+.about-academy-visual .about-academy-features {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
 }
