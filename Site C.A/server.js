@@ -1911,6 +1911,8 @@ const REGISTRATION_FORMATIONS = [
     'Caméra de surveillance'
 ];
 
+const registrationPdfCache = new Map();
+
 const createRegistrationTicket = async (fullName) => {
     const normalizedName = String(fullName || '')
         .normalize('NFD')
@@ -1927,88 +1929,118 @@ const createRegistrationTicket = async (fullName) => {
     throw new Error('Impossible de générer un code de ticket unique.');
 };
 
-const drawRegistrationLogo = (doc, x, y, size) => {
-    doc.image(path.join(__dirname, 'Logo.png'), x, y, { fit: [size, size] });
-};
+const createRegistrationPdf = (registration) => {
+    const cacheKey = JSON.stringify([
+        registration.ticketCode,
+        registration.status,
+        registration.paidAt ? new Date(registration.paidAt).toISOString() : '',
+        registration.fullName,
+        registration.birthDate,
+        registration.gender,
+        registration.email,
+        registration.phone,
+        registration.secondaryPhone,
+        registration.address,
+        registration.city,
+        registration.department,
+        registration.educationLevel,
+        registration.formation,
+        registration.emergencyFirstName,
+        registration.emergencyLastName,
+        registration.emergencyPhone,
+        registration.emergencyAddress,
+        registration.paymentMethod,
+        registration.amount
+    ]);
+    const cachedPdf = registrationPdfCache.get(cacheKey);
+    if (cachedPdf) return cachedPdf;
 
-const createRegistrationPdf = (registration) => new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'LETTER', margins: { top: 42, right: 42, bottom: 42, left: 42 } });
-    const chunks = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('error', reject);
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    const pdfPromise = new Promise((resolvePdf, rejectPdf) => {
+        const doc = new PDFDocument({ size: 'LETTER', margins: { top: 42, right: 42, bottom: 42, left: 42 } });
+        const chunks = [];
+        const pdfLogo = doc.openImage(path.join(__dirname, 'Logo-pdf.png'));
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('error', rejectPdf);
+        doc.on('end', () => resolvePdf(Buffer.concat(chunks)));
 
-    doc.rect(0, 0, doc.page.width, 78).fill('#000641');
-    drawRegistrationLogo(doc, 42, 12, 52);
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17)
-        .text('COMPETENCE ACADEMY', 100, 24, { width: 450 });
-    doc.font('Helvetica').fontSize(9).fillColor('#dbeafe')
-        .text('FORMULAIRE D’INSCRIPTION', 100, 48, { width: 450 });
-    doc.fillColor('#f76b00').roundedRect(42, 91, 528, 52, 8).fill();
-    doc.fillColor('#ffffff').font('Helvetica').fontSize(8)
-        .text('CODE ETUDIANT', 55, 101);
-    doc.font('Helvetica-Bold').fontSize(17)
-        .text(registration.ticketCode, 55, 116, { width: 500 });
-    doc.fillColor('#000641').font('Helvetica-Bold').fontSize(10)
-        .text(`Statut du paiement : ${registration.status === 'SUCCESSFUL' ? 'PAYE' : 'EN ATTENTE'}`, 42, 154);
+        doc.rect(0, 0, doc.page.width, 78).fill('#000641');
+        doc.image(pdfLogo, 42, 12, { fit: [52, 52] });
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17)
+            .text('COMPETENCE ACADEMY', 100, 24, { width: 450 });
+        doc.font('Helvetica').fontSize(9).fillColor('#dbeafe')
+            .text('FORMULAIRE D’INSCRIPTION', 100, 48, { width: 450 });
+        doc.fillColor('#f76b00').roundedRect(42, 91, 528, 52, 8).fill();
+        doc.fillColor('#ffffff').font('Helvetica').fontSize(8)
+            .text('CODE ETUDIANT', 55, 101);
+        doc.font('Helvetica-Bold').fontSize(17)
+            .text(registration.ticketCode, 55, 116, { width: 500 });
+        doc.fillColor('#000641').font('Helvetica-Bold').fontSize(10)
+            .text(`Statut du paiement : ${registration.status === 'SUCCESSFUL' ? 'PAYE' : 'EN ATTENTE'}`, 42, 154);
 
-    const fields = [
-        ['Nom complet', registration.fullName],
-        ['Date de naissance', registration.birthDate],
-        ['Genre', registration.gender],
-        ['E-mail de l’etudiant', registration.email],
-        ['Telephone principal', registration.phone],
-        ['Telephone secondaire', registration.secondaryPhone],
-        ['Adresse', registration.address],
-        ['Ville / Departement', [registration.city, registration.department].filter(Boolean).join(' / ')],
-        ['Niveau d’etudes', registration.educationLevel],
-        ['Formation choisie', registration.formation],
-        ['Personne a contacter', `${registration.emergencyFirstName || ''} ${registration.emergencyLastName || ''}`.trim()],
-        ['Telephone d’urgence', registration.emergencyPhone],
-        ['Adresse de la personne a contacter', registration.emergencyAddress],
-        ['Methode de paiement', registration.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash'],
-        ['Montant', `${Number(registration.amount)} HTG`],
-        ...(registration.status === 'SUCCESSFUL' && registration.paidAt
-            ? [['Date du paiement', new Date(registration.paidAt).toLocaleString('fr-FR')]]
-            : [])
-    ];
-    const labelWidth = 132;
-    const cellPadding = 10;
-    const valueX = 42 + cellPadding + labelWidth + 10;
-    const valueWidth = 570 - valueX - cellPadding;
-    let y = 177;
-    fields.forEach(([label, value], index) => {
-        const valueText = String(value || '—');
-        const valueHeight = doc.heightOfString(valueText, {
-            width: valueWidth,
-            font: 'Helvetica',
-            fontSize: 8.5,
-            lineGap: 1
-        });
-        const rowHeight = Math.max(23, valueHeight + 9);
-        doc.rect(42, y, 528, rowHeight).fill(index % 2 === 0 ? '#f4f7fb' : '#ffffff');
-        doc.fillColor('#475467').font('Helvetica-Bold').fontSize(7.5)
-            .text(label, 42 + cellPadding, y + 6, {
-                width: labelWidth,
-                lineBreak: false
-            });
-        doc.fillColor('#14182b').font('Helvetica').fontSize(8.5)
-            .text(valueText, valueX, y + 5, {
+        const fields = [
+            ['Nom complet', registration.fullName],
+            ['Date de naissance', registration.birthDate],
+            ['Genre', registration.gender],
+            ['E-mail de l’etudiant', registration.email],
+            ['Telephone principal', registration.phone],
+            ['Telephone secondaire', registration.secondaryPhone],
+            ['Adresse', registration.address],
+            ['Ville / Departement', [registration.city, registration.department].filter(Boolean).join(' / ')],
+            ['Niveau d’etudes', registration.educationLevel],
+            ['Formation choisie', registration.formation],
+            ['Personne a contacter', `${registration.emergencyFirstName || ''} ${registration.emergencyLastName || ''}`.trim()],
+            ['Telephone d’urgence', registration.emergencyPhone],
+            ['Adresse de la personne a contacter', registration.emergencyAddress],
+            ['Methode de paiement', registration.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash'],
+            ['Montant', `${Number(registration.amount)} HTG`],
+            ...(registration.status === 'SUCCESSFUL' && registration.paidAt
+                ? [['Date du paiement', new Date(registration.paidAt).toLocaleString('fr-FR')]]
+                : [])
+        ];
+        const labelWidth = 132;
+        const cellPadding = 10;
+        const valueX = 42 + cellPadding + labelWidth + 10;
+        const valueWidth = 570 - valueX - cellPadding;
+        let y = 177;
+        fields.forEach(([label, value], index) => {
+            const valueText = String(value || '—');
+            const valueHeight = doc.heightOfString(valueText, {
                 width: valueWidth,
-                height: rowHeight - 8,
+                font: 'Helvetica',
+                fontSize: 8.5,
                 lineGap: 1
             });
-        doc.strokeColor('#e5e7eb').moveTo(42, y + rowHeight).lineTo(570, y + rowHeight).stroke();
-        y += rowHeight;
-    });
-    doc.font('Helvetica').fontSize(8).fillColor('#667085')
-        .text('Conservez ce formulaire et presentez votre code etudiant a l’administration.', 42, y + 8, {
-            width: 528,
-            align: 'center',
-            lineBreak: false
+            const rowHeight = Math.max(23, valueHeight + 9);
+            doc.rect(42, y, 528, rowHeight).fill(index % 2 === 0 ? '#f4f7fb' : '#ffffff');
+            doc.fillColor('#475467').font('Helvetica-Bold').fontSize(7.5)
+                .text(label, 42 + cellPadding, y + 6, {
+                    width: labelWidth,
+                    lineBreak: false
+                });
+            doc.fillColor('#14182b').font('Helvetica').fontSize(8.5)
+                .text(valueText, valueX, y + 5, {
+                    width: valueWidth,
+                    height: rowHeight - 8,
+                    lineGap: 1
+                });
+            doc.strokeColor('#e5e7eb').moveTo(42, y + rowHeight).lineTo(570, y + rowHeight).stroke();
+            y += rowHeight;
         });
-    doc.end();
-});
+        doc.font('Helvetica').fontSize(8).fillColor('#667085')
+            .text('Conservez ce formulaire et presentez votre code etudiant a l’administration.', 42, y + 8, {
+                width: 528,
+                align: 'center',
+                lineBreak: false
+            });
+        doc.end();
+    });
+    registrationPdfCache.set(cacheKey, pdfPromise);
+    if (registrationPdfCache.size > 40) {
+        registrationPdfCache.delete(registrationPdfCache.keys().next().value);
+    }
+    pdfPromise.catch(() => registrationPdfCache.delete(cacheKey));
+    return pdfPromise;
+};
 
 const sendRegistrationReceipt = async (registration) => {
     const alreadyClaimed = await Registration.findOneAndUpdate(
