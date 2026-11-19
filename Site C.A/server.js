@@ -5,7 +5,6 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
-const path = require('path');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
@@ -1927,16 +1926,46 @@ const createRegistrationTicket = async (fullName) => {
     throw new Error('Impossible de générer un code de ticket unique.');
 };
 
+const drawRegistrationLogo = (doc, x, y, size, opacity = 1) => {
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    doc.save();
+    doc.opacity(opacity);
+    doc.circle(centerX, centerY, size * 0.49).fill('#ffffff');
+    doc.circle(centerX, centerY, size * 0.46)
+        .lineWidth(size * 0.025).stroke('#f76b00');
+    doc.circle(centerX, centerY, size * 0.4)
+        .lineWidth(size * 0.02).stroke('#101967');
+    doc.moveTo(x + size * 0.25, y + size * 0.43)
+        .lineTo(centerX, y + size * 0.19)
+        .lineTo(x + size * 0.75, y + size * 0.43)
+        .lineTo(x + size * 0.75, y + size * 0.73)
+        .lineTo(centerX, y + size * 0.86)
+        .lineTo(x + size * 0.25, y + size * 0.73)
+        .closePath()
+        .lineWidth(size * 0.055)
+        .lineJoin('round')
+        .stroke('#101967');
+    doc.moveTo(x + size * 0.39, y + size * 0.48)
+        .lineTo(x + size * 0.39, y + size * 0.67)
+        .moveTo(x + size * 0.61, y + size * 0.48)
+        .lineTo(x + size * 0.61, y + size * 0.67)
+        .moveTo(x + size * 0.39, y + size * 0.575)
+        .lineTo(x + size * 0.61, y + size * 0.575)
+        .lineWidth(size * 0.035)
+        .stroke('#f76b00');
+    doc.restore();
+};
+
 const createRegistrationPdf = (registration) => new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'LETTER', margins: { top: 42, right: 42, bottom: 42, left: 42 } });
     const chunks = [];
-    const pdfLogo = doc.openImage(path.join(__dirname, 'Logo-pdf.png'));
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('error', reject);
     doc.on('end', () => resolve(Buffer.concat(chunks)));
 
     doc.rect(0, 0, doc.page.width, 78).fill('#000641');
-    doc.image(pdfLogo, 42, 12, { fit: [52, 52] });
+    drawRegistrationLogo(doc, 42, 12, 52);
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17)
         .text('COMPETENCE ACADEMY', 100, 24, { width: 450 });
     doc.font('Helvetica').fontSize(9).fillColor('#dbeafe')
@@ -1991,8 +2020,7 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
     }
 
     doc.save();
-    doc.opacity(0.1);
-    doc.image(pdfLogo, 207, 337, { fit: [198, 198] });
+    drawRegistrationLogo(doc, 207, 337, 198, 0.1);
     doc.restore();
 
     rows.forEach(({ rowFields, rowHeight, y: rowY }) => {
