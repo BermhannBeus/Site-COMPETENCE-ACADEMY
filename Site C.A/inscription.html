@@ -233,6 +233,49 @@
         return data;
     }
 
+    async function downloadRegistrationPdf(button) {
+        const pdfUrl = button.href;
+        if (!pdfUrl || pdfUrl.endsWith('#')) {
+            resumeMessage.textContent = 'Le lien du formulaire PDF est indisponible. Rechargez la page et réessayez.';
+            return;
+        }
+
+        const originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Préparation du PDF...';
+        try {
+            const response = await fetch(pdfUrl, { headers: { Accept: 'application/pdf' } });
+            const contentType = response.headers.get('content-type') || '';
+            if (!response.ok || !contentType.toLowerCase().includes('application/pdf')) {
+                let message = 'Impossible de télécharger le formulaire PDF. Réessayez dans quelques instants.';
+                if (contentType.toLowerCase().includes('application/json')) {
+                    const error = await response.json();
+                    if (error.message) message = error.message;
+                }
+                throw new Error(message);
+            }
+
+            const pdfBlob = await response.blob();
+            if (!pdfBlob.size) throw new Error('Le formulaire PDF reçu est vide. Réessayez.');
+            const disposition = response.headers.get('content-disposition') || '';
+            const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'formulaire-inscription.pdf';
+            const downloadUrl = URL.createObjectURL(pdfBlob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = downloadUrl;
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            downloadLink.remove();
+            window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+            resumeMessage.textContent = 'Le téléchargement du formulaire PDF a commencé.';
+        } catch (error) {
+            resumeMessage.textContent = error.message || 'Impossible de télécharger le formulaire PDF.';
+        } finally {
+            button.disabled = false;
+            button.textContent = originalLabel;
+        }
+    }
+
     function saveDraft() {
         const draft = {};
         for (const field of form.elements) {
@@ -356,6 +399,13 @@
     resumeButton.addEventListener('click', () => {
         resumePaymentMethods.hidden = !resumePaymentMethods.hidden;
         resumeButton.setAttribute('aria-expanded', String(!resumePaymentMethods.hidden));
+    });
+
+    [downloadPendingPdfButton, document.getElementById('downloadPdfButton')].forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            downloadRegistrationPdf(button);
+        });
     });
 
     resumePaymentMethods.addEventListener('click', async (event) => {
