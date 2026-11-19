@@ -16,6 +16,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 
 const getTranzakApiBaseUrl = () => {
     const configuredUrl = String(process.env.TRANZAK_API_URL || 'https://api.tranzak.co').trim();
@@ -1927,33 +1928,7 @@ const createRegistrationTicket = async (fullName) => {
 };
 
 const drawRegistrationLogo = (doc, x, y, size) => {
-    const centerX = x + size / 2;
-    const centerY = y + size / 2;
-    doc.save();
-    doc.circle(centerX, centerY, size * 0.49).fill('#ffffff');
-    doc.circle(centerX, centerY, size * 0.46)
-        .lineWidth(size * 0.025).stroke('#f76b00');
-    doc.circle(centerX, centerY, size * 0.4)
-        .lineWidth(size * 0.02).stroke('#101967');
-    doc.moveTo(x + size * 0.25, y + size * 0.43)
-        .lineTo(centerX, y + size * 0.19)
-        .lineTo(x + size * 0.75, y + size * 0.43)
-        .lineTo(x + size * 0.75, y + size * 0.73)
-        .lineTo(centerX, y + size * 0.86)
-        .lineTo(x + size * 0.25, y + size * 0.73)
-        .closePath()
-        .lineWidth(size * 0.055)
-        .lineJoin('round')
-        .stroke('#101967');
-    doc.moveTo(x + size * 0.39, y + size * 0.48)
-        .lineTo(x + size * 0.39, y + size * 0.67)
-        .moveTo(x + size * 0.61, y + size * 0.48)
-        .lineTo(x + size * 0.61, y + size * 0.67)
-        .moveTo(x + size * 0.39, y + size * 0.575)
-        .lineTo(x + size * 0.61, y + size * 0.575)
-        .lineWidth(size * 0.035)
-        .stroke('#f76b00');
-    doc.restore();
+    doc.image(path.join(__dirname, 'Logo.png'), x, y, { fit: [size, size] });
 };
 
 const createRegistrationPdf = (registration) => new Promise((resolve, reject) => {
@@ -1992,7 +1967,7 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
         ['Telephone d’urgence', registration.emergencyPhone],
         ['Adresse de la personne a contacter', registration.emergencyAddress],
         ['Methode de paiement', registration.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash'],
-        ['Montant', `${Number(registration.amount).toLocaleString('fr-FR')} HTG`],
+        ['Montant', `${Number(registration.amount)} HTG`],
         ...(registration.status === 'SUCCESSFUL' && registration.paidAt
             ? [['Date du paiement', new Date(registration.paidAt).toLocaleString('fr-FR')]]
             : [])
