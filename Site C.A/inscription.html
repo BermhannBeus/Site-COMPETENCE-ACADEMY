@@ -164,7 +164,7 @@
         <section class="payment-resume-card" id="paymentResumeCard" aria-live="polite">
             <h2>Reprendre votre paiement</h2>
             <p id="paymentResumeMessage">Vérification de votre inscription...</p>
-            <button class="resume-payment-button" id="resumePaymentButton" type="button" hidden>Choisir une méthode de paiement</button>
+            <button class="resume-payment-button" id="resumePaymentButton" type="button" aria-expanded="false" aria-controls="resumePaymentMethods" hidden>Choisir une méthode de paiement</button>
             <div class="resume-payment-methods" id="resumePaymentMethods" hidden>
                 <button class="resume-method-button" type="button" data-payment-method="moncash">
                     <img src="Logo/Moncash.png" alt="">
@@ -262,17 +262,23 @@
         }
     }
 
-    function setPendingPayment(reference, paymentUrl = '') {
-        sessionStorage.setItem(pendingKey, JSON.stringify({ reference, paymentUrl }));
+    function setPendingPayment(reference, paymentUrl = '', paymentMethod = '') {
+        sessionStorage.setItem(pendingKey, JSON.stringify({ reference, paymentUrl, paymentMethod }));
     }
 
-    function showPendingPayment(paymentUrl, reference, canRetry = true) {
+    function showPendingPayment(paymentUrl, reference, canRetry = true, paymentMethod = '') {
+        const isNewReference = resumeButton.dataset.reference !== (reference || '');
         document.getElementById('registrationCard').style.display = 'none';
         resumeCard.classList.add('visible');
         resumeMessage.textContent = 'Votre inscription est enregistrée. Choisissez MonCash ou NatCash pour reprendre le paiement sans créer une nouvelle inscription.';
         resumeButton.hidden = !canRetry;
-        resumePaymentMethods.hidden = true;
+        if (isNewReference) {
+            resumePaymentMethods.hidden = true;
+            resumeButton.setAttribute('aria-expanded', 'false');
+        }
         resumeButton.dataset.reference = reference || '';
+        resumePaymentMethods.dataset.paymentUrl = paymentUrl || '';
+        resumePaymentMethods.dataset.paymentMethod = paymentMethod || '';
         downloadPendingPdfButton.hidden = !reference;
         if (reference) {
             downloadPendingPdfButton.href =
@@ -296,8 +302,13 @@
                     return;
                 }
                 if (data.status === 'PENDING') {
-                    setPendingPayment(reference, data.paymentUrl || '');
-                    showPendingPayment(data.paymentUrl || '', reference, data.canRetryPayment !== false);
+                    setPendingPayment(reference, data.paymentUrl || '', data.paymentMethod || '');
+                    showPendingPayment(
+                        data.paymentUrl || '',
+                        reference,
+                        data.canRetryPayment !== false,
+                        data.paymentMethod || ''
+                    );
                 } else if (['REJECTED', 'CANCELLED'].includes(data.status) && data.canRetryPayment) {
                     setPendingPayment(reference);
                     showPendingPayment('', reference, true);
@@ -344,6 +355,7 @@
 
     resumeButton.addEventListener('click', () => {
         resumePaymentMethods.hidden = !resumePaymentMethods.hidden;
+        resumeButton.setAttribute('aria-expanded', String(!resumePaymentMethods.hidden));
     });
 
     resumePaymentMethods.addEventListener('click', async (event) => {
@@ -351,21 +363,28 @@
         if (!methodButton) return;
         const reference = resumeButton.dataset.reference;
         if (!reference) return;
+        const paymentMethod = methodButton.dataset.paymentMethod;
+        const currentMethod = resumePaymentMethods.dataset.paymentMethod;
+        const currentPaymentUrl = resumePaymentMethods.dataset.paymentUrl;
+        if (paymentMethod === currentMethod && currentPaymentUrl) {
+            window.location.assign(currentPaymentUrl);
+            return;
+        }
         resumePaymentMethods.querySelectorAll('button').forEach((button) => {
             button.disabled = true;
         });
         resumeMessage.textContent = 'Préparation du paiement avec ' +
-            (methodButton.dataset.paymentMethod === 'natcash' ? 'NatCash' : 'MonCash') + '...';
+            (paymentMethod === 'natcash' ? 'NatCash' : 'MonCash') + '...';
         try {
             const data = await requestJson(
                 `${apiBase}/api/registrations/${encodeURIComponent(reference)}/retry-payment`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentMethod: methodButton.dataset.paymentMethod })
+                    body: JSON.stringify({ paymentMethod })
                 }
             );
-            setPendingPayment(data.reference, data.paymentUrl);
+            setPendingPayment(data.reference, data.paymentUrl, data.paymentMethod);
             window.location.assign(data.paymentUrl);
         } catch (error) {
             resumeMessage.textContent = error.message;
@@ -397,7 +416,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            setPendingPayment(data.reference, data.paymentUrl);
+            setPendingPayment(data.reference, data.paymentUrl, payload.paymentMethod || '');
             window.location.assign(data.paymentUrl);
         } catch (error) {
             setMessage(error.message, 'error');
@@ -409,8 +428,24 @@
 
     const returnReference = new URLSearchParams(window.location.search).get('reference');
     if (returnReference) {
-        setPendingPayment(returnReference);
-        showPendingPayment('', returnReference);
+        let savedPayment = {};
+        try {
+            savedPayment = JSON.parse(sessionStorage.getItem(pendingKey) || '{}');
+        } catch (error) {
+            console.error('Impossible de restaurer le paiement de reprise:', error);
+        }
+        if (savedPayment.reference !== returnReference) savedPayment = {};
+        setPendingPayment(
+            returnReference,
+            savedPayment.paymentUrl || '',
+            savedPayment.paymentMethod || ''
+        );
+        showPendingPayment(
+            savedPayment.paymentUrl || '',
+            returnReference,
+            true,
+            savedPayment.paymentMethod || ''
+        );
         pollPayment(returnReference).catch((error) => {
             showFormAgain(error.message);
         });
@@ -420,7 +455,7 @@
             try {
                 const payment = JSON.parse(savedPayment);
                 if (payment.reference) {
-                    showPendingPayment(payment.paymentUrl || '', payment.reference);
+                    showPendingPayment(payment.paymentUrl || '', payment.reference, true, payment.paymentMethod || '');
                     pollPayment(payment.reference).catch((error) => {
                         resumeMessage.textContent = error.message;
                     });
