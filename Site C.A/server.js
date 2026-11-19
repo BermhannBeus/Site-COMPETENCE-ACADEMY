@@ -5,6 +5,7 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
+const path = require('path');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
@@ -1929,14 +1930,13 @@ const createRegistrationTicket = async (fullName) => {
 const createRegistrationPdf = (registration) => new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'LETTER', margins: { top: 42, right: 42, bottom: 42, left: 42 } });
     const chunks = [];
+    const pdfLogo = doc.openImage(path.join(__dirname, 'Logo-pdf.png'));
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('error', reject);
     doc.on('end', () => resolve(Buffer.concat(chunks)));
 
     doc.rect(0, 0, doc.page.width, 78).fill('#000641');
-    doc.fillColor('#f76b00').roundedRect(42, 15, 46, 46, 8).fill();
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(13)
-        .text('CA', 42, 31, { width: 46, align: 'center', lineBreak: false });
+    doc.image(pdfLogo, 42, 12, { fit: [52, 52] });
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17)
         .text('COMPETENCE ACADEMY', 100, 24, { width: 450 });
     doc.font('Helvetica').fontSize(9).fillColor('#dbeafe')
@@ -1972,6 +1972,7 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
     const columnWidth = 264;
     const cellPadding = 9;
     let y = 177;
+    const rows = [];
     for (let index = 0; index < fields.length; index += 2) {
         const rowFields = fields.slice(index, index + 2).map(([label, value]) => ({
             label,
@@ -1983,22 +1984,31 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
             fontSize: 8.5,
             lineGap: 1
         }));
-        const rowHeight = Math.max(34, ...valueHeights.map((height) => height + 20));
+        const rowHeight = Math.max(36, ...valueHeights.map((height) => height + 20));
         doc.rect(42, y, 528, rowHeight).fill(index % 4 === 0 ? '#f4f7fb' : '#ffffff');
+        rows.push({ rowFields, rowHeight, y });
+        y += rowHeight;
+    }
+
+    doc.save();
+    doc.opacity(0.1);
+    doc.image(pdfLogo, 207, 337, { fit: [198, 198] });
+    doc.restore();
+
+    rows.forEach(({ rowFields, rowHeight, y: rowY }) => {
         rowFields.forEach(({ label, value }, columnIndex) => {
             const x = 42 + columnIndex * columnWidth + cellPadding;
             doc.fillColor('#475467').font('Helvetica-Bold').fontSize(7.5)
-                .text(label, x, y + 5, { width: columnWidth - cellPadding * 2, lineBreak: false });
+                .text(label, x, rowY + 5, { width: columnWidth - cellPadding * 2, lineBreak: false });
             doc.fillColor('#14182b').font('Helvetica').fontSize(8.5)
-                .text(value, x, y + 17, {
+                .text(value, x, rowY + 17, {
                     width: columnWidth - cellPadding * 2,
                     height: rowHeight - 18,
                     lineGap: 1
                 });
         });
-        doc.strokeColor('#e5e7eb').moveTo(42, y + rowHeight).lineTo(570, y + rowHeight).stroke();
-        y += rowHeight;
-    }
+        doc.strokeColor('#e5e7eb').moveTo(42, rowY + rowHeight).lineTo(570, rowY + rowHeight).stroke();
+    });
     doc.font('Helvetica').fontSize(8).fillColor('#667085')
         .text('Conservez ce formulaire et presentez votre code etudiant a l’administration.', 42, y + 12, {
             width: 528,
