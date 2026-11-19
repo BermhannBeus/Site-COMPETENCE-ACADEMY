@@ -1926,11 +1926,10 @@ const createRegistrationTicket = async (fullName) => {
     throw new Error('Impossible de générer un code de ticket unique.');
 };
 
-const drawRegistrationLogo = (doc, x, y, size, opacity = 1) => {
+const drawRegistrationLogo = (doc, x, y, size) => {
     const centerX = x + size / 2;
     const centerY = y + size / 2;
     doc.save();
-    doc.opacity(opacity);
     doc.circle(centerX, centerY, size * 0.49).fill('#ffffff');
     doc.circle(centerX, centerY, size * 0.46)
         .lineWidth(size * 0.025).stroke('#f76b00');
@@ -1998,47 +1997,37 @@ const createRegistrationPdf = (registration) => new Promise((resolve, reject) =>
             ? [['Date du paiement', new Date(registration.paidAt).toLocaleString('fr-FR')]]
             : [])
     ];
-    const columnWidth = 264;
-    const cellPadding = 9;
+    const labelWidth = 132;
+    const cellPadding = 10;
+    const valueX = 42 + cellPadding + labelWidth + 10;
+    const valueWidth = 570 - valueX - cellPadding;
     let y = 177;
-    const rows = [];
-    for (let index = 0; index < fields.length; index += 2) {
-        const rowFields = fields.slice(index, index + 2).map(([label, value]) => ({
-            label,
-            value: String(value || '—')
-        }));
-        const valueHeights = rowFields.map(({ value }) => doc.heightOfString(value, {
-            width: columnWidth - cellPadding * 2,
+    fields.forEach(([label, value], index) => {
+        const valueText = String(value || '—');
+        const valueHeight = doc.heightOfString(valueText, {
+            width: valueWidth,
             font: 'Helvetica',
             fontSize: 8.5,
             lineGap: 1
-        }));
-        const rowHeight = Math.max(36, ...valueHeights.map((height) => height + 20));
-        doc.rect(42, y, 528, rowHeight).fill(index % 4 === 0 ? '#f4f7fb' : '#ffffff');
-        rows.push({ rowFields, rowHeight, y });
-        y += rowHeight;
-    }
-
-    doc.save();
-    drawRegistrationLogo(doc, 207, 337, 198, 0.1);
-    doc.restore();
-
-    rows.forEach(({ rowFields, rowHeight, y: rowY }) => {
-        rowFields.forEach(({ label, value }, columnIndex) => {
-            const x = 42 + columnIndex * columnWidth + cellPadding;
-            doc.fillColor('#475467').font('Helvetica-Bold').fontSize(7.5)
-                .text(label, x, rowY + 5, { width: columnWidth - cellPadding * 2, lineBreak: false });
-            doc.fillColor('#14182b').font('Helvetica').fontSize(8.5)
-                .text(value, x, rowY + 17, {
-                    width: columnWidth - cellPadding * 2,
-                    height: rowHeight - 18,
-                    lineGap: 1
-                });
         });
-        doc.strokeColor('#e5e7eb').moveTo(42, rowY + rowHeight).lineTo(570, rowY + rowHeight).stroke();
+        const rowHeight = Math.max(23, valueHeight + 9);
+        doc.rect(42, y, 528, rowHeight).fill(index % 2 === 0 ? '#f4f7fb' : '#ffffff');
+        doc.fillColor('#475467').font('Helvetica-Bold').fontSize(7.5)
+            .text(label, 42 + cellPadding, y + 6, {
+                width: labelWidth,
+                lineBreak: false
+            });
+        doc.fillColor('#14182b').font('Helvetica').fontSize(8.5)
+            .text(valueText, valueX, y + 5, {
+                width: valueWidth,
+                height: rowHeight - 8,
+                lineGap: 1
+            });
+        doc.strokeColor('#e5e7eb').moveTo(42, y + rowHeight).lineTo(570, y + rowHeight).stroke();
+        y += rowHeight;
     });
     doc.font('Helvetica').fontSize(8).fillColor('#667085')
-        .text('Conservez ce formulaire et presentez votre code etudiant a l’administration.', 42, y + 12, {
+        .text('Conservez ce formulaire et presentez votre code etudiant a l’administration.', 42, y + 8, {
             width: 528,
             align: 'center',
             lineBreak: false
