@@ -510,11 +510,19 @@ body {
 }
 
 .secondary-resume-button {
-    margin-left: 8px;
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    margin: 14px 0 0;
     color: var(--navy);
     border: 1px solid var(--border);
     background: #fff;
     box-shadow: none;
+}
+
+.secondary-resume-button:disabled {
+    opacity: .7;
+    cursor: wait;
 }
 
 .secondary-resume-button:hover {
